@@ -94,7 +94,7 @@ const SECTIONS = [
 const REKVIZITLAR = [
   ['Yakka tartibdagi tadbirkor', "Safarov Husan Normamat o'g'li"],
   ["Ro'yxat raqami (YaTT)", '7594647'],
-  ['STIR', '611478387'],
+  ['JShShIR (ПИНФЛ)', '50805006240051'],
   ['Telefon', '+998 90 676 29 20'],
   ['Veb-sayt', 'edu-platform.uz'],
 ];

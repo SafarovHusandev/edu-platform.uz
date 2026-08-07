@@ -1,6 +1,8 @@
 "use client"
 
-import { Bell, BellOff, Check, CheckCheck, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Bell, BellOff, Check, CheckCheck, ChevronRight, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -11,8 +13,11 @@ import {
 } from "@/hooks/use-notifications"
 import { formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { useAuthStore } from "@/store/auth-store"
 
 export default function NotificationsPage() {
+  const router = useRouter()
+  const user = useAuthStore((s) => s.user)
   const { data, isLoading } = useNotifications(1, 50)
   const markRead = useMarkNotificationRead()
   const markAllRead = useMarkAllNotificationsRead()
@@ -48,51 +53,99 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((notification) => (
-            <Card
-              key={notification._id}
-              className={cn(
-                "flex-row items-start gap-3 p-4",
-                !notification.isRead && "bg-primary/5 ring-primary/20"
-              )}
-            >
-              <span
+          {items.map((notification) => {
+            let href: string | undefined
+            let actionLabel: string | undefined
+
+            if (notification.type === "quiz" && notification.meta?.quizId && notification.meta?.attemptId) {
+              if (user?.role === "student") {
+                href = `/student/quizzes/${notification.meta.quizId}/attempts/${notification.meta.attemptId}`
+                actionLabel = "Natijani ko'rish"
+              } else if (user?.role === "teacher" && notification.title === "Tekshirish kerak") {
+                href = `/teacher/quizzes/${notification.meta.quizId}/results?attemptId=${notification.meta.attemptId}`
+                actionLabel = "Tekshirish"
+              } else if (user?.role === "teacher" && notification.title === "Talaba testni yakunladi") {
+                href = `/teacher/quizzes/${notification.meta.quizId}/results/${notification.meta.attemptId}`
+                actionLabel = "Ko'rish"
+              }
+            }
+
+            return (
+              <Card
+                key={notification._id}
+                onClick={() => {
+                  if (!href) return
+                  if (!notification.isRead) markRead.mutate(notification._id)
+                  router.push(href)
+                }}
                 className={cn(
-                  "mt-1 flex size-8 shrink-0 items-center justify-center rounded-full",
-                  notification.isRead ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"
+                  "flex-row items-start gap-3 p-4",
+                  href && "cursor-pointer transition-colors hover:border-primary/40",
+                  !notification.isRead && "bg-primary/5 ring-primary/20"
                 )}
               >
-                <Bell className="size-4" />
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{notification.title}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">{notification.message}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatDateTime(notification.createdAt)}
-                </p>
-              </div>
-              <div className="flex shrink-0 gap-1">
-                {!notification.isRead && (
+                <span
+                  className={cn(
+                    "mt-1 flex size-8 shrink-0 items-center justify-center rounded-full",
+                    notification.isRead
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-primary/15 text-primary"
+                  )}
+                >
+                  <Bell className="size-4" />
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{notification.title}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{notification.message}</p>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(notification.createdAt)}
+                    </p>
+                    {href && actionLabel && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7"
+                        render={<Link href={href} />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (!notification.isRead) markRead.mutate(notification._id)
+                        }}
+                      >
+                        {actionLabel} <ChevronRight className="size-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  {!notification.isRead && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="O'qildi deb belgilash"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        markRead.mutate(notification._id)
+                      }}
+                    >
+                      <Check className="size-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="O'qildi deb belgilash"
-                    onClick={() => markRead.mutate(notification._id)}
+                    aria-label="O'chirish"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteNotification.mutate(notification._id)
+                    }}
                   >
-                    <Check className="size-4" />
+                    <Trash2 className="size-4" />
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="O'chirish"
-                  onClick={() => deleteNotification.mutate(notification._id)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-            </Card>
-          ))}
+                </div>
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>

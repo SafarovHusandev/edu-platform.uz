@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Loader2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -22,16 +23,17 @@ import {
 import { useLogin, useTelegramLogin } from '@/hooks/use-auth';
 
 const schema = z.object({
-  phone: z.string().min(9, { error: "Telefon raqamni to'liq kiriting" }),
-  // .regex(/^[0-9]{9,12}$/, { error: "Faqat raqamlardan iborat bo'lsin" }),
+  phone: z
+    .string()
+    .length(9, { error: "Telefon raqamni to'liq kiriting" })
+    .regex(/^[0-9]{9}$/, { error: "Faqat raqamlardan iborat bo'lsin" }),
   password: z.string().min(6, { error: 'Kamida 6 ta belgi' }),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 const telegramSchema = z.object({
-  telegramId: z.string().min(1, { error: 'Telegram ID kiriting' }),
-  code: z.string().min(4, { error: 'Kodni to\'liq kiriting' }),
+  code: z.string().min(4, { error: "Kodni to'liq kiriting" }),
 });
 
 type TelegramFormValues = z.infer<typeof telegramSchema>;
@@ -42,6 +44,10 @@ function LoginForm() {
   const login = useLogin();
   const telegramLogin = useTelegramLogin();
 
+  const tgCode = searchParams.get('tg_code');
+  const autoLoginAttempted = useRef(false);
+  const [autoLoginFailed, setAutoLoginFailed] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { phone: '', password: '' },
@@ -49,15 +55,45 @@ function LoginForm() {
 
   const telegramForm = useForm<TelegramFormValues>({
     resolver: zodResolver(telegramSchema),
-    defaultValues: { telegramId: '', code: '' },
+    defaultValues: { code: '' },
   });
 
+  // https://edu-platform.uz/login?tg_code=... — Telegram botdan yuborilgan
+  // havola bosilganda kodni qo'lda kiritmasdan avtomatik login qilinadi.
+  useEffect(() => {
+    if (!tgCode || autoLoginAttempted.current) return;
+    autoLoginAttempted.current = true;
+    telegramLogin.mutate(
+      { code: tgCode },
+      {
+        onSuccess: () => router.push(searchParams.get('redirect') || '/dashboard'),
+        onError: () => setAutoLoginFailed(true),
+      }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tgCode]);
+
+  if (tgCode && !autoLoginFailed) {
+    return (
+      <Card className="w-full max-w-sm">
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="font-medium">Telegram orqali kirilmoqda...</p>
+          <p className="text-sm text-muted-foreground">Iltimos, bir necha soniya kuting</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   function onSubmit(values: FormValues) {
-    login.mutate(values, {
-      onSuccess: () => {
-        router.push(searchParams.get('redirect') || '/dashboard');
-      },
-    });
+    login.mutate(
+      { ...values, phone: `998${values.phone}` },
+      {
+        onSuccess: () => {
+          router.push(searchParams.get('redirect') || '/dashboard');
+        },
+      }
+    );
   }
 
   function onTelegramSubmit(values: TelegramFormValues) {
@@ -75,10 +111,14 @@ function LoginForm() {
         <CardDescription>Hisobingizga kirish uchun ma&apos;lumotlarni kiriting</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="password">
+        <Tabs defaultValue={tgCode ? 'telegram' : 'password'}>
           <TabsList className="w-full">
-            <TabsTrigger value="password" className="flex-1">Telefon</TabsTrigger>
-            <TabsTrigger value="telegram" className="flex-1">Telegram</TabsTrigger>
+            <TabsTrigger value="password" className="flex-1">
+              Telefon
+            </TabsTrigger>
+            <TabsTrigger value="telegram" className="flex-1">
+              Telegram
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="password" className="mt-4">
             <Form {...form}>
@@ -90,7 +130,7 @@ function LoginForm() {
                     <FormItem>
                       <FormLabel>Telefon raqam</FormLabel>
                       <FormControl>
-                        <Input placeholder="998901234567" inputMode="numeric" {...field} />
+                        <PhoneInput {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -118,24 +158,19 @@ function LoginForm() {
           </TabsContent>
           <TabsContent value="telegram" className="mt-4">
             <p className="mb-4 text-sm text-muted-foreground">
-              Telegram botimizga (@edu_platform_bot) <code className="text-xs">/start</code> yuboring,
-              u sizga Telegram ID va bir martalik kodni yuboradi.
+              Telegram botimizga{' '}
+              <a
+                href="https://t.me/edu_platform_uz_bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                @edu_platform_bot
+              </a>{' '}
+              <code className="text-xs">/start</code> yuboring, u sizga bir martalik kodni yuboradi.
             </p>
             <Form {...telegramForm}>
               <form onSubmit={telegramForm.handleSubmit(onTelegramSubmit)} className="space-y-4">
-                <FormField
-                  control={telegramForm.control}
-                  name="telegramId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telegram ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123456789" inputMode="numeric" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={telegramForm.control}
                   name="code"

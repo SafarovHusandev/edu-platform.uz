@@ -1,10 +1,21 @@
 "use client"
 
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Camera, Gem, Loader2, ShieldCheck, Wallet } from "lucide-react"
+import { toast } from "sonner"
+import {
+  Camera,
+  CheckCircle2,
+  Gem,
+  KeyRound,
+  Loader2,
+  Send,
+  ShieldCheck,
+  Unlink,
+  Wallet,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -18,11 +29,51 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useAuthStore } from "@/store/auth-store"
-import { useChangePassword, useUpdateProfile, useUploadAvatar } from "@/hooks/use-users"
+import {
+  useChangePassword,
+  useLinkTelegram,
+  useUnlinkTelegram,
+  useUpdateProfile,
+  useUploadAvatar,
+} from "@/hooks/use-users"
+import { refreshCurrentUser } from "@/hooks/use-auth"
+import { ApiError } from "@/lib/api-client"
 import { ROLE_LABELS } from "@/lib/roles"
-import { resolveAssetUrl } from "@/lib/config"
+import { resolveAssetUrl, TELEGRAM_BOT_USERNAME } from "@/lib/config"
 import { formatNumber, formatPrice, initials } from "@/lib/format"
+
+const TELEGRAM_POLL_INTERVAL_MS = 2500
+const TELEGRAM_POLL_TIMEOUT_MS = 60_000
+
+const setPasswordSchema = z
+  .object({
+    newPassword: z.string().min(6, { error: "Kamida 6 ta belgi" }),
+    confirmPassword: z.string().min(6, { error: "Kamida 6 ta belgi" }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    error: "Parollar mos kelmadi",
+    path: ["confirmPassword"],
+  })
 
 const profileSchema = z.object({
   name: z.string().min(2, { error: "Ism kamida 2 ta belgidan iborat bo'lsin" }),
@@ -45,6 +96,8 @@ export default function ProfilePage() {
   const uploadAvatar = useUploadAvatar()
   const updateProfile = useUpdateProfile()
   const changePassword = useChangePassword()
+  const linkTelegram = useLinkTelegram()
+  const unlinkTelegram = useUnlinkTelegram()
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -55,6 +108,59 @@ export default function ProfilePage() {
     resolver: zodResolver(passwordSchema),
     defaultValues: { oldPassword: "", newPassword: "", confirmPassword: "" },
   })
+
+  const setPasswordForm = useForm<z.infer<typeof setPasswordSchema>>({
+    resolver: zodResolver(setPasswordSchema),
+    defaultValues: { newPassword: "", confirmPassword: "" },
+  })
+
+  const [telegramState, setTelegramState] = useState<"idle" | "waiting" | "timeout">("idle")
+  const [setPasswordOpen, setSetPasswordOpen] = useState(false)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function stopTelegramPolling() {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current)
+    pollIntervalRef.current = null
+    pollTimeoutRef.current = null
+  }
+
+  useEffect(() => stopTelegramPolling, [])
+
+  function handleLinkTelegram() {
+    linkTelegram.mutate(undefined, {
+      onSuccess: ({ token, deepLink }) => {
+        const finalLink = deepLink ?? `https://t.me/${TELEGRAM_BOT_USERNAME}?start=${token}`
+        window.open(finalLink, "_blank")
+
+        stopTelegramPolling()
+        setTelegramState("waiting")
+        pollIntervalRef.current = setInterval(async () => {
+          await refreshCurrentUser()
+          if (useAuthStore.getState().user?.telegramId) {
+            stopTelegramPolling()
+            setTelegramState("idle")
+            toast.success("Telegram muvaffaqiyatli ulandi!")
+          }
+        }, TELEGRAM_POLL_INTERVAL_MS)
+        pollTimeoutRef.current = setTimeout(() => {
+          stopTelegramPolling()
+          setTelegramState((s) => (s === "waiting" ? "timeout" : s))
+        }, TELEGRAM_POLL_TIMEOUT_MS)
+      },
+    })
+  }
+
+  function handleUnlinkTelegram() {
+    unlinkTelegram.mutate(undefined, {
+      onError: (error) => {
+        if (error instanceof ApiError && error.message.includes("parol o'rnating")) {
+          setSetPasswordOpen(true)
+        }
+      },
+    })
+  }
 
   if (!user) return null
 
@@ -223,6 +329,143 @@ export default function ProfilePage() {
           </Form>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Telegram</CardTitle>
+          <CardDescription>
+            Ulasangiz, barcha bildirishnomalar (to&apos;lov, kursga yozilish, test natijasi,
+            mukofot) Telegram botga ham keladi
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {user.telegramId ? (
+            <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+              <span className="flex items-center gap-2 text-sm font-medium text-success">
+                <CheckCircle2 className="size-4" />
+                Telegram ulangan{user.telegramUsername ? ` (@${user.telegramUsername})` : ""}
+              </span>
+              <AlertDialog>
+                <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
+                  <Unlink className="size-4" /> Uzish
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Telegramni uzasizmi?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Telegram orqali bildirishnomalar kelmay qo&apos;yadi. Davom etasizmi?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleUnlinkTelegram}>Uzish</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          ) : telegramState === "waiting" ? (
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Telegram botida ulanishni yakunlang, bu yerda avtomatik yangilanadi...
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  stopTelegramPolling()
+                  setTelegramState("idle")
+                }}
+              >
+                Bekor qilish
+              </Button>
+            </div>
+          ) : telegramState === "timeout" ? (
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm text-muted-foreground">
+                Ulanmadi, qayta urinib ko&apos;ring
+              </span>
+              <Button variant="outline" size="sm" onClick={handleLinkTelegram}>
+                <Send className="size-4" /> Qayta urinish
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={handleLinkTelegram} disabled={linkTelegram.isPending}>
+              {linkTelegram.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+              Telegramni ulash
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={setPasswordOpen} onOpenChange={setSetPasswordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-4" /> Parol o&apos;rnating
+            </DialogTitle>
+            <DialogDescription>
+              Telegram orqali ro&apos;yxatdan o&apos;tgansiz, sizda hali parol yo&apos;q.
+              Telegramni uzishdan oldin parol o&apos;rnating — aks holda hisobingizga kira olmay
+              qolasiz.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...setPasswordForm}>
+            <form
+              onSubmit={setPasswordForm.handleSubmit((values) => {
+                changePassword.mutate(
+                  { newPassword: values.newPassword },
+                  {
+                    onSuccess: () => {
+                      setPasswordForm.reset()
+                      setSetPasswordOpen(false)
+                      toast.success("Parol o'rnatildi. Endi Telegramni uzishingiz mumkin")
+                    },
+                  }
+                )
+              })}
+              className="space-y-3"
+            >
+              <FormField
+                control={setPasswordForm.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Yangi parol</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={setPasswordForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parolni tasdiqlang</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={changePassword.isPending}>
+                  {changePassword.isPending && <Loader2 className="size-4 animate-spin" />}
+                  Parolni o&apos;rnatish
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

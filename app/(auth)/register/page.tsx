@@ -8,6 +8,7 @@ import { z } from "zod"
 import { Loader2, GraduationCap, Presentation } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import {
   Card,
   CardContent,
@@ -41,8 +42,8 @@ const schema = z
     name: z.string().min(2, { error: "Ism kamida 2 ta belgidan iborat bo'lsin" }),
     phone: z
       .string()
-      .min(9, { error: "Telefon raqamni to'liq kiriting" })
-      .regex(/^[0-9]{9,12}$/, { error: "Faqat raqamlardan iborat bo'lsin" }),
+      .length(9, { error: "Telefon raqamni to'liq kiriting" })
+      .regex(/^[0-9]{9}$/, { error: "Faqat raqamlardan iborat bo'lsin" }),
     password: z.string().min(6, { error: "Kamida 6 ta belgi" }),
     role: z.enum(["student", "teacher"]),
     gradeNumber: z.string().optional(),
@@ -83,7 +84,7 @@ export default function RegisterPage() {
     register.mutate(
       {
         name: values.name,
-        phone: values.phone,
+        phone: `998${values.phone}`,
         password: values.password,
         role: values.role,
         grade:
@@ -158,7 +159,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Telefon raqam</FormLabel>
                   <FormControl>
-                    <Input placeholder="998901234567" inputMode="numeric" {...field} />
+                    <PhoneInput {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

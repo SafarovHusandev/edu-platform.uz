@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { api, ApiError } from "@/lib/api-client"
 import { setTokenCookie } from "@/lib/cookies"
 import { useAuthStore } from "@/store/auth-store"
-import type { Paginated, User } from "@/types"
+import type { Grade, Paginated, Role, Tarif, User } from "@/types"
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) return error.message
@@ -55,6 +55,46 @@ export function useToggleUserBlock() {
   })
 }
 
+export interface AdminUpdateUserPayload {
+  id: string
+  name?: string
+  phone?: string
+  role?: Role
+  tarif?: Tarif
+  grade?: Grade
+}
+
+// Faqat superadmin uchun: /users/:id/block'dan farqli o'laroq, foydalanuvchining
+// istalgan maydonini (rol, tarif, sinf va h.k.) tahrirlaydi.
+export function useUpdateUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: AdminUpdateUserPayload) => {
+      const res = await api.patch<{ user: User }>(`/users/${id}`, payload)
+      return res.user
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
+      toast.success("Foydalanuvchi yangilandi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Foydalanuvchini yangilashda xatolik")),
+  })
+}
+
+// Faqat superadmin uchun: foydalanuvchini butunlay o'chiradi (qaytarib bo'lmaydi).
+export function useDeleteUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      toast.success("Foydalanuvchi o'chirildi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Foydalanuvchini o'chirishda xatolik")),
+  })
+}
+
 export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (payload: { name?: string }) => {
@@ -71,7 +111,7 @@ export function useUpdateProfile() {
 
 export function useChangePassword() {
   return useMutation({
-    mutationFn: async (payload: { oldPassword: string; newPassword: string }) => {
+    mutationFn: async (payload: { oldPassword?: string; newPassword: string }) => {
       const res = await api.patch<{ token: string }>("/users/me/password", payload)
       return res.token
     },
@@ -83,6 +123,39 @@ export function useChangePassword() {
       toast.success("Parol muvaffaqiyatli o'zgartirildi")
     },
     onError: (error) => toast.error(errorMessage(error, "Parolni o'zgartirishda xatolik")),
+  })
+}
+
+export interface TelegramLinkResult {
+  token: string
+  deepLink: string | null
+  expiresAt: string
+}
+
+export function useLinkTelegram() {
+  return useMutation({
+    mutationFn: () => api.post<TelegramLinkResult>("/users/me/telegram/link"),
+    onError: (error) => toast.error(errorMessage(error, "Telegramni ulashda xatolik")),
+  })
+}
+
+// "Telegramni uzishdan oldin parol o'rnating" xatosini alohida qayta ishlash
+// kerak (toast o'rniga parol o'rnatish modali ko'rsatiladi) — shu sabab bu
+// hookda o'sha holat uchun toast chiqarilmaydi, chaqiruvchi component hal qiladi.
+export function useUnlinkTelegram() {
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.delete<{ user: User }>("/users/me/telegram")
+      return res.user
+    },
+    onSuccess: (user) => {
+      useAuthStore.getState().updateUser(user)
+      toast.success("Telegram uzildi")
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.message.includes("parol o'rnating")) return
+      toast.error(errorMessage(error, "Telegramni uzishda xatolik"))
+    },
   })
 }
 

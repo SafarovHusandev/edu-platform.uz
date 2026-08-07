@@ -1,8 +1,8 @@
 export type Role = "student" | "teacher" | "admin" | "superadmin"
 
 export interface Grade {
-  number: number
-  letter: string
+  number: number | null
+  letter: string | null
 }
 
 export type Tarif = "standart" | "premium"
@@ -18,7 +18,10 @@ export interface User {
   balance?: number
   tarif?: Tarif
   isBlocked?: boolean
-  telegramId?: string
+  isVerified?: boolean
+  telegramId?: number | null
+  telegramUsername?: string | null
+  lastLogin?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -43,6 +46,32 @@ export interface Course {
   reviewsCount?: number
   studentsCount?: number
   lessonsCount?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface BookCategory {
+  _id: string
+  name: string
+  slug: string
+  description?: string
+  icon?: string | null
+  isActive?: boolean
+  createdAt?: string
+}
+
+export interface Book {
+  _id: string
+  title: string
+  author: string
+  description?: string
+  category: BookCategory | string
+  grade?: number | null
+  uploadedBy?: User | string
+  coverImage?: string | null
+  file?: string | null
+  isPublished?: boolean
+  downloadsCount?: number
   createdAt?: string
   updatedAt?: string
 }
@@ -84,6 +113,7 @@ export interface Notification {
   title: string
   message: string
   type?: string
+  meta?: { quizId?: string; attemptId?: string; studentId?: string }
   isRead: boolean
   createdAt: string
 }
@@ -119,6 +149,9 @@ export interface Quiz {
   passingScore: number
   maxAttempts: number
   timeLimit?: number | null
+  availableFrom?: string | null
+  availableUntil?: string | null
+  grade?: number
   isActive?: boolean
   questions?: Question[]
   questionsCount?: number
@@ -136,6 +169,7 @@ export interface EvaluatedAnswer {
   givenAnswer?: number | string | boolean | null
   isCorrect: boolean
   pointsEarned: number
+  feedback?: string | null
 }
 
 export type AttemptStatus = "in_progress" | "submitted" | "reviewed"
@@ -153,6 +187,7 @@ export interface Attempt {
   attemptNumber?: number
   startedAt?: string
   submittedAt?: string
+  durationSeconds?: number | null
 }
 
 export type PaymentPurpose = "wallet" | "course" | "premium" | "donation"

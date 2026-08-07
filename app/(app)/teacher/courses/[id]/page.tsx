@@ -130,7 +130,7 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
           <ArrowLeft className="size-4" /> Kurslarga qaytish
         </Button>
         <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Users className="size-4" /> {course.studentsCount ?? 0} o&apos;quvchi
+          <Users className="size-4" /> {course.studentsCount ?? 0}&nbsp; o&apos;quvchi
         </span>
       </div>
 
@@ -273,7 +273,9 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
-                        items={categories?.map((cat) => ({ value: cat._id, label: cat.name })) ?? []}
+                        items={
+                          categories?.map((cat) => ({ value: cat._id, label: cat.name })) ?? []
+                        }
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">

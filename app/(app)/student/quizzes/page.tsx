@@ -1,13 +1,13 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { ClipboardList, ChevronRight, Target, Repeat } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { useQuizzes } from "@/hooks/use-quizzes"
+import Link from 'next/link';
+import { ClipboardList, ChevronRight, Target, Repeat, Clock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useQuizzes } from '@/hooks/use-quizzes';
 
 export default function StudentQuizzesPage() {
-  const { data, isLoading } = useQuizzes({ page: 1, limit: 50 })
+  const { data, isLoading } = useQuizzes({ page: 1, limit: 50 });
 
   return (
     <div>
@@ -28,7 +28,7 @@ export default function StudentQuizzesPage() {
           <p className="text-sm text-muted-foreground">Hozircha testlar mavjud emas</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 flex flex-col gap-0.5">
           {data.items.map((quiz) => (
             <Link key={quiz._id} href={`/student/quizzes/${quiz._id}`}>
               <Card className="transition-colors hover:border-primary/40">
@@ -39,7 +39,9 @@ export default function StudentQuizzesPage() {
                   <div className="flex-1">
                     <p className="font-medium">{quiz.title}</p>
                     {quiz.description && (
-                      <p className="line-clamp-1 text-sm text-muted-foreground">{quiz.description}</p>
+                      <p className="line-clamp-1 text-sm text-muted-foreground">
+                        {quiz.description}
+                      </p>
                     )}
                     <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
@@ -48,8 +50,14 @@ export default function StudentQuizzesPage() {
                       <span className="flex items-center gap-1">
                         <Repeat className="size-3.5" /> {quiz.maxAttempts} urinish
                       </span>
+                      {quiz.grade != null && <Badge variant="outline">{quiz.grade}-sinf</Badge>}
                       {quiz.questionsCount !== undefined && (
                         <Badge variant="outline">{quiz.questionsCount} savol</Badge>
+                      )}
+                      {(quiz.availableFrom || quiz.availableUntil) && (
+                        <span className="flex items-center gap-1 text-gold-foreground">
+                          <Clock className="size-3.5" /> Vaqt oynasi belgilangan
+                        </span>
                       )}
                     </div>
                   </div>
@@ -61,5 +69,5 @@ export default function StudentQuizzesPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

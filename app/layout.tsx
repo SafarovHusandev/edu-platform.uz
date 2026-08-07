@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: '%s · Edu Platform',
   },
   description:
-    "Edu Platform — kurslar, testlar, sertifikatlar va mukofotlar bilan zamonaviy o'quv platformasi.",
+    "Edu Platform — kurslar, testlar, kitoblar, sertifikatlar va mukofotlar bilan zamonaviy o'quv platformasi.",
 };
 
 export default function RootLayout({
@@ -39,7 +39,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -49,7 +49,7 @@ export default function RootLayout({
           <QueryProvider>
             <AuthProvider>
               <TooltipProvider delay={200}>
-                <NextTopLoader />
+                <NextTopLoader showSpinner={false} />
                 {children}
                 <Toaster position="top-center" richColors closeButton />
               </TooltipProvider>

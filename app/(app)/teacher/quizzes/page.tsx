@@ -56,6 +56,7 @@ export default function TeacherQuizzesPage() {
                 <Link href={`/teacher/quizzes/${quiz._id}`} className="flex-1">
                   <p className="font-medium hover:underline">{quiz.title}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {quiz.grade != null && <Badge variant="outline">{quiz.grade}-sinf</Badge>}
                     <Badge variant="outline">{quiz.questionsCount ?? quiz.questions?.length ?? 0} savol</Badge>
                     <span>O&apos;tish balli: {quiz.passingScore}%</span>
                   </div>

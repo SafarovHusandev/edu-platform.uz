@@ -67,7 +67,11 @@ export interface QuizPayload {
   targetId?: string
   passingScore: number
   maxAttempts: number
-  timeLimit?: number
+  timeLimit: number
+  availableFrom?: string | null
+  availableUntil?: string | null
+  grade: number
+  isActive?: boolean
 }
 
 export function useCreateQuiz() {
@@ -194,14 +198,22 @@ export function useSubmitAttempt() {
   })
 }
 
+export interface MyAttemptsResult {
+  attempts: Attempt[]
+  attemptsUsed: number
+  attemptsRemaining: number
+  maxAttempts: number
+}
+
 export function useMyAttempts(quizId: string | undefined) {
   return useQuery({
     queryKey: ["my-attempts", quizId],
     queryFn: async () => {
-      const res = await api.get<Attempt[] | { attempts: Attempt[] }>(
-        `/quizzes/${quizId}/my-attempts`
-      )
-      return Array.isArray(res) ? res : res.attempts
+      const res = await api.get<MyAttemptsResult | Attempt[]>(`/quizzes/${quizId}/my-attempts`)
+      if (Array.isArray(res)) {
+        return { attempts: res, attemptsUsed: res.length, attemptsRemaining: 0, maxAttempts: 0 }
+      }
+      return res
     },
     enabled: !!quizId,
   })
@@ -228,7 +240,7 @@ export function useReviewOpenEnded(quizId: string) {
       reviewedAnswers,
     }: {
       attemptId: string
-      reviewedAnswers: { questionId: string; pointsEarned: number }[]
+      reviewedAnswers: { questionId: string; pointsEarned: number; isCorrect: boolean; feedback?: string }[]
     }) => {
       const res = await api.patch<{ attempt: Attempt }>(
         `/quizzes/attempts/${attemptId}/review`,

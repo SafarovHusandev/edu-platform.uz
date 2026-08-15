@@ -14,10 +14,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonList } from "@/components/ui/skeleton"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useAllRedemptions, useUpdateRedemptionStatus } from "@/hooks/use-rewards"
 import { formatDate, initials } from "@/lib/format"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Redemption, RedemptionStatus } from "@/types"
+
+const PAGE_SIZE = 15
 
 const STATUS_TABS: { value: RedemptionStatus | "all"; label: string }[] = [
   { value: "pending", label: "Kutilmoqda" },
@@ -40,10 +47,11 @@ const STATUS_VARIANTS: Record<RedemptionStatus, "secondary" | "default" | "destr
 
 export default function AdminRedemptionsPage() {
   const [status, setStatus] = useState<RedemptionStatus | "all">("pending")
-  const { data, isLoading } = useAllRedemptions({
+  const [page, setPage] = useState(1)
+  const { data, isLoading, isError, refetch } = useAllRedemptions({
     status: status === "all" ? undefined : status,
-    page: 1,
-    limit: 50,
+    page,
+    limit: PAGE_SIZE,
   })
   const updateStatus = useUpdateRedemptionStatus()
 
@@ -65,12 +73,16 @@ export default function AdminRedemptionsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Yutuqlar</h1>
-        <p className="mt-1 text-muted-foreground">Mukofot so&apos;rovlarini ko&apos;rib chiqing</p>
-      </div>
+      <PageHeader title="Yutuqlar" description="Mukofot so'rovlarini ko'rib chiqing" />
 
-      <Tabs value={status} onValueChange={(v) => setStatus(v as RedemptionStatus | "all")} className="mb-6">
+      <Tabs
+        value={status}
+        onValueChange={(v) => {
+          setStatus(v as RedemptionStatus | "all")
+          setPage(1)
+        }}
+        className="mb-6"
+      >
         <TabsList>
           {STATUS_TABS.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
@@ -81,17 +93,13 @@ export default function AdminRedemptionsPage() {
       </Tabs>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonList count={4} itemClassName="h-20" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <PackageCheck className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Bu bo&apos;limda so&apos;rovlar yo&apos;q</p>
-        </div>
+        <EmptyState icon={PackageCheck} title="Bu bo'limda so'rovlar yo'q" />
       ) : (
+        <>
         <div className="space-y-2">
           {data.items.map((redemption) => {
             const reward = typeof redemption.reward === "object" ? redemption.reward : null
@@ -120,6 +128,14 @@ export default function AdminRedemptionsPage() {
             )
           })}
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={data.totalPages}
+          total={data.total}
+          itemLabel="so'rov"
+          onPageChange={setPage}
+        />
+        </>
       )}
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>

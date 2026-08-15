@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { FolderTree, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,6 +27,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonCardGrid } from "@/components/ui/skeleton"
 import {
   useCategories,
   useCreateCategory,
@@ -32,63 +40,65 @@ import {
 } from "@/hooks/use-categories"
 import type { Category } from "@/types"
 
+const categorySchema = z.object({
+  name: z.string().min(2, { error: "Kamida 2 ta belgi" }),
+  description: z.string().optional(),
+})
+
+type CategoryFormValues = z.infer<typeof categorySchema>
+
 export default function AdminCategoriesPage() {
-  const { data: categories, isLoading } = useCategories()
+  const { data: categories, isLoading, isError, refetch } = useCategories()
   const createCategory = useCreateCategory()
   const updateCategory = useUpdateCategory()
   const deleteCategory = useDeleteCategory()
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Category | null>(null)
-  const [form, setForm] = useState({ name: "", description: "" })
+
+  const form = useForm<CategoryFormValues>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: { name: "", description: "" },
+  })
 
   function openCreate() {
     setEditing(null)
-    setForm({ name: "", description: "" })
+    form.reset({ name: "", description: "" })
     setDialogOpen(true)
   }
 
   function openEdit(category: Category) {
     setEditing(category)
-    setForm({ name: category.name, description: category.description ?? "" })
+    form.reset({ name: category.name, description: category.description ?? "" })
     setDialogOpen(true)
   }
 
-  function handleSubmit() {
-    if (!form.name.trim()) return
+  function onSubmit(values: CategoryFormValues) {
     if (editing) {
-      updateCategory.mutate(
-        { id: editing._id, ...form },
-        { onSuccess: () => setDialogOpen(false) }
-      )
+      updateCategory.mutate({ id: editing._id, ...values }, { onSuccess: () => setDialogOpen(false) })
     } else {
-      createCategory.mutate(form, { onSuccess: () => setDialogOpen(false) })
+      createCategory.mutate(values, { onSuccess: () => setDialogOpen(false) })
     }
   }
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Kategoriyalar</h1>
-          <p className="mt-1 text-muted-foreground">Kurs kategoriyalarini boshqaring</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" /> Yangi kategoriya
-        </Button>
-      </div>
+      <PageHeader
+        title="Kategoriyalar"
+        description="Kurs kategoriyalarini boshqaring"
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="size-4" /> Yangi kategoriya
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonCardGrid count={6} itemClassName="h-24" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !categories || categories.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <FolderTree className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Hali kategoriya qo&apos;shilmagan</p>
-        </div>
+        <EmptyState icon={FolderTree} title="Hali kategoriya qo'shilmagan" />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
@@ -103,11 +113,16 @@ export default function AdminCategoriesPage() {
                   )}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <Button variant="ghost" size="icon-sm" onClick={() => openEdit(category)}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Tahrirlash"
+                    onClick={() => openEdit(category)}
+                  >
                     <Pencil className="size-4" />
                   </Button>
                   <AlertDialog>
-                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
                       <Trash2 className="size-4" />
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -137,29 +152,44 @@ export default function AdminCategoriesPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Kategoriyani tahrirlash" : "Yangi kategoriya"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Kategoriya nomi"
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            />
-            <Textarea
-              placeholder="Tavsif (ixtiyoriy)"
-              value={form.description}
-              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={handleSubmit}
-              disabled={createCategory.isPending || updateCategory.isPending}
-            >
-              {(createCategory.isPending || updateCategory.isPending) && (
-                <Loader2 className="size-4 animate-spin" />
-              )}
-              Saqlash
-            </Button>
-          </DialogFooter>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kategoriya nomi</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tavsif (ixtiyoriy)</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={createCategory.isPending || updateCategory.isPending}>
+                  {(createCategory.isPending || updateCategory.isPending) && (
+                    <Loader2 className="size-4 animate-spin" />
+                  )}
+                  Saqlash
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

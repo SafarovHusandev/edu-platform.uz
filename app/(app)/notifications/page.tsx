@@ -6,6 +6,21 @@ import { Bell, BellOff, Check, CheckCheck, ChevronRight, Trash2 } from "lucide-r
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonList } from "@/components/ui/skeleton"
+import {
   useDeleteNotification,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -18,7 +33,7 @@ import { useAuthStore } from "@/store/auth-store"
 export default function NotificationsPage() {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
-  const { data, isLoading } = useNotifications(1, 50)
+  const { data, isLoading, isError, refetch } = useNotifications(1, 50)
   const markRead = useMarkNotificationRead()
   const markAllRead = useMarkAllNotificationsRead()
   const deleteNotification = useDeleteNotification()
@@ -28,29 +43,24 @@ export default function NotificationsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Bildirishnomalar</h1>
-          <p className="mt-1 text-muted-foreground">So&apos;nggi yangiliklar va xabarlar</p>
-        </div>
-        {hasUnread && (
-          <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()}>
-            <CheckCheck className="size-4" /> Barchasini o&apos;qildi deb belgilash
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Bildirishnomalar"
+        description="So'nggi yangiliklar va xabarlar"
+        actions={
+          hasUnread ? (
+            <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()}>
+              <CheckCheck className="size-4" /> Barchasini o&apos;qildi deb belgilash
+            </Button>
+          ) : undefined
+        }
+      />
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonList count={5} itemClassName="h-20" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-16 text-center text-muted-foreground">
-          <BellOff className="size-6" />
-          <p className="text-sm">Hozircha bildirishnomalar yo&apos;q</p>
-        </div>
+        <EmptyState icon={BellOff} title="Hozircha bildirishnomalar yo'q" />
       ) : (
         <div className="space-y-2">
           {items.map((notification) => {
@@ -117,31 +127,34 @@ export default function NotificationsPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-1">
+                <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
                   {!notification.isRead && (
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       aria-label="O'qildi deb belgilash"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        markRead.mutate(notification._id)
-                      }}
+                      onClick={() => markRead.mutate(notification._id)}
                     >
                       <Check className="size-4" />
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="O'chirish"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteNotification.mutate(notification._id)
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
+                      <Trash2 className="size-4" />
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bildirishnomani o&apos;chirasizmi?</AlertDialogTitle>
+                        <AlertDialogDescription>Bu amalni bekor qilib bo&apos;lmaydi.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteNotification.mutate(notification._id)}>
+                          O&apos;chirish
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </Card>
             )

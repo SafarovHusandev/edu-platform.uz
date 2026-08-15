@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, ClipboardList, Trash2 } from "lucide-react"
+import { ClipboardList, Search, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -24,6 +25,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonTable } from "@/components/ui/skeleton"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useQuizzes, useDeleteQuiz } from "@/hooks/use-quizzes"
 
 const PAGE_SIZE = 15
@@ -36,27 +42,34 @@ const TARGET_LABELS: Record<string, string> = {
 
 export default function AdminQuizzesPage() {
   const [page, setPage] = useState(1)
-  const { data, isLoading } = useQuizzes({ page, limit: PAGE_SIZE })
+  const [search, setSearch] = useState("")
+  const { data, isLoading, isError, refetch } = useQuizzes({ page, limit: PAGE_SIZE })
   const deleteQuiz = useDeleteQuiz()
+
+  const items = (data?.items ?? []).filter((quiz) =>
+    quiz.title.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Testlar</h1>
-        <p className="mt-1 text-muted-foreground">Platformadagi barcha testlar</p>
+      <PageHeader title="Testlar" description="Platformadagi barcha testlar" />
+
+      <div className="relative mb-4 max-w-sm">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Test nomi bo'yicha qidirish..."
+          className="h-10 pl-9"
+        />
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
-      ) : !data || data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <ClipboardList className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Test topilmadi</p>
-        </div>
+        <SkeletonTable rows={6} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : items.length === 0 ? (
+        <EmptyState icon={ClipboardList} title="Test topilmadi" />
       ) : (
         <>
           <Table>
@@ -71,7 +84,7 @@ export default function AdminQuizzesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.items.map((quiz) => {
+              {items.map((quiz) => {
                 const creator = typeof quiz.createdBy === "object" ? quiz.createdBy : undefined
                 return (
                   <TableRow key={quiz._id}>
@@ -91,7 +104,7 @@ export default function AdminQuizzesPage() {
                     <TableCell>{quiz.maxAttempts}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                        <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
                           <Trash2 className="size-4" />
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -117,27 +130,13 @@ export default function AdminQuizzesPage() {
             </TableBody>
           </Table>
 
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Jami {data.total} ta test</p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            totalPages={data?.totalPages ?? 1}
+            total={data?.total}
+            itemLabel="test"
+            onPageChange={setPage}
+          />
         </>
       )}
     </div>

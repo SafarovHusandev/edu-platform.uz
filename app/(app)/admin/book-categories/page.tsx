@@ -1,6 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { Library, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,6 +28,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonCardGrid } from "@/components/ui/skeleton"
 import {
   useBookCategories,
   useCreateBookCategory,
@@ -32,25 +41,37 @@ import {
 } from "@/hooks/use-book-categories"
 import type { BookCategory } from "@/types"
 
+const bookCategorySchema = z.object({
+  name: z.string().min(2, { error: "Kamida 2 ta belgi" }),
+  description: z.string().optional(),
+  icon: z.string().optional(),
+})
+
+type BookCategoryFormValues = z.infer<typeof bookCategorySchema>
+
 export default function AdminBookCategoriesPage() {
-  const { data: categories, isLoading } = useBookCategories()
+  const { data: categories, isLoading, isError, refetch } = useBookCategories()
   const createCategory = useCreateBookCategory()
   const updateCategory = useUpdateBookCategory()
   const deleteCategory = useDeleteBookCategory()
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<BookCategory | null>(null)
-  const [form, setForm] = useState({ name: "", description: "", icon: "" })
+
+  const form = useForm<BookCategoryFormValues>({
+    resolver: zodResolver(bookCategorySchema),
+    defaultValues: { name: "", description: "", icon: "" },
+  })
 
   function openCreate() {
     setEditing(null)
-    setForm({ name: "", description: "", icon: "" })
+    form.reset({ name: "", description: "", icon: "" })
     setDialogOpen(true)
   }
 
   function openEdit(category: BookCategory) {
     setEditing(category)
-    setForm({
+    form.reset({
       name: category.name,
       description: category.description ?? "",
       icon: category.icon ?? "",
@@ -58,18 +79,14 @@ export default function AdminBookCategoriesPage() {
     setDialogOpen(true)
   }
 
-  function handleSubmit() {
-    if (!form.name.trim()) return
+  function onSubmit(values: BookCategoryFormValues) {
     const payload = {
-      name: form.name,
-      description: form.description || undefined,
-      icon: form.icon || undefined,
+      name: values.name,
+      description: values.description || undefined,
+      icon: values.icon || undefined,
     }
     if (editing) {
-      updateCategory.mutate(
-        { id: editing._id, ...payload },
-        { onSuccess: () => setDialogOpen(false) }
-      )
+      updateCategory.mutate({ id: editing._id, ...payload }, { onSuccess: () => setDialogOpen(false) })
     } else {
       createCategory.mutate(payload, { onSuccess: () => setDialogOpen(false) })
     }
@@ -77,29 +94,22 @@ export default function AdminBookCategoriesPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            Kitob kategoriyalari
-          </h1>
-          <p className="mt-1 text-muted-foreground">Kutubxona kategoriyalarini boshqaring</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" /> Yangi kategoriya
-        </Button>
-      </div>
+      <PageHeader
+        title="Kitob kategoriyalari"
+        description="Kutubxona kategoriyalarini boshqaring"
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="size-4" /> Yangi kategoriya
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonCardGrid count={6} itemClassName="h-24" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !categories || categories.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <Library className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Hali kategoriya qo&apos;shilmagan</p>
-        </div>
+        <EmptyState icon={Library} title="Hali kategoriya qo'shilmagan" />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
@@ -108,8 +118,7 @@ export default function AdminBookCategoriesPage() {
                 <div className="flex items-start gap-3">
                   <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 text-primary">
                     {category.icon ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={category.icon} alt="" className="size-full object-cover" />
+                      <Image src={category.icon} alt="" width={36} height={36} unoptimized className="size-full object-cover" />
                     ) : (
                       <Library className="size-4.5" />
                     )}
@@ -124,11 +133,16 @@ export default function AdminBookCategoriesPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <Button variant="ghost" size="icon-sm" onClick={() => openEdit(category)}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Tahrirlash"
+                    onClick={() => openEdit(category)}
+                  >
                     <Pencil className="size-4" />
                   </Button>
                   <AlertDialog>
-                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
                       <Trash2 className="size-4" />
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -158,34 +172,57 @@ export default function AdminBookCategoriesPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Kategoriyani tahrirlash" : "Yangi kategoriya"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              placeholder="Kategoriya nomi"
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            />
-            <Textarea
-              placeholder="Tavsif (ixtiyoriy)"
-              value={form.description}
-              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-            />
-            <Input
-              placeholder="Icon URL (ixtiyoriy)"
-              value={form.icon}
-              onChange={(e) => setForm((prev) => ({ ...prev, icon: e.target.value }))}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={handleSubmit}
-              disabled={createCategory.isPending || updateCategory.isPending}
-            >
-              {(createCategory.isPending || updateCategory.isPending) && (
-                <Loader2 className="size-4 animate-spin" />
-              )}
-              Saqlash
-            </Button>
-          </DialogFooter>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kategoriya nomi</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tavsif (ixtiyoriy)</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="icon"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Icon URL (ixtiyoriy)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={createCategory.isPending || updateCategory.isPending}>
+                  {(createCategory.isPending || updateCategory.isPending) && (
+                    <Loader2 className="size-4 animate-spin" />
+                  )}
+                  Saqlash
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

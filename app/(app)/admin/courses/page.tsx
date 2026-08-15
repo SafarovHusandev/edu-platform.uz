@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { BookOpen, ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react"
+import { BookOpen, Search, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonTable } from "@/components/ui/skeleton"
+import { PaginationBar } from "@/components/ui/pagination-bar"
 import { useCourses, useUpdateCourse, useDeleteCourse } from "@/hooks/use-courses"
 import { formatPrice } from "@/lib/format"
 
@@ -34,16 +39,13 @@ const PAGE_SIZE = 15
 export default function AdminCoursesPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
-  const { data, isLoading } = useCourses({ page, limit: PAGE_SIZE, search: search || undefined })
+  const { data, isLoading, isError, refetch } = useCourses({ page, limit: PAGE_SIZE, search: search || undefined })
   const updateCourse = useUpdateCourse()
   const deleteCourse = useDeleteCourse()
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Kurslar</h1>
-        <p className="mt-1 text-muted-foreground">Platformadagi barcha kurslar</p>
-      </div>
+      <PageHeader title="Kurslar" description="Platformadagi barcha kurslar" />
 
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -59,16 +61,11 @@ export default function AdminCoursesPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonTable rows={6} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <BookOpen className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Kurs topilmadi</p>
-        </div>
+        <EmptyState icon={BookOpen} title="Kurs topilmadi" />
       ) : (
         <>
           <Table>
@@ -106,6 +103,7 @@ export default function AdminCoursesPage() {
                           onCheckedChange={(checked) =>
                             updateCourse.mutate({ id: course._id, isPublished: checked })
                           }
+                          aria-label={course.isPublished ? "Nashrdan olish" : "Nashr etish"}
                         />
                         <Badge variant={course.isPublished ? "default" : "secondary"}>
                           {course.isPublished ? "Nashr etilgan" : "Qoralama"}
@@ -114,7 +112,7 @@ export default function AdminCoursesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                        <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
                           <Trash2 className="size-4" />
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -140,27 +138,13 @@ export default function AdminCoursesPage() {
             </TableBody>
           </Table>
 
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Jami {data.total} ta kurs</p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            totalPages={data.totalPages}
+            total={data.total}
+            itemLabel="kurs"
+            onPageChange={setPage}
+          />
         </>
       )}
     </div>

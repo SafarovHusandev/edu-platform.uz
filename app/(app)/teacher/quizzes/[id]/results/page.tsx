@@ -33,6 +33,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import { useQuizWithAnswers, useQuizResults, useReviewOpenEnded } from '@/hooks/use-quizzes';
 import { formatDateTime, formatDuration, formatTashkentDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -180,7 +184,7 @@ function ResultsContent({ quizId }: { quizId: string }) {
   const deepLinkAttemptId = searchParams.get('attemptId');
 
   const { data: quiz } = useQuizWithAnswers(quizId);
-  const { data: attempts, isLoading } = useQuizResults(quizId);
+  const { data: attempts, isLoading, isError, refetch } = useQuizResults(quizId);
   const reviewOpenEnded = useReviewOpenEnded(quizId);
 
   const [manualAttemptId, setManualAttemptId] = useState<string | null>(null);
@@ -198,6 +202,24 @@ function ResultsContent({ quizId }: { quizId: string }) {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/teacher/quizzes" />}>Testlar</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${quizId}`} />}>
+              {quiz?.title ?? 'Test'}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Natijalar</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" render={<Link href={`/teacher/quizzes/${quizId}`} />}>
           <ArrowLeft className="size-4" /> Testga qaytish
@@ -210,12 +232,11 @@ function ResultsContent({ quizId }: { quizId: string }) {
       </div>
 
       {isLoading ? (
-        <div className="h-64 animate-pulse rounded-xl bg-muted" />
+        <SkeletonTable rows={6} />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !attempts || attempts.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <ClipboardCheck className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Hali hech kim testdan o&apos;tmagan</p>
-        </div>
+        <EmptyState icon={ClipboardCheck} title="Hali hech kim testdan o'tmagan" />
       ) : (
         <Table>
           <TableHeader>

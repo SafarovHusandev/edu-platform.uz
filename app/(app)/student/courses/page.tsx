@@ -7,31 +7,30 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonCardGrid } from "@/components/ui/skeleton"
 import { useMyEnrollments } from "@/hooks/use-enrollment"
 import { resolveAssetUrl } from "@/lib/config"
 
 export default function MyCoursesPage() {
-  const { data, isLoading } = useMyEnrollments(1, 24)
+  const { data, isLoading, isError, refetch } = useMyEnrollments(1, 24)
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Mening kurslarim</h1>
-        <p className="mt-1 text-muted-foreground">Yozilgan kurslaringiz va o&apos;rganish jarayoni</p>
-      </div>
+      <PageHeader title="Mening kurslarim" description="Yozilgan kurslaringiz va o'rganish jarayoni" />
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-56 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonCardGrid count={6} itemClassName="h-56" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-20 text-center">
-          <BookOpen className="size-8 text-muted-foreground" />
-          <p className="font-medium">Hali hech qanday kursga yozilmagansiz</p>
-          <Button render={<Link href="/courses" />}>Kurslarni ko&apos;rish</Button>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="Hali hech qanday kursga yozilmagansiz"
+          action={<Button render={<Link href="/courses" />}>Kurslarni ko&apos;rish</Button>}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.items.map((enrollment) => {

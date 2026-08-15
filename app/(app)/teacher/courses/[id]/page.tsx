@@ -2,6 +2,7 @@
 
 import { use, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,6 +48,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import {
   useCourse,
   useCourseStats,
@@ -76,7 +80,7 @@ type CourseFormValues = z.output<typeof courseSchema>;
 export default function TeacherCourseDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const { data, isLoading } = useCourse(id);
+  const { data, isLoading, isError, refetch } = useCourse(id);
   const course = data?.course;
   const lessons = data?.lessons;
   const { data: stats } = useCourseStats(id);
@@ -104,8 +108,26 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
       : undefined,
   });
 
-  if (isLoading || !course) {
+  if (isLoading) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />;
+  }
+
+  if (!course) {
+    return (
+      <EmptyState
+        title="Kurs topilmadi"
+        description="Bu kurs o'chirilgan yoki mavjud emas."
+        action={
+          <Link href="/teacher/courses" className="text-sm font-medium text-primary hover:underline">
+            Kurslarga qaytish
+          </Link>
+        }
+      />
+    );
   }
 
   const thumbnail = resolveAssetUrl(course.thumbnail);
@@ -125,6 +147,18 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/teacher/courses" />}>Kurslarim</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{course.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" render={<Link href="/teacher/courses" />}>
           <ArrowLeft className="size-4" /> Kurslarga qaytish
@@ -138,13 +172,13 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
         <CardContent className="flex items-center gap-4 pt-2">
           <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-muted">
             {thumbnail && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={thumbnail} alt={course.title} className="size-full object-cover" />
+              <Image src={thumbnail} alt={course.title} fill unoptimized className="object-cover" />
             )}
             <button
               type="button"
+              aria-label="Rasmni almashtirish"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity hover:opacity-100"
+              className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {uploadThumbnail.isPending ? (
                 <Loader2 className="size-5 animate-spin" />
@@ -263,7 +297,7 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="category"
@@ -384,14 +418,23 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
                     >
                       {lesson.title}
                     </Link>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="O'chirish"
-                      onClick={() => deleteLesson.mutate(lesson._id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
+                        <Trash2 className="size-4" />
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Darsni o&apos;chirasizmi?</AlertDialogTitle>
+                          <AlertDialogDescription>Bu amalni bekor qilib bo&apos;lmaydi.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteLesson.mutate(lesson._id)}>
+                            O&apos;chirish
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </li>
                 ))}
             </ol>

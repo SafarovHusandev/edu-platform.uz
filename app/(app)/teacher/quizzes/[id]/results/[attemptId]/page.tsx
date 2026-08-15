@@ -14,6 +14,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import { useQuizWithAnswers, useQuizResults } from '@/hooks/use-quizzes';
 import { cn } from '@/lib/utils';
 import { formatDateTime, formatDuration, formatTashkentDateTime, initials } from '@/lib/format';
@@ -30,23 +33,42 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function TeacherAttemptDetailPage({ params }: PageProps) {
   const { id, attemptId } = use(params);
-  const { data: quiz, isLoading: quizLoading } = useQuizWithAnswers(id);
-  const { data: attempts, isLoading: attemptsLoading } = useQuizResults(id);
+  const { data: quiz, isLoading: quizLoading, isError: quizError, refetch: refetchQuiz } = useQuizWithAnswers(id);
+  const { data: attempts, isLoading: attemptsLoading, isError: attemptsError, refetch: refetchAttempts } = useQuizResults(id);
 
-  if (quizLoading || attemptsLoading || !quiz) {
+  if (quizLoading || attemptsLoading) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+  }
+
+  if (quizError || attemptsError) {
+    return <ErrorState onRetry={() => { refetchQuiz(); refetchAttempts(); }} />;
+  }
+
+  if (!quiz) {
+    return (
+      <EmptyState
+        title="Test topilmadi"
+        action={
+          <Link href="/teacher/quizzes" className="text-sm font-medium text-primary hover:underline">
+            Testlarga qaytish
+          </Link>
+        }
+      />
+    );
   }
 
   const attempt = attempts?.find((a) => a._id === attemptId);
 
   if (!attempt) {
     return (
-      <div className="mx-auto max-w-xl space-y-4 text-center">
-        <p className="text-muted-foreground">Urinish topilmadi</p>
-        <Button variant="outline" render={<Link href={`/teacher/quizzes/${id}/results`} />}>
-          Natijalarga qaytish
-        </Button>
-      </div>
+      <EmptyState
+        title="Urinish topilmadi"
+        action={
+          <Button variant="outline" render={<Link href={`/teacher/quizzes/${id}/results`} />}>
+            Natijalarga qaytish
+          </Button>
+        }
+      />
     );
   }
 
@@ -57,6 +79,26 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/teacher/quizzes" />}>Testlar</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${id}`} />}>{quiz.title}</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${id}/results`} />}>Natijalar</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{student?.name ?? "O'quvchi"}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <Button
         variant="ghost"
         size="sm"

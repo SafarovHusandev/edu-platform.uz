@@ -4,13 +4,15 @@ import Link from "next/link"
 import { BookOpen, Plus, Star, Users, Wallet } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { StatCard, type StatCardTone } from "@/components/ui/stat-card"
+import { ErrorState } from "@/components/ui/error-state"
 import { useTeacherStats } from "@/hooks/use-stats"
 import { useAuthStore } from "@/store/auth-store"
 import { formatNumber, formatPrice } from "@/lib/format"
 
 export default function TeacherDashboardPage() {
   const user = useAuthStore((s) => s.user)
-  const { data: stats, isLoading } = useTeacherStats()
+  const { data: stats, isLoading, isError, refetch } = useTeacherStats()
 
   return (
     <div className="space-y-8">
@@ -28,38 +30,38 @@ export default function TeacherDashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { icon: BookOpen, label: "Kurslar", value: stats?.courses.total ?? 0, color: "bg-primary/10 text-primary" },
-          { icon: Users, label: "O'quvchilar", value: stats?.students.total ?? 0, color: "bg-success/15 text-success" },
-          {
-            icon: Wallet,
-            label: "Daromad",
-            value: formatPrice(stats?.revenue.total ?? 0),
-            color: "bg-gold/15 text-gold-foreground",
-          },
-          {
-            icon: Star,
-            label: "O'rtacha reyting",
-            value: stats?.rating.avg ? stats.rating.avg.toFixed(1) : "—",
-            color: "bg-accent text-accent-foreground",
-          },
-        ].map((item) => (
-          <Card key={item.label}>
-            <CardContent className="flex items-center gap-4 pt-2">
-              <span className={`flex size-11 items-center justify-center rounded-xl ${item.color}`}>
-                <item.icon className="size-5" />
-              </span>
-              <div>
-                <p className="text-2xl font-semibold">
-                  {isLoading ? "—" : typeof item.value === "number" ? formatNumber(item.value) : item.value}
-                </p>
-                <p className="text-sm text-muted-foreground">{item.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {(
+            [
+              { icon: BookOpen, label: "Kurslar", value: stats?.courses.total ?? 0, tone: "primary" },
+              { icon: Users, label: "O'quvchilar", value: stats?.students.total ?? 0, tone: "success" },
+              {
+                icon: Wallet,
+                label: "Daromad",
+                value: formatPrice(stats?.revenue.total ?? 0),
+                tone: "gold",
+              },
+              {
+                icon: Star,
+                label: "O'rtacha reyting",
+                value: stats?.rating.avg ? stats.rating.avg.toFixed(1) : "—",
+                tone: "accent",
+              },
+            ] satisfies Array<{ icon: typeof BookOpen; label: string; value: number | string; tone: StatCardTone }>
+          ).map((item) => (
+            <StatCard
+              key={item.label}
+              icon={item.icon}
+              tone={item.tone}
+              label={item.label}
+              value={isLoading ? "—" : typeof item.value === "number" ? formatNumber(item.value) : item.value}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link href="/teacher/courses">

@@ -5,6 +5,9 @@ import Link from "next/link"
 import { CheckCircle2, Circle, PlayCircle, GraduationCap } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
 import { useEnrollment } from "@/hooks/use-enrollment"
 import { useCourseLessons } from "@/hooks/use-lessons"
 import { cn } from "@/lib/utils"
@@ -15,12 +18,12 @@ interface PageProps {
 
 export default function EnrollmentDetailPage({ params }: PageProps) {
   const { enrollmentId } = use(params)
-  const { data: enrollment, isLoading } = useEnrollment(enrollmentId)
+  const { data: enrollment, isLoading, isError, refetch } = useEnrollment(enrollmentId)
   const course = enrollment && typeof enrollment.course === "object" ? enrollment.course : null
   const { data: lessons } = useCourseLessons(course?._id)
   const completedLessons = new Set(enrollment?.completedLessons ?? [])
 
-  if (isLoading || !enrollment || !course) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="h-24 animate-pulse rounded-xl bg-muted" />
@@ -29,8 +32,35 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
     )
   }
 
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />
+  }
+
+  if (!enrollment || !course) {
+    return (
+      <EmptyState
+        icon={GraduationCap}
+        title="Kurs topilmadi"
+        description="Bu kursga yozilmagansiz yoki kurs o'chirilgan bo'lishi mumkin."
+        action={<Link href="/student/courses" className="text-sm font-medium text-primary hover:underline">Kurslarimga qaytish</Link>}
+      />
+    )
+  }
+
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/student/courses" />}>Mening kurslarim</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{course.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col gap-4 rounded-2xl border border-border p-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">

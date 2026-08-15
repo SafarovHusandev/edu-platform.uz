@@ -4,31 +4,27 @@ import Link from 'next/link';
 import { ClipboardList, ChevronRight, Target, Repeat, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { useQuizzes } from '@/hooks/use-quizzes';
 
 export default function StudentQuizzesPage() {
-  const { data, isLoading } = useQuizzes({ page: 1, limit: 50 });
+  const { data, isLoading, isError, refetch } = useQuizzes({ page: 1, limit: 50 });
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Testlar</h1>
-        <p className="mt-1 text-muted-foreground">Bilimingizni sinab ko&apos;ring</p>
-      </div>
+      <PageHeader title="Testlar" description="Bilimingizni sinab ko'ring" />
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonList count={5} itemClassName="h-20" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-20 text-center">
-          <ClipboardList className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Hozircha testlar mavjud emas</p>
-        </div>
+        <EmptyState icon={ClipboardList} title="Hozircha testlar mavjud emas" />
       ) : (
-        <div className="space-y-3 flex flex-col gap-0.5">
+        <div className="flex flex-col gap-3">
           {data.items.map((quiz) => (
             <Link key={quiz._id} href={`/student/quizzes/${quiz._id}`}>
               <Card className="transition-colors hover:border-primary/40">

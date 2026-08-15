@@ -51,6 +51,9 @@ import {
   QuestionFormDialog,
   type QuestionFormValues,
 } from '@/components/quizzes/question-form-dialog';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import {
   useQuizWithAnswers,
   useAddQuestion,
@@ -98,7 +101,7 @@ const TARGET_LABELS: Record<string, string> = {
 export default function TeacherQuizDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const { data: quiz, isLoading } = useQuizWithAnswers(id);
+  const { data: quiz, isLoading, isError, refetch } = useQuizWithAnswers(id);
   const addQuestion = useAddQuestion(id);
   const updateQuestion = useUpdateQuestion(id);
   const deleteQuestion = useDeleteQuestion(id);
@@ -126,8 +129,26 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
   });
   const [limitAvailability, setLimitAvailability] = useState(false);
 
-  if (isLoading || !quiz) {
+  if (isLoading) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />;
+  }
+
+  if (!quiz) {
+    return (
+      <EmptyState
+        title="Test topilmadi"
+        description="Bu test o'chirilgan yoki mavjud emas."
+        action={
+          <Link href="/teacher/quizzes" className="text-sm font-medium text-primary hover:underline">
+            Testlarga qaytish
+          </Link>
+        }
+      />
+    );
   }
 
   const creator = typeof quiz.createdBy === 'object' ? quiz.createdBy : null;
@@ -200,6 +221,18 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-300 w-full space-y-6 ">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/teacher/quizzes" />}>Testlar</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{quiz.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" render={<Link href="/teacher/quizzes" />}>
           <ArrowLeft className="size-4" /> Testlarga qaytish
@@ -538,10 +571,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
         </div>
 
         {!quiz.questions || quiz.questions.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-12 text-center text-muted-foreground">
-            <ListChecks className="size-6" />
-            <p className="text-sm">Hali savollar qo&apos;shilmagan</p>
-          </div>
+          <EmptyState icon={ListChecks} title="Hali savollar qo'shilmagan" className="py-12" />
         ) : (
           <div className="space-y-2.5">
             {quiz.questions.map((question, idx) => (

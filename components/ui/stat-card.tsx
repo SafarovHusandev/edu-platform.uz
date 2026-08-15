@@ -8,6 +8,7 @@ const STAT_CARD_TONE_CLASSES = {
   primary: "bg-primary/10 text-primary",
   gold: "bg-gold/15 text-gold",
   success: "bg-success/15 text-success",
+  accent: "bg-accent text-accent-foreground",
   destructive: "bg-destructive/10 text-destructive",
   muted: "bg-muted text-muted-foreground",
 } as const

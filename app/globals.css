@@ -50,6 +50,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
 }
 
 :root {
@@ -89,6 +93,10 @@
   --sidebar-accent-foreground: oklch(0.35 0.08 264);
   --sidebar-border: oklch(0.92 0.01 264);
   --sidebar-ring: oklch(0.53 0.211 264 / 50%);
+  --elevation-xs: 0 1px 2px 0 oklch(0.17 0.014 264 / 6%);
+  --elevation-sm: 0 1px 3px 0 oklch(0.17 0.014 264 / 10%), 0 1px 2px -1px oklch(0.17 0.014 264 / 10%);
+  --elevation-md: 0 4px 6px -1px oklch(0.17 0.014 264 / 10%), 0 2px 4px -2px oklch(0.17 0.014 264 / 10%);
+  --elevation-lg: 0 10px 15px -3px oklch(0.17 0.014 264 / 12%), 0 4px 6px -4px oklch(0.17 0.014 264 / 12%);
 }
 
 .dark {
@@ -127,6 +135,10 @@
   --sidebar-accent-foreground: oklch(0.9 0.03 264);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.68 0.17 264 / 50%);
+  --elevation-xs: 0 1px 2px 0 oklch(0 0 0 / 30%);
+  --elevation-sm: 0 1px 3px 0 oklch(0 0 0 / 40%), 0 1px 2px -1px oklch(0 0 0 / 40%);
+  --elevation-md: 0 4px 6px -1px oklch(0 0 0 / 40%), 0 2px 4px -2px oklch(0 0 0 / 40%);
+  --elevation-lg: 0 10px 15px -3px oklch(0 0 0 / 50%), 0 4px 6px -4px oklch(0 0 0 / 50%);
 }
 
 @layer base {

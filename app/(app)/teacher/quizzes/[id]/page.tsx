@@ -440,7 +440,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                 setSettingsForm((prev) => ({ ...prev, description: e.target.value }))
               }
             />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className="text-sm text-muted-foreground">O&apos;tish balli (%)</label>
                 <Input
@@ -668,7 +668,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                       <Pencil className="size-4" />
                     </Button>
                     <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                      <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
                         <Trash2 className="size-4" />
                       </AlertDialogTrigger>
                       <AlertDialogContent>

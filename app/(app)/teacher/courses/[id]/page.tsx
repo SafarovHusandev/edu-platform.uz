@@ -201,10 +201,11 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
           <div className="flex flex-1 items-center justify-between">
             <div className="flex items-center gap-2">
               <Switch
+                id="course-published"
                 checked={course.isPublished ?? false}
                 onCheckedChange={(checked) => updateCourse.mutate({ id, isPublished: checked })}
               />
-              <Label>{course.isPublished ? 'Nashr etilgan' : 'Qoralama'}</Label>
+              <Label htmlFor="course-published">{course.isPublished ? 'Nashr etilgan' : 'Qoralama'}</Label>
             </div>
             <AlertDialog>
               <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>

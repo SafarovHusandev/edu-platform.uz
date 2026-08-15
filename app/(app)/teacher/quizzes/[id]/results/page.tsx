@@ -113,8 +113,11 @@ function ReviewDialog({ attempt, questions, isPending, onOpenChange, onSubmit }:
                   </p>
                 )}
                 <div className="flex items-center gap-2">
-                  <Label className="text-xs">Ball (max {question.points})</Label>
+                  <Label htmlFor={`score-${question._id}`} className="text-xs">
+                    Ball (max {question.points})
+                  </Label>
                   <Input
+                    id={`score-${question._id}`}
                     type="number"
                     min={0}
                     max={question.points}

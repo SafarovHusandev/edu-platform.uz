@@ -100,6 +100,7 @@ export default function WalletPage() {
             step={1000}
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
+            aria-label="To'lov miqdori (so'm)"
           />
           <Button onClick={handleTopUp} disabled={createPayment.isPending || amount < 1000}>
             {createPayment.isPending ? (

@@ -64,7 +64,7 @@ export default function TeacherQuizzesPage() {
                   <BarChart3 className="size-4" />
                 </Button>
                 <AlertDialog>
-                  <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                  <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
                     <Trash2 className="size-4" />
                   </AlertDialogTrigger>
                   <AlertDialogContent>

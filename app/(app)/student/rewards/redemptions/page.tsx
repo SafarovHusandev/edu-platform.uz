@@ -5,6 +5,10 @@ import { ArrowLeft, PackageCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonList } from "@/components/ui/skeleton"
 import { useMyRedemptions } from "@/hooks/use-rewards"
 import { formatDate } from "@/lib/format"
 import type { RedemptionStatus } from "@/types"
@@ -22,10 +26,21 @@ const STATUS_VARIANTS: Record<RedemptionStatus, "secondary" | "default" | "destr
 }
 
 export default function MyRedemptionsPage() {
-  const { data, isLoading } = useMyRedemptions(1, 24)
+  const { data, isLoading, isError, refetch } = useMyRedemptions(1, 24)
 
   return (
     <div>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/student/rewards" />}>Mukofotlar</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Mening yutuqlarim</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <Button variant="ghost" size="sm" render={<Link href="/student/rewards" />} className="mb-4 w-fit">
         <ArrowLeft className="size-4" /> Mukofotlarga qaytish
       </Button>
@@ -34,16 +49,11 @@ export default function MyRedemptionsPage() {
 
       <div className="mt-6">
         {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
-            ))}
-          </div>
+          <SkeletonList count={4} itemClassName="h-16" />
+        ) : isError ? (
+          <ErrorState onRetry={() => refetch()} />
         ) : !data || data.items.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-            <PackageCheck className="size-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Hali mukofotga almashtirmagansiz</p>
-          </div>
+          <EmptyState icon={PackageCheck} title="Hali mukofotga almashtirmagansiz" />
         ) : (
           <div className="space-y-2">
             {data.items.map((redemption) => {

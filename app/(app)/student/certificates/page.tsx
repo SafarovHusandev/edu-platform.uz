@@ -3,32 +3,30 @@
 import { Award } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { DownloadCertificateButton } from "@/components/certificates/download-certificate-button"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonCardGrid } from "@/components/ui/skeleton"
 import { useMyCertificates } from "@/hooks/use-certificates"
 import { formatDate } from "@/lib/format"
 
 export default function StudentCertificatesPage() {
-  const { data, isLoading } = useMyCertificates(1, 24)
+  const { data, isLoading, isError, refetch } = useMyCertificates(1, 24)
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Sertifikatlarim</h1>
-        <p className="mt-1 text-muted-foreground">Yakunlagan kurslaringiz uchun sertifikatlar</p>
-      </div>
+      <PageHeader title="Sertifikatlarim" description="Yakunlagan kurslaringiz uchun sertifikatlar" />
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonCardGrid count={3} itemClassName="h-40" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-20 text-center">
-          <Award className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Hali sertifikatlaringiz yo&apos;q. Kursni yakunlab, birinchi sertifikatingizni oling!
-          </p>
-        </div>
+        <EmptyState
+          icon={Award}
+          title="Hali sertifikatlaringiz yo'q"
+          description="Kursni yakunlab, birinchi sertifikatingizni oling!"
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.items.map((certificate) => {

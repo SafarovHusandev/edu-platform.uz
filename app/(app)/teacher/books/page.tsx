@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { BookMarked, Plus, Trash2, Download } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonList } from "@/components/ui/skeleton"
 import { useBooks, useDeleteBook } from "@/hooks/use-books"
 import { useAuthStore } from "@/store/auth-store"
 import { resolveAssetUrl } from "@/lib/config"
@@ -23,7 +28,7 @@ import { formatNumber } from "@/lib/format"
 
 export default function TeacherBooksPage() {
   const user = useAuthStore((s) => s.user)
-  const { data, isLoading } = useBooks({ page: 1, limit: 100 })
+  const { data, isLoading, isError, refetch } = useBooks({ page: 1, limit: 100 })
   const deleteBook = useDeleteBook()
 
   const myBooks = data?.items.filter((book) => {
@@ -33,27 +38,22 @@ export default function TeacherBooksPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Kitoblarim</h1>
-          <p className="mt-1 text-muted-foreground">Yuklagan kitoblaringizni boshqaring</p>
-        </div>
-        <Button render={<Link href="/teacher/books/new" />}>
-          <Plus className="size-4" /> Yangi kitob
-        </Button>
-      </div>
+      <PageHeader
+        title="Kitoblarim"
+        description="Yuklagan kitoblaringizni boshqaring"
+        actions={
+          <Button render={<Link href="/teacher/books/new" />}>
+            <Plus className="size-4" /> Yangi kitob
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonList count={4} itemClassName="h-20" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !myBooks || myBooks.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-20 text-center">
-          <BookMarked className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Hali kitob yuklamagansiz</p>
-        </div>
+        <EmptyState icon={BookMarked} title="Hali kitob yuklamagansiz" />
       ) : (
         <div className="space-y-3">
           {myBooks.map((book) => {
@@ -63,8 +63,7 @@ export default function TeacherBooksPage() {
                 <CardContent className="flex items-center gap-4 pt-2">
                   <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary">
                     {cover ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cover} alt={book.title} className="size-full object-cover" />
+                      <Image src={cover} alt={book.title} width={44} height={44} unoptimized className="size-full object-cover" />
                     ) : (
                       <BookMarked className="size-5" />
                     )}
@@ -82,7 +81,7 @@ export default function TeacherBooksPage() {
                     </div>
                   </Link>
                   <AlertDialog>
-                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
                       <Trash2 className="size-4" />
                     </AlertDialogTrigger>
                     <AlertDialogContent>

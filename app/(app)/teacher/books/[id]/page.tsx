@@ -2,6 +2,7 @@
 
 import { use, useRef } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -48,6 +49,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
 import {
   useBook,
   useDeleteBook,
@@ -78,7 +82,7 @@ type BookFormValues = z.infer<typeof bookSchema>
 export default function TeacherBookDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
-  const { data: book, isLoading } = useBook(id)
+  const { data: book, isLoading, isError, refetch } = useBook(id)
   const { data: categories } = useBookCategories()
   const updateBook = useUpdateBook()
   const deleteBook = useDeleteBook()
@@ -102,14 +106,43 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
       : undefined,
   })
 
-  if (isLoading || !book) {
+  if (isLoading) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />
+  }
+
+  if (!book) {
+    return (
+      <EmptyState
+        title="Kitob topilmadi"
+        action={
+          <Link href="/teacher/books" className="text-sm font-medium text-primary hover:underline">
+            Kitoblarga qaytish
+          </Link>
+        }
+      />
+    )
   }
 
   const cover = resolveAssetUrl(book.coverImage)
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/teacher/books" />}>Kitoblarim</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{book.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" render={<Link href="/teacher/books" />}>
           <ArrowLeft className="size-4" /> Kitoblarga qaytish
@@ -124,13 +157,13 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
         <CardContent className="flex items-center gap-4 pt-2">
           <div className="relative aspect-3/4 w-28 shrink-0 overflow-hidden rounded-lg bg-muted">
             {cover && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={cover} alt={book.title} className="size-full object-cover" />
+              <Image src={cover} alt={book.title} fill unoptimized className="object-cover" />
             )}
             <button
               type="button"
+              aria-label="Muqovani almashtirish"
               onClick={() => coverInputRef.current?.click()}
-              className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity hover:opacity-100"
+              className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {uploadCover.isPending ? (
                 <Loader2 className="size-5 animate-spin" />
@@ -294,7 +327,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="category"

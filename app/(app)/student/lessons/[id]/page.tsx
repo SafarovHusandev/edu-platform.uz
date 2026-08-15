@@ -2,9 +2,11 @@
 
 import { use } from "react"
 import Link from "next/link"
-import { ArrowLeft, CheckCircle2, FileDown, Loader2 } from "lucide-react"
+import { ArrowLeft, BookOpen, CheckCircle2, FileDown, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
 import { useLesson, useCompleteLesson } from "@/hooks/use-lessons"
 import { resolveAssetUrl } from "@/lib/config"
 
@@ -14,11 +16,29 @@ interface PageProps {
 
 export default function LessonViewerPage({ params }: PageProps) {
   const { id } = use(params)
-  const { data: lesson, isLoading } = useLesson(id)
+  const { data: lesson, isLoading, isError, refetch } = useLesson(id)
   const completeLesson = useCompleteLesson()
 
-  if (isLoading || !lesson) {
+  if (isLoading) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />
+  }
+
+  if (!lesson) {
+    return (
+      <EmptyState
+        icon={BookOpen}
+        title="Dars topilmadi"
+        action={
+          <Link href="/student/courses" className="text-sm font-medium text-primary hover:underline">
+            Kurslarimga qaytish
+          </Link>
+        }
+      />
+    )
   }
 
   const material = resolveAssetUrl(lesson.material)

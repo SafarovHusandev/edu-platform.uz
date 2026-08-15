@@ -2,31 +2,23 @@
 
 import { use, useEffect, useRef } from "react"
 import Link from "next/link"
-import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { ErrorState } from "@/components/ui/error-state"
 import { usePaymentStatus } from "@/hooks/use-payment"
 import { refreshCurrentUser } from "@/hooks/use-auth"
 import { formatPrice } from "@/lib/format"
+import { getPaymentStatusConfig } from "@/lib/payment-status"
 import { cn } from "@/lib/utils"
 
 interface PageProps {
   params: Promise<{ invoiceId: string }>
 }
 
-const STATUS_CONFIG = {
-  success: { icon: CheckCircle2, label: "To'lov muvaffaqiyatli", className: "bg-success/15 text-success" },
-  draft: { icon: Clock, label: "To'lov kutilmoqda", className: "bg-muted text-muted-foreground" },
-  progress: { icon: Clock, label: "To'lov amalga oshirilmoqda", className: "bg-muted text-muted-foreground" },
-  billing: { icon: Clock, label: "To'lov amalga oshirilmoqda", className: "bg-muted text-muted-foreground" },
-  hold: { icon: Clock, label: "To'lov tekshirilmoqda", className: "bg-muted text-muted-foreground" },
-  error: { icon: XCircle, label: "To'lov amalga oshmadi", className: "bg-destructive/10 text-destructive" },
-  revert: { icon: XCircle, label: "To'lov qaytarildi", className: "bg-destructive/10 text-destructive" },
-}
-
 export default function PaymentStatusPage({ params }: PageProps) {
   const { invoiceId } = use(params)
-  const { data: invoice, isLoading } = usePaymentStatus(invoiceId, true)
+  const { data: invoice, isLoading, isError, refetch } = usePaymentStatus(invoiceId, true)
   const refreshed = useRef(false)
 
   useEffect(() => {
@@ -35,6 +27,10 @@ export default function PaymentStatusPage({ params }: PageProps) {
       refreshCurrentUser()
     }
   }, [invoice?.status])
+
+  if (isError) {
+    return <ErrorState title="To'lov holatini tekshirib bo'lmadi" onRetry={() => refetch()} />
+  }
 
   if (isLoading || !invoice) {
     return (
@@ -45,7 +41,7 @@ export default function PaymentStatusPage({ params }: PageProps) {
     )
   }
 
-  const config = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.draft
+  const config = getPaymentStatusConfig(invoice.status)
   const Icon = config.icon
 
   return (

@@ -48,6 +48,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { PageHeader } from "@/components/ui/page-header"
 import { useAuthStore } from "@/store/auth-store"
 import {
   useChangePassword,
@@ -166,10 +167,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Profil</h1>
-        <p className="mt-1 text-muted-foreground">Shaxsiy ma&apos;lumotlaringizni boshqaring</p>
-      </div>
+      <PageHeader title="Profil" description="Shaxsiy ma'lumotlaringizni boshqaring" />
 
       <Card>
         <CardContent className="flex flex-col items-center gap-4 pt-2 sm:flex-row">
@@ -181,7 +179,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
+              className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Rasm yuklash"
             >
               {uploadAvatar.isPending ? (

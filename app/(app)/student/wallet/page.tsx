@@ -6,6 +6,7 @@ import { CreditCard, Loader2, ShieldCheck, Wallet } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/ui/page-header"
 import { useAuthStore } from "@/store/auth-store"
 import { useCreatePayment } from "@/hooks/use-payment"
 import { formatNumber, formatPrice, toTiyin } from "@/lib/format"
@@ -57,10 +58,10 @@ export default function WalletPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Hamyon</h1>
-        <p className="mt-1 text-muted-foreground">Balansingizni to&apos;ldiring va Premium imkoniyatlardan foydalaning</p>
-      </div>
+      <PageHeader
+        title="Hamyon"
+        description="Balansingizni to'ldiring va Premium imkoniyatlardan foydalaning"
+      />
 
       <Card className="bg-linear-to-br from-primary to-primary/70 text-primary-foreground">
         <CardContent className="flex items-center gap-4 pt-2">
@@ -80,7 +81,7 @@ export default function WalletPage() {
           <CardDescription>Miqdorni tanlang yoki qo&apos;lda kiriting</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {QUICK_AMOUNTS.map((value) => (
               <Button
                 key={value}

@@ -16,6 +16,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { SkeletonCardGrid } from "@/components/ui/skeleton"
 import { useRewards, useRedeemReward } from "@/hooks/use-rewards"
 import { useAuthStore } from "@/store/auth-store"
 import { resolveAssetUrl } from "@/lib/config"
@@ -23,38 +27,33 @@ import { formatNumber } from "@/lib/format"
 
 export default function StudentRewardsPage() {
   const user = useAuthStore((s) => s.user)
-  const { data, isLoading } = useRewards({ page: 1, limit: 24 })
+  const { data, isLoading, isError, refetch } = useRewards({ page: 1, limit: 24 })
   const redeem = useRedeemReward()
   const diamonds = user?.diamonds ?? 0
 
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Mukofotlar</h1>
-          <p className="mt-1 text-muted-foreground">Olmoslaringizni sovg&apos;alarga almashtiring</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-foreground">
-            <Gem className="size-4 text-gold" /> {formatNumber(diamonds)}
-          </span>
-          <Button variant="outline" size="sm" render={<Link href="/student/rewards/redemptions" />}>
-            <PackageCheck className="size-4" /> Mening yutuqlarim
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Mukofotlar"
+        description="Olmoslaringizni sovg'alarga almashtiring"
+        actions={
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-foreground">
+              <Gem className="size-4 text-gold" /> {formatNumber(diamonds)}
+            </span>
+            <Button variant="outline" size="sm" render={<Link href="/student/rewards/redemptions" />}>
+              <PackageCheck className="size-4" /> Mening yutuqlarim
+            </Button>
+          </div>
+        }
+      />
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-56 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
+        <SkeletonCardGrid count={6} itemClassName="h-56" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-20 text-center">
-          <Gift className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Hozircha mukofotlar mavjud emas</p>
-        </div>
+        <EmptyState icon={Gift} title="Hozircha mukofotlar mavjud emas" />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.items.map((reward) => {

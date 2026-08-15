@@ -30,6 +30,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
 import { useLesson, useUpdateLesson, useDeleteLesson, useUploadMaterial } from "@/hooks/use-lessons"
 import { resolveAssetUrl } from "@/lib/config"
 
@@ -48,7 +50,7 @@ type FormValues = z.infer<typeof schema>
 export default function TeacherLessonEditPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
-  const { data: lesson, isLoading } = useLesson(id)
+  const { data: lesson, isLoading, isError, refetch } = useLesson(id)
   const updateLesson = useUpdateLesson(lesson?.course)
   const deleteLesson = useDeleteLesson(lesson?.course)
   const uploadMaterial = useUploadMaterial(lesson?.course)
@@ -61,8 +63,25 @@ export default function TeacherLessonEditPage({ params }: PageProps) {
       : undefined,
   })
 
-  if (isLoading || !lesson) {
+  if (isLoading) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />
+  }
+
+  if (!lesson) {
+    return (
+      <EmptyState
+        title="Dars topilmadi"
+        action={
+          <Link href="/teacher/courses" className="text-sm font-medium text-primary hover:underline">
+            Kurslarga qaytish
+          </Link>
+        }
+      />
+    )
   }
 
   const material = resolveAssetUrl(lesson.material)

@@ -191,7 +191,7 @@ export default function AdminPromoCodesPage() {
                     <FormItem>
                       <FormLabel>Chegirma (%)</FormLabel>
                       <FormControl>
-                        <Input type="number" min={1} max={100} {...field} />
+                        <Input type="number" min={1} max={100} {...field} value={field.value as number} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -204,7 +204,7 @@ export default function AdminPromoCodesPage() {
                     <FormItem>
                       <FormLabel>Maks. foydalanish</FormLabel>
                       <FormControl>
-                        <Input type="number" min={1} {...field} />
+                        <Input type="number" min={1} {...field} value={field.value as number} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

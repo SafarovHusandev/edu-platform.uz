@@ -273,7 +273,7 @@ export default function AdminRewardsPage() {
                     <FormItem>
                       <FormLabel>Narxi (olmos)</FormLabel>
                       <FormControl>
-                        <Input type="number" min={1} {...field} />
+                        <Input type="number" min={1} {...field} value={field.value as number} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -286,7 +286,7 @@ export default function AdminRewardsPage() {
                     <FormItem>
                       <FormLabel>Miqdori</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} disabled={unlimited} {...field} />
+                        <Input type="number" min={0} disabled={unlimited} {...field} value={field.value as number} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

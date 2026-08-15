@@ -137,7 +137,7 @@ export default function AdminUsersPage() {
         role: values.role,
         tarif: values.tarif,
         ...(values.role === "student"
-          ? { grade: { number: Number(values.gradeNumber), letter: values.gradeLetter } }
+          ? { grade: { number: Number(values.gradeNumber), letter: values.gradeLetter ?? null } }
           : {}),
       },
       { onSuccess: () => setEditing(null) }

@@ -19,7 +19,7 @@ const PODIUM_STYLES = [
     order: "sm:order-2",
     ring: "ring-gold",
     badge: "bg-gold text-gold-foreground",
-    card: "sm:-translate-y-4 border-gold/40 bg-gold/10",
+    card: "sm:-translate-y-4 hover:scale-105 transition-all duration-300 bg-amber-50/60 border border-amber-300 shadow-xl shadow-amber-500/30 dark:bg-amber-500/10 dark:border-[#D4AF37]/40 dark:shadow-2xl dark:shadow-[#D4AF37]/40",
     avatarSize: "size-20",
     icon: Crown,
   },
@@ -27,7 +27,7 @@ const PODIUM_STYLES = [
     order: "sm:order-1",
     ring: "ring-muted-foreground/50",
     badge: "bg-muted-foreground text-background",
-    card: "border-border bg-muted/30",
+    card: "hover:scale-105 transition-all duration-300 bg-slate-100/70 border border-slate-300 shadow-xl shadow-slate-400/40 dark:bg-slate-500/10 dark:border-slate-500/30 dark:shadow-2xl dark:shadow-slate-500/30",
     avatarSize: "size-16",
     icon: Medal,
   },
@@ -35,7 +35,7 @@ const PODIUM_STYLES = [
     order: "sm:order-3",
     ring: "ring-amber-700/50",
     badge: "bg-amber-700 text-white",
-    card: "border-amber-700/30 bg-amber-700/10",
+    card: "hover:scale-105 transition-all duration-300 bg-orange-50/70 border border-orange-300 shadow-xl shadow-orange-600/30 dark:bg-amber-700/10 dark:border-amber-700/40 dark:shadow-2xl dark:shadow-[#CD7F32]/40",
     avatarSize: "size-16",
     icon: Medal,
   },
@@ -75,7 +75,7 @@ function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
           </p>
         )}
       </div>
-      <span className="flex items-center gap-1.5 rounded-full bg-background px-2.5 py-1 text-sm font-semibold text-gold-foreground shadow-xs">
+      <span className="flex items-center gap-1.5 rounded-full bg-background px-2.5 py-1 text-sm font-semibold text-gold-foreground shadow-xs animate-pulse dark:text-white">
         <Gem className="size-4 text-gold" />
         {formatNumber(entry.diamonds ?? 0)}
       </span>
@@ -141,36 +141,36 @@ export default function LeaderboardPage() {
                 <div
                   key={entry._id}
                   className={cn(
-                    "flex items-center gap-4 rounded-xl border px-4 py-3 transition-colors",
+                    "flex items-center gap-4 rounded-xl border px-4 py-3 shadow-sm hover:shadow-md hover:translate-x-1 transition-all duration-300",
                     isMe
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border hover:border-border hover:bg-muted/30"
+                      ? "border-blue-400 bg-blue-50/50 dark:border-blue-500/40 dark:bg-blue-500/10 text-slate-900 dark:text-white"
+                      : "bg-white border-slate-100 hover:bg-slate-50/80 dark:bg-slate-900/50 dark:border-slate-800 dark:text-white dark:hover:bg-slate-800/50"
                   )}
                 >
                   <div className="flex w-8 shrink-0 items-center justify-center">
-                    <span className="text-sm font-medium text-muted-foreground">{rank}</span>
+                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{rank}</span>
                   </div>
-                  <Avatar>
+                  <Avatar className="border border-slate-200 dark:border-slate-700">
                     <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
                     <AvatarFallback>{initials(entry.name)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="flex items-center gap-1.5 text-sm font-medium">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-white">
                       {entry.name}
                       {isMe && (
-                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 dark:bg-blue-400/20">
                           Siz
                         </span>
                       )}
                     </p>
                     {entry.grade?.number && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {entry.grade.number}-{entry.grade.letter} sinf
                       </p>
                     )}
                   </div>
-                  <span className="flex items-center gap-1.5 text-sm font-semibold text-gold-foreground">
-                    <Gem className="size-4 text-gold" />
+                  <span className="flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-[#D4AF37]">
+                    <Gem className="size-4 animate-pulse text-amber-500 dark:text-[#D4AF37]" />
                     {formatNumber(entry.diamonds ?? 0)}
                   </span>
                 </div>

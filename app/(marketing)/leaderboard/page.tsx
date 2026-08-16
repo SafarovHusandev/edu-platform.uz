@@ -1,7 +1,9 @@
 "use client"
 
+
+import { LuMedal } from "react-icons/lu"
 import { useState } from "react"
-import { Trophy, Gem, Crown, Medal, LogIn } from "lucide-react"
+import { Trophy, Gem, Crown, LogIn } from "lucide-react"
 import { Container } from "@/components/layout/container"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -29,7 +31,7 @@ const PODIUM_STYLES = [
     badge: "bg-muted-foreground text-background",
     card: "hover:scale-105 transition-all duration-300 bg-slate-100/70 border border-slate-300 shadow-xl shadow-slate-400/40 dark:bg-slate-500/10 dark:border-slate-500/30 dark:shadow-2xl dark:shadow-slate-500/30",
     avatarSize: "size-16",
-    icon: Medal,
+    icon: LuMedal,
   },
   {
     order: "sm:order-3",
@@ -37,7 +39,7 @@ const PODIUM_STYLES = [
     badge: "bg-amber-700 text-white",
     card: "hover:scale-105 transition-all duration-300 bg-orange-50/70 border border-orange-300 shadow-xl shadow-orange-600/30 dark:bg-amber-700/10 dark:border-amber-700/40 dark:shadow-2xl dark:shadow-[#CD7F32]/40",
     avatarSize: "size-16",
-    icon: Medal,
+    icon: LuMedal,
   },
 ]
 
@@ -76,7 +78,7 @@ function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
         )}
       </div>
       <span className="flex items-center gap-1.5 rounded-full bg-background px-2.5 py-1 text-sm font-semibold text-gold-foreground shadow-xs animate-pulse dark:text-white">
-        <Gem className="size-4 text-gold" />
+        <svg className="size-5 animate-pulse text-amber-500 dark:text-[#D4AF37]" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#D4AF37"><path d="M480-120 80-600l120-240h560l120 240-400 480Zm-95-520h190l-60-120h-70l-60 120Zm55 347v-267H218l222 267Zm80 0 222-267H520v267Zm144-347h106l-60-120H604l60 120Zm-474 0h106l60-120H250l-60 120Z"/></svg>
         {formatNumber(entry.diamonds ?? 0)}
       </span>
     </div>
@@ -170,7 +172,7 @@ export default function LeaderboardPage() {
                     )}
                   </div>
                   <span className="flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-[#D4AF37]">
-                    <Gem className="size-4 animate-pulse text-amber-500 dark:text-[#D4AF37]" />
+                    <svg className="size-5 animate-pulse text-amber-500 dark:text-[#D4AF37]" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#D4AF37"><path d="M480-120 80-600l120-240h560l120 240-400 480Zm-95-520h190l-60-120h-70l-60 120Zm55 347v-267H218l222 267Zm80 0 222-267H520v267Zm144-347h106l-60-120H604l60 120Zm-474 0h106l60-120H250l-60 120Z"/></svg>
                     {formatNumber(entry.diamonds ?? 0)}
                   </span>
                 </div>

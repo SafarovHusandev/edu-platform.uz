@@ -27,6 +27,7 @@ import { formatNumber } from "@/lib/format"
 
 export default function StudentRewardsPage() {
   const user = useAuthStore((s) => s.user)
+  const isStudent = user?.role === "student"
   const { data, isLoading, isError, refetch } = useRewards({ page: 1, limit: 24 })
   const redeem = useRedeemReward()
   const diamonds = user?.diamonds ?? 0
@@ -35,16 +36,20 @@ export default function StudentRewardsPage() {
     <div>
       <PageHeader
         title="Mukofotlar"
-        description="Olmoslaringizni sovg'alarga almashtiring"
+        description={
+          isStudent ? "Olmoslaringizni sovg'alarga almashtiring" : "O'quvchilar uchun sovg'alar katalogi"
+        }
         actions={
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-foreground">
-              <Gem className="size-4 text-gold" /> {formatNumber(diamonds)}
-            </span>
-            <Button variant="outline" size="sm" render={<Link href="/student/rewards/redemptions" />}>
-              <PackageCheck className="size-4" /> Mening yutuqlarim
-            </Button>
-          </div>
+          isStudent ? (
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-foreground">
+                <Gem className="size-4 text-gold" /> {formatNumber(diamonds)}
+              </span>
+              <Button variant="outline" size="sm" render={<Link href="/student/rewards/redemptions" />}>
+                <PackageCheck className="size-4" /> Mening yutuqlarim
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
@@ -88,28 +93,30 @@ export default function StudentRewardsPage() {
                           : "Tugagan"}
                     </span>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger
-                      render={<Button className="mt-1 w-full" disabled={!canAfford} />}
-                    >
-                      Almashtirish
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Mukofotga almashtirasizmi?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          &quot;{reward.title}&quot; uchun {formatNumber(reward.cost)} olmos
-                          yechiladi. Bu amalni bekor qilib bo&apos;lmaydi.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => redeem.mutate(reward._id)}>
-                          Tasdiqlash
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {isStudent && (
+                    <AlertDialog>
+                      <AlertDialogTrigger
+                        render={<Button className="mt-1 w-full" disabled={!canAfford} />}
+                      >
+                        Almashtirish
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Mukofotga almashtirasizmi?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            &quot;{reward.title}&quot; uchun {formatNumber(reward.cost)} olmos
+                            yechiladi. Bu amalni bekor qilib bo&apos;lmaydi.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => redeem.mutate(reward._id)}>
+                            Tasdiqlash
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </CardContent>
               </Card>
             )

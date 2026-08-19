@@ -12,6 +12,10 @@ const PROTECTED_PREFIXES = [
   "/admin",
 ]
 const ROLE_PREFIXES: Record<string, string[]> = {
+  // Teachers can browse the rewards catalog, but redemption stays student-only
+  // (the backend also restricts /rewards/:id/redeem and /redemptions/my to students).
+  "/student/rewards/redemptions": ["student"],
+  "/student/rewards": ["student", "teacher"],
   "/student": ["student"],
   "/teacher": ["teacher"],
   "/admin": ["admin", "superadmin"],
@@ -36,10 +40,12 @@ export function proxy(request: NextRequest) {
   }
 
   if (token && role) {
-    for (const [prefix, allowedRoles] of Object.entries(ROLE_PREFIXES)) {
-      if (pathname.startsWith(prefix) && !allowedRoles.includes(role)) {
-        return NextResponse.redirect(new URL("/dashboard", request.url))
-      }
+    const matchedPrefix = Object.keys(ROLE_PREFIXES)
+      .filter((prefix) => pathname.startsWith(prefix))
+      .sort((a, b) => b.length - a.length)[0]
+
+    if (matchedPrefix && !ROLE_PREFIXES[matchedPrefix].includes(role)) {
+      return NextResponse.redirect(new URL("/dashboard", request.url))
     }
   }
 

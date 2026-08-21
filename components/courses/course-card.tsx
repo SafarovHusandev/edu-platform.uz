@@ -1,34 +1,37 @@
-import Link from "next/link"
-import Image from "next/image"
-import { Star, Users, BookOpen, GraduationCap, ArrowRight, Sparkles } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import type { Course } from "@/types"
-import { formatPrice, formatNumber, initials } from "@/lib/format"
-import { resolveAssetUrl } from "@/lib/config"
+import Link from 'next/link';
+import Image from 'next/image';
+import { Star, Users, BookOpen, GraduationCap, ArrowRight, Sparkles } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { Course } from '@/types';
+import { formatPrice, formatNumber, initials } from '@/lib/format';
+import { resolveAssetUrl } from '@/lib/config';
 
 export function CourseCard({ course }: { course: Course }) {
-  const category = typeof course.category === "object" ? course.category?.name : undefined
-  const teacher = typeof course.teacher === "object" ? course.teacher : undefined
-  const teacherName = teacher?.name || (typeof course.teacher === "string" ? course.teacher : undefined)
-  const teacherAvatar = teacher?.avatar ? resolveAssetUrl(teacher.avatar) : undefined
-  const thumbnail = resolveAssetUrl(course.thumbnail)
-  const isFree = !course.price || course.price === 0
+  const category = typeof course.category === 'object' ? course.category?.name : undefined;
+  const teacher = typeof course.teacher === 'object' ? course.teacher : undefined;
+  const teacherName =
+    teacher?.name || (typeof course.teacher === 'string' ? course.teacher : undefined);
+  const teacherAvatar = teacher?.avatar ? resolveAssetUrl(teacher.avatar) : undefined;
+  const thumbnail = resolveAssetUrl(course.thumbnail);
+  const isFree = !course.price || course.price === 0;
 
   return (
     <Link href={`/courses/${course._id}`} className="group block h-full select-none outline-none">
       <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-card-foreground shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 dark:border-border/60 dark:hover:border-primary/50 dark:hover:shadow-primary/10">
         {/* Media / Thumbnail */}
-        <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted/70">
+        <div className="relative w-full h-56 sm:h-64 overflow-hidden bg-muted/70">
           {thumbnail ? (
             <Image
               src={thumbnail}
               alt={course.title}
               fill
               unoptimized
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              loading="eager"
               className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             />
           ) : (
-            <div className="relative flex size-full items-center justify-center bg-linear-to-br from-primary/15 via-primary/5 to-accent/30">
+            <div className="relative flex h-full w-full items-center justify-center bg-linear-to-br from-primary/15 via-primary/5 to-accent/30">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.2),transparent)]" />
               <div className="flex size-14 items-center justify-center rounded-2xl bg-background/80 shadow-md backdrop-blur-md transition-transform duration-300 group-hover:scale-110">
                 <GraduationCap className="size-7 text-primary" />
@@ -60,14 +63,16 @@ export function CourseCard({ course }: { course: Course }) {
         </div>
 
         {/* Content Body */}
-        <div className="flex flex-1 flex-col justify-between gap-4 p-4 sm:p-5">
+        <div className="flex flex-1 flex-col justify-between gap-2 p-4 sm:p-5">
           <div className="space-y-2.5">
             {/* Teacher Row */}
             {teacherName && (
               <div className="flex items-center gap-2">
                 <Avatar size="sm" className="size-5 border border-border">
                   {teacherAvatar && <AvatarImage src={teacherAvatar} alt={teacherName} />}
-                  <AvatarFallback className="text-[10px] font-medium">{initials(teacherName)}</AvatarFallback>
+                  <AvatarFallback className="text-[10px] font-medium">
+                    {initials(teacherName)}
+                  </AvatarFallback>
                 </Avatar>
                 <span className="line-clamp-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                   {teacherName}
@@ -95,7 +100,9 @@ export function CourseCard({ course }: { course: Course }) {
                   <Star className="size-3.5 fill-amber-400 text-amber-400" />
                   {course.rating.toFixed(1)}
                   {course.reviewsCount !== undefined && (
-                    <span className="text-[11px] font-normal text-muted-foreground">({course.reviewsCount})</span>
+                    <span className="text-[11px] font-normal text-muted-foreground">
+                      ({course.reviewsCount})
+                    </span>
                   )}
                 </span>
               ) : (
@@ -121,7 +128,7 @@ export function CourseCard({ course }: { course: Course }) {
             </div>
 
             {/* Price & Action Row */}
-            <div className="flex items-center justify-between border-t border-border/50 pt-3">
+            <div className="flex items-end justify-between border-t border-border/50 pt-3">
               <div className="flex flex-col">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   Narxi
@@ -129,8 +136,8 @@ export function CourseCard({ course }: { course: Course }) {
                 <span
                   className={
                     isFree
-                      ? "text-base font-bold text-success"
-                      : "text-base font-bold text-foreground transition-colors group-hover:text-primary"
+                      ? 'text-base font-bold text-success'
+                      : 'text-base font-bold text-foreground transition-colors group-hover:text-primary'
                   }
                 >
                   {formatPrice(course.price)}
@@ -146,13 +153,13 @@ export function CourseCard({ course }: { course: Course }) {
         </div>
       </div>
     </Link>
-  )
+  );
 }
 
 export function CourseCardSkeleton() {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-xs">
-      <div className="relative aspect-[16/10] w-full animate-pulse bg-muted/80">
+      <div className="relative w-full h-56 animate-pulse bg-muted/80">
         <div className="absolute top-3 left-3 h-5 w-20 rounded-full bg-muted-foreground/15" />
       </div>
       <div className="flex flex-1 flex-col justify-between gap-4 p-4 sm:p-5">
@@ -184,5 +191,5 @@ export function CourseCardSkeleton() {
         </div>
       </div>
     </div>
-  )
+  );
 }

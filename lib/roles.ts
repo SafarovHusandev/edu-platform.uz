@@ -43,19 +43,19 @@ export interface NavItem {
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: 'Bosh sahifa', href: '/admin', icon: LayoutDashboard },
   { label: 'Foydalanuvchilar', href: '/admin/users', icon: Users },
-  { label: 'Kurslar', href: '/admin/courses', icon: BookOpen },
+  { label: 'Kurslar', href: '/admin/courses', icon: GraduationCap },
   { label: 'Testlar', href: '/admin/quizzes', icon: ClipboardList },
   { label: 'Kategoriyalar', href: '/admin/categories', icon: Tags },
   { label: 'Kitob kategoriyalari', href: '/admin/book-categories', icon: Tag },
   { label: 'Mukofotlar', href: '/admin/rewards', icon: Gift },
-  { label: 'Yutuqlar', href: '/admin/redemptions', icon: PackageCheck },
+  { label: 'Yutuqlar', href: '/admin/redemptions', icon: Trophy },
   { label: 'Promo kodlar', href: '/admin/promo-codes', icon: TicketPercent },
 ];
 
 export const NAV_ITEMS: Record<Role, NavItem[]> = {
   student: [
     { label: 'Bosh sahifa', href: '/student', icon: LayoutDashboard },
-    { label: 'Mening kurslarim', href: '/student/courses', icon: BookOpen },
+    { label: 'Mening kurslarim', href: '/student/courses', icon: GraduationCap },
     { label: 'Testlar', href: '/student/quizzes', icon: ClipboardList },
     { label: 'Kutubxona', href: '/books', icon: Library },
     { label: 'Sertifikatlar', href: '/student/certificates', icon: ScrollText },
@@ -65,7 +65,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   ],
   teacher: [
     { label: 'Bosh sahifa', href: '/teacher', icon: LayoutDashboard },
-    { label: 'Kurslarim', href: '/teacher/courses', icon: BookOpen },
+    { label: 'Kurslarim', href: '/teacher/courses', icon: GraduationCap },
     { label: 'Testlar', href: '/teacher/quizzes', icon: ClipboardList },
     { label: 'Kitoblarim', href: '/teacher/books', icon: Library },
     { label: 'Mukofotlar', href: '/student/rewards', icon: Gift },

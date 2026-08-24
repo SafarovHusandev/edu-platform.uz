@@ -51,7 +51,14 @@ import {
   QuestionFormDialog,
   type QuestionFormValues,
 } from '@/components/quizzes/question-form-dialog';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import {
@@ -143,7 +150,10 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
         title="Test topilmadi"
         description="Bu test o'chirilgan yoki mavjud emas."
         action={
-          <Link href="/teacher/quizzes" className="text-sm font-medium text-primary hover:underline">
+          <Link
+            href="/teacher/quizzes"
+            className="text-sm font-medium text-primary hover:underline"
+          >
             Testlarga qaytish
           </Link>
         }
@@ -383,7 +393,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
           </div>
 
           {(quiz.availableFrom || quiz.availableUntil) && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-xs text-gold-foreground">
+            <div className="flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-md text-gold-foreground">
               <Clock className="size-3.5 shrink-0" />
               <span>
                 {quiz.availableFrom && `Boshlanishi: ${formatTashkentDateTime(quiz.availableFrom)}`}
@@ -541,7 +551,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <h2 className="flex items-center gap-2 text-xl font-semibold sm:text-2xl">
             <ListChecks className="size-5" /> Savollar
           </h2>
           <Button
@@ -550,12 +560,13 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
               setEditingQuestion(null);
               setDialogOpen(true);
             }}
+            className="text-sm sm:text-base"
           >
             <Plus className="size-4" /> Savol qo&apos;shish
           </Button>
         </div>
 
-        <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div
               className={cn(
@@ -579,15 +590,17 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                 <CardContent className="flex items-start gap-3.5 pt-2">
                   <span
                     className={cn(
-                      'flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-semibold',
+                      'flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-semibold sm:size-9 sm:text-base',
                       TYPE_BADGE_STYLES[question.type]
                     )}
                   >
                     {idx + 1}
                   </span>
                   <div className="min-w-0 flex-1 space-y-2">
-                    <p className="text-sm leading-relaxed font-medium">{question.text}</p>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <p className="text-base font-medium leading-relaxed sm:text-lg">
+                      {question.text}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
                       <Badge className={cn('border-transparent', TYPE_BADGE_STYLES[question.type])}>
                         {TYPE_LABELS[question.type]}
                       </Badge>
@@ -606,7 +619,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                               <div
                                 key={option.label}
                                 className={cn(
-                                  'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs',
+                                  'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm',
                                   isCorrect
                                     ? 'border-success/40 bg-success/10 font-medium text-success'
                                     : 'border-border text-muted-foreground'
@@ -627,7 +640,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                       )}
 
                     {question.type === 'true_false' && (
-                      <div className="flex gap-2 text-xs">
+                      <div className="flex gap-2 text-xs sm:text-sm">
                         {[true, false].map((value) => {
                           const isCorrect = question.correctAnswer === value;
                           return (
@@ -649,7 +662,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                     )}
 
                     {question.type === 'open_ended' && question.sampleAnswer && (
-                      <p className="rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
+                      <p className="rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground sm:text-sm">
                         <span className="font-medium text-foreground">Namuna javob: </span>
                         {question.sampleAnswer}
                       </p>
@@ -668,7 +681,9 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                       <Pencil className="size-4" />
                     </Button>
                     <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
+                      <AlertDialogTrigger
+                        render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}
+                      >
                         <Trash2 className="size-4" />
                       </AlertDialogTrigger>
                       <AlertDialogContent>

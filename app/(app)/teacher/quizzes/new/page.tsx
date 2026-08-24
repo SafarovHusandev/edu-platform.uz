@@ -138,27 +138,35 @@ export default function NewQuizPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Yangi test yaratish</CardTitle>
-          <CardDescription>
+    <div className="mx-auto max-w-2xl">
+      <Card className="border-none ">
+        <CardHeader className="space-y-3  pt-2 text-center">
+          <CardTitle className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            Yangi test yaratish
+          </CardTitle>
+          <CardDescription className="text-base text-muted-foreground sm:text-lg">
             Test ma&apos;lumotlarini kiriting, savollarni keyingi bosqichda qo&apos;shasiz
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-5 pb-2 sm:px-7">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Test nomi</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-[16px] font-medium text-foreground">
+                      Test nomi
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Matematika testi" {...field} />
+                      <Input
+                        placeholder="Matematika testi"
+                        {...field}
+                        className="h-12 text-[16px]!"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[16px]" />
                   </FormItem>
                 )}
               />
@@ -166,12 +174,14 @@ export default function NewQuizPage() {
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tavsif (ixtiyoriy)</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-[16px] font-medium text-foreground">
+                      Tavsif (ixtiyoriy)
+                    </FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="min-h-24 text-[16px]!" />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[16px]" />
                   </FormItem>
                 )}
               />
@@ -179,8 +189,10 @@ export default function NewQuizPage() {
                 control={form.control}
                 name="targetType"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Test turi</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-[16px] font-medium text-foreground">
+                      Test turi
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(v) => {
@@ -195,7 +207,7 @@ export default function NewQuizPage() {
                       ]}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="h-12 w-full text-[16px]!">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -205,7 +217,7 @@ export default function NewQuizPage() {
                         <SelectItem value="lesson">Dars</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-[16px]" />
                   </FormItem>
                 )}
               />
@@ -214,8 +226,10 @@ export default function NewQuizPage() {
                   control={form.control}
                   name="course"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Kurs</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[16px] font-medium text-foreground">
+                        Kurs
+                      </FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={(v) => {
@@ -230,7 +244,7 @@ export default function NewQuizPage() {
                         }
                       >
                         <FormControl>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="h-12 w-full text-[16px]!">
                             <SelectValue placeholder="Kursni tanlang" />
                           </SelectTrigger>
                         </FormControl>
@@ -242,7 +256,7 @@ export default function NewQuizPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-[16px]" />
                     </FormItem>
                   )}
                 />
@@ -252,8 +266,10 @@ export default function NewQuizPage() {
                   control={form.control}
                   name="lesson"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dars</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[16px] font-medium text-foreground">
+                        Dars
+                      </FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
@@ -265,7 +281,7 @@ export default function NewQuizPage() {
                         }
                       >
                         <FormControl>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="h-12 w-full text-[16px]!">
                             <SelectValue placeholder="Darsni tanlang" />
                           </SelectTrigger>
                         </FormControl>
@@ -277,7 +293,7 @@ export default function NewQuizPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-[16px]" />
                     </FormItem>
                   )}
                 />
@@ -287,8 +303,10 @@ export default function NewQuizPage() {
                   control={form.control}
                   name="passingScore"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>O&apos;tish balli (%)</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[16px] font-medium text-foreground">
+                        O&apos;tish balli (%)
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -296,9 +314,10 @@ export default function NewQuizPage() {
                           max={100}
                           {...field}
                           value={field.value as number}
+                          className="h-12 text-[16px]!"
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-[16px]" />
                     </FormItem>
                   )}
                 />
@@ -306,12 +325,20 @@ export default function NewQuizPage() {
                   control={form.control}
                   name="maxAttempts"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Urinishlar soni</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[16px] font-medium text-foreground">
+                        Urinishlar soni
+                      </FormLabel>
                       <FormControl>
-                        <Input type="number" min={1} {...field} value={field.value as number} />
+                        <Input
+                          type="number"
+                          min={1}
+                          {...field}
+                          value={field.value as number}
+                          className="h-12 text-[16px]!"
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-[16px]" />
                     </FormItem>
                   )}
                 />
@@ -321,8 +348,10 @@ export default function NewQuizPage() {
                   control={form.control}
                   name="timeLimit"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Vaqt chegarasi (daqiqa) *</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[16px] font-medium text-foreground">
+                        Vaqt chegarasi (daqiqa) *
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -330,9 +359,10 @@ export default function NewQuizPage() {
                           placeholder="15"
                           {...field}
                           value={(field.value as number | undefined) ?? ''}
+                          className="h-12 text-[16px]!"
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-[16px]" />
                     </FormItem>
                   )}
                 />
@@ -340,15 +370,17 @@ export default function NewQuizPage() {
                   control={form.control}
                   name="grade"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sinf *</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-[16px] font-medium text-foreground">
+                        Sinf *
+                      </FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
                         items={GRADE_NUMBERS.map((n) => ({ value: n, label: `${n}-sinf` }))}
                       >
                         <FormControl>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="h-12 w-full text-[16px]!">
                             <SelectValue placeholder="Tanlang" />
                           </SelectTrigger>
                         </FormControl>
@@ -361,25 +393,28 @@ export default function NewQuizPage() {
                         </SelectContent>
                       </Select>
                       {selectedGrade && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[16px] text-muted-foreground">
                           Bu sinf uchun kamida {getMinQuestions(Number(selectedGrade))} ta savol
                           kerak bo&apos;ladi
                         </p>
                       )}
-                      <FormMessage />
+                      <FormMessage className="text-[16px]" />
                     </FormItem>
                   )}
                 />
               </div>
-              <div className="space-y-3 rounded-lg border border-input p-3">
+              <div className="space-y-3 rounded-lg border border-input p-3 sm:p-4">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="limit-availability"
                     checked={limitAvailability}
                     onCheckedChange={(checked) => setLimitAvailability(checked === true)}
                   />
-                  <Label htmlFor="limit-availability" className="cursor-pointer font-normal">
-                    Testni boshlash uchun vaqt oynasi belgilash
+                  <Label
+                    htmlFor="limit-availability"
+                    className="cursor-pointer text-[16px] font-normal"
+                  >
+                    Testni boshlash uchun vaqt belgilash
                   </Label>
                 </div>
                 {limitAvailability && (
@@ -389,15 +424,21 @@ export default function NewQuizPage() {
                         control={form.control}
                         name="availableFrom"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Boshlanish vaqti</FormLabel>
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-[16px] font-medium text-foreground">
+                              Boshlanish vaqti
+                            </FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input type="datetime-local" className="pl-9" {...field} />
+                                <Input
+                                  type="datetime-local"
+                                  className="h-12 pl-9 text-[16px]!"
+                                  {...field}
+                                />
                               </div>
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-[16px]" />
                           </FormItem>
                         )}
                       />
@@ -405,31 +446,41 @@ export default function NewQuizPage() {
                         control={form.control}
                         name="availableUntil"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tugash vaqti</FormLabel>
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-[16px] font-medium text-foreground">
+                              Tugash vaqti
+                            </FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input type="datetime-local" className="pl-9" {...field} />
+                                <Input
+                                  type="datetime-local"
+                                  className="h-12 pl-9 text-[16px]!"
+                                  {...field}
+                                />
                               </div>
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-[16px]" />
                           </FormItem>
                         )}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[16px] text-muted-foreground">
                       Vaqtlar Toshkent vaqti (GMT+5) bo&apos;yicha kiritiladi
                     </p>
                   </div>
                 )}
                 {!limitAvailability && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[16px] text-muted-foreground">
                     Belgilanmasa, test istalgan vaqtda boshlanishi mumkin
                   </p>
                 )}
               </div>
-              <Button type="submit" className="w-full" disabled={createQuiz.isPending}>
+              <Button
+                type="submit"
+                className="h-12 w-full text-[16px]! font-semibold shadow-md shadow-primary/20 transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
+                disabled={createQuiz.isPending}
+              >
                 {createQuiz.isPending && <Loader2 className="size-4 animate-spin" />}
                 Testni yaratish
               </Button>

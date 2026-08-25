@@ -1,35 +1,35 @@
-import { notFound } from "next/navigation"
-import Image from "next/image"
-import { BookMarked, Download, User2 } from "lucide-react"
-import { Container } from "@/components/layout/container"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { api } from "@/lib/api-client"
-import { resolveAssetUrl, bookDownloadUrl } from "@/lib/config"
-import { formatNumber } from "@/lib/format"
-import type { Book } from "@/types"
+import { notFound } from 'next/navigation';
+import Image from 'next/image';
+import { BookMarked, Download, User2 } from 'lucide-react';
+import { Container } from '@/components/layout/container';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api-client';
+import { resolveAssetUrl, bookDownloadUrl } from '@/lib/config';
+import { formatNumber } from '@/lib/format';
+import type { Book } from '@/types';
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 async function getBook(id: string) {
   try {
-    const res = await api.get<{ book: Book }>(`/books/${id}`, undefined, { skipAuth: true })
-    return res.book
+    const res = await api.get<{ book: Book }>(`/books/${id}`, undefined, { skipAuth: true });
+    return res.book;
   } catch {
-    return null
+    return null;
   }
 }
 
 export default async function BookDetailPage({ params }: PageProps) {
-  const { id } = await params
-  const book = await getBook(id)
-  if (!book) notFound()
+  const { id } = await params;
+  const book = await getBook(id);
+  if (!book) notFound();
 
-  const category = typeof book.category === "object" ? book.category?.name : undefined
-  const uploader = typeof book.uploadedBy === "object" ? book.uploadedBy : undefined
-  const cover = resolveAssetUrl(book.coverImage)
+  const category = typeof book.category === 'object' ? book.category?.name : undefined;
+  const uploader = typeof book.uploadedBy === 'object' ? book.uploadedBy : undefined;
+  const cover = resolveAssetUrl(book.coverImage);
 
   return (
     <div className="pb-16">
@@ -37,11 +37,11 @@ export default async function BookDetailPage({ params }: PageProps) {
         <Container className="grid gap-8 py-10 lg:grid-cols-[280px_1fr] lg:py-14">
           <div className="mx-auto w-full max-w-56 lg:mx-0">
             {cover ? (
-              <div className="relative aspect-3/4 w-full overflow-hidden rounded-xl bg-muted shadow-lg">
+              <div className="relative aspect-3/4 w-full overflow-hidden rounded-md bg-muted shadow-lg">
                 <Image src={cover} alt={book.title} fill unoptimized className="object-cover" />
               </div>
             ) : (
-              <div className="flex aspect-3/4 w-full items-center justify-center rounded-xl bg-linear-to-br from-primary/15 to-accent/40">
+              <div className="flex aspect-3/4 w-full items-center justify-center rounded-md bg-linear-to-br from-primary/15 to-accent/40">
                 <BookMarked className="size-12 text-primary/50" />
               </div>
             )}
@@ -67,7 +67,8 @@ export default async function BookDetailPage({ params }: PageProps) {
               )}
               {book.downloadsCount !== undefined && (
                 <span className="flex items-center gap-1.5">
-                  <Download className="size-4" /> {formatNumber(book.downloadsCount)} marta yuklab olingan
+                  <Download className="size-4" /> {formatNumber(book.downloadsCount)} marta yuklab
+                  olingan
                 </span>
               )}
             </div>
@@ -82,12 +83,12 @@ export default async function BookDetailPage({ params }: PageProps) {
                 }
               >
                 <Download className="size-4" />
-                {book.file ? "Yuklab olish" : "Fayl hali yuklanmagan"}
+                {book.file ? 'Yuklab olish' : 'Fayl hali yuklanmagan'}
               </Button>
             </div>
           </div>
         </Container>
       </div>
     </div>
-  )
+  );
 }

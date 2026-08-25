@@ -38,6 +38,7 @@ export interface RewardPayload {
   description?: string
   cost: number
   stock: number | null
+  premiumOnly?: boolean
 }
 
 export function useCreateReward() {
@@ -132,28 +133,59 @@ export function useAllRedemptions(filters: { status?: RedemptionStatus; page?: n
   })
 }
 
-export function useUpdateRedemptionStatus() {
+// Bosqich 1: pending -> approved (mukofot hali qo'lda topshirilmagan, navbatga qo'yiladi)
+export function useApproveRedemption() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({
-      id,
-      status,
-      adminNote,
-    }: {
-      id: string
-      status: RedemptionStatus
-      adminNote?: string
-    }) => {
+    mutationFn: async (id: string) => {
       const res = await api.patch<{ redemption: Redemption }>(
-        `/rewards/redemptions/${id}`,
-        { status, adminNote }
+        `/rewards/redemptions/${id}/approve`
       )
       return res.redemption
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-redemptions"] })
-      toast.success("Holat yangilandi")
+      toast.success("So'rov tasdiqlandi")
     },
-    onError: (error) => toast.error(errorMessage(error, "Holatni yangilashda xatolik")),
+    onError: (error) => toast.error(errorMessage(error, "Tasdiqlashda xatolik")),
+  })
+}
+
+// pending yoki approved -> rejected. Diamond va (agar cheklangan bo'lsa) stock
+// backend tomonidan avtomatik qaytariladi.
+export function useRejectRedemption() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
+      const res = await api.patch<{ redemption: Redemption }>(
+        `/rewards/redemptions/${id}/reject`,
+        { reason }
+      )
+      return res.redemption
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-redemptions"] })
+      toast.success("So'rov rad etildi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Rad etishda xatolik")),
+  })
+}
+
+// Bosqich 2 (yakuniy): approved -> delivered — mukofot studentga jismonan topshirildi
+export function useDeliverRedemption() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, note }: { id: string; note?: string }) => {
+      const res = await api.patch<{ redemption: Redemption }>(
+        `/rewards/redemptions/${id}/deliver`,
+        { note }
+      )
+      return res.redemption
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-redemptions"] })
+      toast.success("Mukofot topshirildi deb belgilandi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Topshirishda xatolik")),
   })
 }

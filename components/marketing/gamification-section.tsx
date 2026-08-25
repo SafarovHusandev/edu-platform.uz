@@ -1,12 +1,13 @@
 import Link from "next/link"
-import { Gem, Trophy, Gift, Award } from "lucide-react"
+import { Trophy, Gift, Award } from "lucide-react"
 import { Container } from "@/components/layout/container"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { DiamondIcon } from "@/components/icons/diamond-icon"
 
 const ITEMS = [
   {
-    icon: Gem,
+    icon: DiamondIcon,
     title: "Olmoslar",
     description: "Har bir tugatilgan dars uchun olmos qo'lga kiriting.",
   },

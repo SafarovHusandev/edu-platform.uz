@@ -1,17 +1,17 @@
-"use client"
+'use client';
 
-import { Suspense, useEffect, useState } from "react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Search, SearchX } from "lucide-react"
-import { Container } from "@/components/layout/container"
-import { Input } from "@/components/ui/input"
+import { Suspense, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Search, SearchX } from 'lucide-react';
+import { Container } from '@/components/layout/container';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
 import {
   Pagination,
   PaginationContent,
@@ -19,66 +19,68 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"
-import { BookCard, BookCardSkeleton } from "@/components/books/book-card"
-import { useBooks } from "@/hooks/use-books"
-import { useBookCategories } from "@/hooks/use-book-categories"
+} from '@/components/ui/pagination';
+import { BookCard, BookCardSkeleton } from '@/components/books/book-card';
+import { useBooks } from '@/hooks/use-books';
+import { useBookCategories } from '@/hooks/use-book-categories';
 
-const PAGE_SIZE = 12
-const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1))
+const PAGE_SIZE = 12;
+const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
 
 function BooksCatalog() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const page = Number(searchParams.get("page") ?? "1")
-  const category = searchParams.get("category") ?? ""
-  const grade = searchParams.get("grade") ?? ""
-  const initialSearch = searchParams.get("search") ?? ""
-  const [searchInput, setSearchInput] = useState(initialSearch)
+  const page = Number(searchParams.get('page') ?? '1');
+  const category = searchParams.get('category') ?? '';
+  const grade = searchParams.get('grade') ?? '';
+  const initialSearch = searchParams.get('search') ?? '';
+  const [searchInput, setSearchInput] = useState(initialSearch);
 
-  const { data: categories } = useBookCategories()
+  const { data: categories } = useBookCategories();
   const { data, isLoading, isPlaceholderData } = useBooks({
     page,
     limit: PAGE_SIZE,
     search: initialSearch || undefined,
     category: category || undefined,
     grade: grade ? Number(grade) : undefined,
-  })
+  });
 
   function updateParams(next: Record<string, string | undefined>) {
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(searchParams.toString());
     for (const [key, value] of Object.entries(next)) {
-      if (value) params.set(key, value)
-      else params.delete(key)
+      if (value) params.set(key, value);
+      else params.delete(key);
     }
-    router.push(`${pathname}?${params.toString()}`)
+    router.push(`${pathname}?${params.toString()}`);
   }
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (searchInput !== initialSearch) {
-        updateParams({ search: searchInput || undefined, page: undefined })
+        updateParams({ search: searchInput || undefined, page: undefined });
       }
-    }, 400)
-    return () => clearTimeout(timeout)
+    }, 400);
+    return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput])
+  }, [searchInput]);
 
-  const totalPages = data?.totalPages ?? 1
+  const totalPages = data?.totalPages ?? 1;
   const baseParams = {
     ...(category && { category }),
     ...(grade && { grade }),
     ...(initialSearch && { search: initialSearch }),
-  }
+  };
 
   return (
     <Container className="py-12">
       <div className="mb-8">
         <h1 className="font-heading text-3xl font-semibold tracking-tight">Kutubxona</h1>
         <p className="mt-1 text-muted-foreground">
-          {data?.total ? `${data.total} ta bepul kitob topildi` : "Bepul kitoblarni yuklab oling va o'qing"}
+          {data?.total
+            ? `${data.total} ta bepul kitob topildi`
+            : "Bepul kitoblarni yuklab oling va o'qing"}
         </p>
       </div>
 
@@ -93,12 +95,15 @@ function BooksCatalog() {
           />
         </div>
         <Select
-          value={category || "all"}
+          value={category || 'all'}
           onValueChange={(value) =>
-            updateParams({ category: !value || value === "all" ? undefined : value, page: undefined })
+            updateParams({
+              category: !value || value === 'all' ? undefined : value,
+              page: undefined,
+            })
           }
           items={[
-            { value: "all", label: "Barcha kategoriyalar" },
+            { value: 'all', label: 'Barcha kategoriyalar' },
             ...(categories?.map((cat) => ({ value: cat._id, label: cat.name })) ?? []),
           ]}
         >
@@ -115,12 +120,12 @@ function BooksCatalog() {
           </SelectContent>
         </Select>
         <Select
-          value={grade || "all"}
+          value={grade || 'all'}
           onValueChange={(value) =>
-            updateParams({ grade: !value || value === "all" ? undefined : value, page: undefined })
+            updateParams({ grade: !value || value === 'all' ? undefined : value, page: undefined })
           }
           items={[
-            { value: "all", label: "Barcha sinflar" },
+            { value: 'all', label: 'Barcha sinflar' },
             ...GRADE_NUMBERS.map((n) => ({ value: n, label: `${n}-sinf` })),
           ]}
         >
@@ -148,8 +153,8 @@ function BooksCatalog() {
         <div
           className={
             isPlaceholderData
-              ? "grid gap-5 opacity-60 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              : "grid gap-5 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              ? 'grid gap-5 opacity-60 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : 'grid gap-5 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
           }
         >
           {data.items.map((book) => (
@@ -157,7 +162,7 @@ function BooksCatalog() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-20 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border py-20 text-center">
           <SearchX className="size-8 text-muted-foreground" />
           <p className="font-medium">Hech qanday kitob topilmadi</p>
           <p className="text-sm text-muted-foreground">
@@ -178,7 +183,9 @@ function BooksCatalog() {
               .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
               .map((p, idx, arr) => (
                 <PaginationItem key={p}>
-                  {idx > 0 && arr[idx - 1] !== p - 1 ? <span className="px-1 text-muted-foreground">…</span> : null}
+                  {idx > 0 && arr[idx - 1] !== p - 1 ? (
+                    <span className="px-1 text-muted-foreground">…</span>
+                  ) : null}
                   <PaginationLink
                     isActive={p === page}
                     href={`${pathname}?${new URLSearchParams({ ...baseParams, page: String(p) }).toString()}`}
@@ -196,7 +203,7 @@ function BooksCatalog() {
         </Pagination>
       )}
     </Container>
-  )
+  );
 }
 
 export default function BooksPage() {
@@ -204,5 +211,5 @@ export default function BooksPage() {
     <Suspense>
       <BooksCatalog />
     </Suspense>
-  )
+  );
 }

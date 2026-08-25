@@ -2,19 +2,19 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Hourglass,
-  Sparkles,
-  Trophy,
-  XCircle,
-} from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Hourglass, Sparkles, Trophy, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { useQuizWithAnswers, useQuizResults } from '@/hooks/use-quizzes';
@@ -33,15 +33,32 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function TeacherAttemptDetailPage({ params }: PageProps) {
   const { id, attemptId } = use(params);
-  const { data: quiz, isLoading: quizLoading, isError: quizError, refetch: refetchQuiz } = useQuizWithAnswers(id);
-  const { data: attempts, isLoading: attemptsLoading, isError: attemptsError, refetch: refetchAttempts } = useQuizResults(id);
+  const {
+    data: quiz,
+    isLoading: quizLoading,
+    isError: quizError,
+    refetch: refetchQuiz,
+  } = useQuizWithAnswers(id);
+  const {
+    data: attempts,
+    isLoading: attemptsLoading,
+    isError: attemptsError,
+    refetch: refetchAttempts,
+  } = useQuizResults(id);
 
   if (quizLoading || attemptsLoading) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
   }
 
   if (quizError || attemptsError) {
-    return <ErrorState onRetry={() => { refetchQuiz(); refetchAttempts(); }} />;
+    return (
+      <ErrorState
+        onRetry={() => {
+          refetchQuiz();
+          refetchAttempts();
+        }}
+      />
+    );
   }
 
   if (!quiz) {
@@ -49,7 +66,10 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
       <EmptyState
         title="Test topilmadi"
         action={
-          <Link href="/teacher/quizzes" className="text-sm font-medium text-primary hover:underline">
+          <Link
+            href="/teacher/quizzes"
+            className="text-sm font-medium text-primary hover:underline"
+          >
             Testlarga qaytish
           </Link>
         }
@@ -86,11 +106,15 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${id}`} />}>{quiz.title}</BreadcrumbLink>
+            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${id}`} />}>
+              {quiz.title}
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${id}/results`} />}>Natijalar</BreadcrumbLink>
+            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${id}/results`} />}>
+              Natijalar
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -274,9 +298,7 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
                             )}
                           >
                             {value ? "To'g'ri" : "Noto'g'ri"}
-                            {isGiven && (
-                              <span className="ml-1 text-[10px]">(javob)</span>
-                            )}
+                            {isGiven && <span className="ml-1 text-[10px]">(javob)</span>}
                           </span>
                         );
                       })}

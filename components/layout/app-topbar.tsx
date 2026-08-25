@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserMenu } from "@/components/layout/user-menu"
 import { SidebarNav } from "@/components/layout/sidebar-nav"
+import { StatusCard } from "@/components/layout/status-card"
 import { Logo } from "@/components/logo"
 import { useNotifications } from "@/hooks/use-notifications"
 import type { Role } from "@/types"
@@ -41,6 +42,12 @@ export function AppTopbar({ role }: { role: Role }) {
       </Sheet>
 
       <div className="flex-1" />
+
+      {role === "student" && (
+        <div className="hidden sm:block">
+          <StatusCard />
+        </div>
+      )}
 
       <Button variant="ghost" size="icon" className="relative" render={<Link href="/notifications" />}>
         <Bell className="size-4.5" />

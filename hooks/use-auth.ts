@@ -71,11 +71,7 @@ export function useLogin() {
 export function useRegister() {
   return useMutation({
     mutationFn: (payload: RegisterPayload) =>
-      api.post<AuthResponse>('/auth/register', payload, { skipAuth: true }),
-    onSuccess: (data) => {
-      persistSession(data);
-      toast.success("Ro'yxatdan muvaffaqiyatli o'tdingiz!");
-    },
+      api.post<{ user: User }>('/auth/register', payload, { skipAuth: true }),
     onError: (error) => {
       toast.error(errorMessage(error, "Ro'yxatdan o'tishda xatolik"));
     },

@@ -15,12 +15,14 @@ import type { RedemptionStatus } from "@/types"
 
 const STATUS_LABELS: Record<RedemptionStatus, string> = {
   pending: "Kutilmoqda",
-  delivered: "Yetkazildi",
+  approved: "Tasdiqlandi",
+  delivered: "Topshirildi",
   rejected: "Rad etildi",
 }
 
 const STATUS_VARIANTS: Record<RedemptionStatus, "secondary" | "default" | "destructive"> = {
   pending: "secondary",
+  approved: "secondary",
   delivered: "default",
   rejected: "destructive",
 }
@@ -72,11 +74,12 @@ export default function MyRedemptionsPage() {
                         {STATUS_LABELS[redemption.status]}
                       </Badge>
                     </div>
-                    {redemption.status === "rejected" && redemption.adminNote && (
-                      <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                        {redemption.adminNote}
-                      </p>
-                    )}
+                    {redemption.status === "rejected" &&
+                      (redemption.rejectReason || redemption.adminNote) && (
+                        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                          {redemption.rejectReason || redemption.adminNote}
+                        </p>
+                      )}
                   </CardContent>
                 </Card>
               )

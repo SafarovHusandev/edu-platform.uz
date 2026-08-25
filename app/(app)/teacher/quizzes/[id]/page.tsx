@@ -10,6 +10,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
+  Crown,
   EyeOff,
   ListChecks,
   Loader2,
@@ -137,7 +138,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
   const [limitAvailability, setLimitAvailability] = useState(false);
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
   }
 
   if (isError) {
@@ -358,7 +359,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
             {stats.map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-xl bg-white/10 p-3 text-center backdrop-blur-sm"
+                className="rounded-md bg-white/10 p-3 text-center backdrop-blur-sm"
               >
                 <p className="flex items-center justify-center gap-1.5 text-xl font-semibold">
                   <stat.icon className="size-4 text-primary-foreground/70" />
@@ -402,11 +403,22 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
               </span>
             </div>
           )}
+
+          {quiz.effectiveMaxAttempts != null && quiz.effectiveMaxAttempts < quiz.maxAttempts && (
+            <div className="flex items-start gap-2 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-sm text-gold-foreground">
+              <Crown className="mt-0.5 size-4 shrink-0" />
+              <p>
+                Siz standart tarifdasiz — o&apos;quvchilar bu testda faqat{' '}
+                {quiz.effectiveMaxAttempts} marta urinishi mumkin ({quiz.maxAttempts} emas).
+                Ko&apos;proq urinish uchun Premium oling.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {!quiz.isActive && (
-        <div className="flex flex-col items-start gap-3 rounded-xl border border-gold/30 bg-gold/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col items-start gap-3 rounded-md border border-gold/30 bg-gold/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <span className="flex items-center gap-2.5 text-sm text-gold-foreground">
             <EyeOff className="size-5 shrink-0" />
             Bu test hali e&apos;lon qilinmagan — o&apos;quvchilar uni ko&apos;ra olmaydi va boshlay

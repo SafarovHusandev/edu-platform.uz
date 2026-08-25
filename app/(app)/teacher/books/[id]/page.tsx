@@ -1,12 +1,12 @@
-"use client"
+'use client';
 
-import { use, useRef } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { use, useRef } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   ArrowLeft,
   BookMarked,
@@ -16,20 +16,20 @@ import {
   Loader2,
   Trash2,
   Upload,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog';
 import {
   Form,
   FormControl,
@@ -48,70 +48,77 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { EmptyState } from "@/components/ui/empty-state"
-import { ErrorState } from "@/components/ui/error-state"
+} from '@/components/ui/form';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
 import {
   useBook,
   useDeleteBook,
   useUpdateBook,
   useUploadBookCover,
   useUploadBookFile,
-} from "@/hooks/use-books"
-import { useBookCategories } from "@/hooks/use-book-categories"
-import { resolveAssetUrl, bookDownloadUrl } from "@/lib/config"
-import { formatNumber } from "@/lib/format"
+} from '@/hooks/use-books';
+import { useBookCategories } from '@/hooks/use-book-categories';
+import { resolveAssetUrl, bookDownloadUrl } from '@/lib/config';
+import { formatNumber } from '@/lib/format';
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
-const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1))
+const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
 
 const bookSchema = z.object({
-  title: z.string().min(2, { error: "Kamida 2 ta belgi" }).max(150),
-  author: z.string().min(2, { error: "Kamida 2 ta belgi" }).max(100),
+  title: z.string().min(2, { error: 'Kamida 2 ta belgi' }).max(150),
+  author: z.string().min(2, { error: 'Kamida 2 ta belgi' }).max(100),
   description: z.string().optional(),
-  category: z.string().min(1, { error: "Kategoriyani tanlang" }),
+  category: z.string().min(1, { error: 'Kategoriyani tanlang' }),
   grade: z.string().optional(),
-})
+});
 
-type BookFormValues = z.infer<typeof bookSchema>
+type BookFormValues = z.infer<typeof bookSchema>;
 
 export default function TeacherBookDetailPage({ params }: PageProps) {
-  const { id } = use(params)
-  const router = useRouter()
-  const { data: book, isLoading, isError, refetch } = useBook(id)
-  const { data: categories } = useBookCategories()
-  const updateBook = useUpdateBook()
-  const deleteBook = useDeleteBook()
-  const uploadCover = useUploadBookCover()
-  const uploadFile = useUploadBookFile()
+  const { id } = use(params);
+  const router = useRouter();
+  const { data: book, isLoading, isError, refetch } = useBook(id);
+  const { data: categories } = useBookCategories();
+  const updateBook = useUpdateBook();
+  const deleteBook = useDeleteBook();
+  const uploadCover = useUploadBookCover();
+  const uploadFile = useUploadBookFile();
 
-  const coverInputRef = useRef<HTMLInputElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
-    defaultValues: { title: "", author: "", description: "", category: "", grade: "" },
+    defaultValues: { title: '', author: '', description: '', category: '', grade: '' },
     values: book
       ? {
           title: book.title,
           author: book.author,
-          description: book.description ?? "",
-          category: typeof book.category === "object" ? book.category._id : book.category,
-          grade: book.grade != null ? String(book.grade) : "all",
+          description: book.description ?? '',
+          category: typeof book.category === 'object' ? book.category._id : book.category,
+          grade: book.grade != null ? String(book.grade) : 'all',
         }
       : undefined,
-  })
+  });
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />
+    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
   }
 
   if (isError) {
-    return <ErrorState onRetry={() => refetch()} />
+    return <ErrorState onRetry={() => refetch()} />;
   }
 
   if (!book) {
@@ -124,10 +131,10 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
           </Link>
         }
       />
-    )
+    );
   }
 
-  const cover = resolveAssetUrl(book.coverImage)
+  const cover = resolveAssetUrl(book.coverImage);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -177,9 +184,9 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
               accept="image/*"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) uploadCover.mutate({ id, file })
-                e.target.value = ""
+                const file = e.target.files?.[0];
+                if (file) uploadCover.mutate({ id, file });
+                e.target.value = '';
               }}
             />
           </div>
@@ -190,7 +197,9 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
                 checked={book.isPublished ?? false}
                 onCheckedChange={(checked) => updateBook.mutate({ id, isPublished: checked })}
               />
-              <Label htmlFor="book-published">{book.isPublished ? "Nashr etilgan" : "Qoralama"}</Label>
+              <Label htmlFor="book-published">
+                {book.isPublished ? 'Nashr etilgan' : 'Qoralama'}
+              </Label>
             </div>
             <AlertDialog>
               <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
@@ -208,7 +217,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
                   <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() =>
-                      deleteBook.mutate(id, { onSuccess: () => router.push("/teacher/books") })
+                      deleteBook.mutate(id, { onSuccess: () => router.push('/teacher/books') })
                     }
                   >
                     O&apos;chirish
@@ -225,7 +234,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
           <CardTitle className="text-base">Kitob fayli</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <FileText className="size-5" />
           </span>
           <div className="flex-1">
@@ -254,7 +263,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
             ) : (
               <Upload className="size-4" />
             )}
-            {book.file ? "Almashtirish" : "Yuklash"}
+            {book.file ? 'Almashtirish' : 'Yuklash'}
           </Button>
           <input
             ref={fileInputRef}
@@ -262,9 +271,9 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
             accept=".pdf,.jpg,.jpeg,.png,.webp,.mp4"
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) uploadFile.mutate({ id, file })
-              e.target.value = ""
+              const file = e.target.files?.[0];
+              if (file) uploadFile.mutate({ id, file });
+              e.target.value = '';
             }}
           />
         </CardContent>
@@ -284,7 +293,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
                   author: values.author,
                   description: values.description,
                   category: values.category,
-                  grade: values.grade && values.grade !== "all" ? Number(values.grade) : null,
+                  grade: values.grade && values.grade !== 'all' ? Number(values.grade) : null,
                 })
               )}
               className="space-y-4"
@@ -366,10 +375,10 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
                     <FormItem>
                       <FormLabel>Sinf</FormLabel>
                       <Select
-                        value={field.value || "all"}
+                        value={field.value || 'all'}
                         onValueChange={field.onChange}
                         items={[
-                          { value: "all", label: "Barcha sinflar uchun" },
+                          { value: 'all', label: 'Barcha sinflar uchun' },
                           ...GRADE_NUMBERS.map((n) => ({ value: n, label: `${n}-sinf` })),
                         ]}
                       >
@@ -402,11 +411,11 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
       </Card>
 
       {!book.isPublished && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-gold/30 bg-gold/10 p-4 text-sm text-gold-foreground">
+        <div className="flex items-center gap-2.5 rounded-md border border-gold/30 bg-gold/10 p-4 text-sm text-gold-foreground">
           <BookMarked className="size-5 shrink-0" />
           Bu kitob hali qoralama holatida — nashr qilinmaguncha kutubxonada ko&apos;rinmaydi.
         </div>
       )}
     </div>
-  )
+  );
 }

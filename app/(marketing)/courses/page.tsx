@@ -242,7 +242,7 @@ function CoursesCatalog() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Kurs nomi, tavsif yoki mutaxassislik bo'yicha qidirish..."
-                className="h-11 rounded-xl bg-background pl-10 pr-9 text-lg shadow-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="h-11 rounded-md bg-background pl-10 pr-9 text-lg shadow-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
               {searchInput && (
                 <button
@@ -259,7 +259,7 @@ function CoursesCatalog() {
             {/* Filter Controls Group */}
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               {/* Price Filter Segment */}
-              <div className="flex rounded-xl border border-border bg-background p-0.5 text-base font-medium">
+              <div className="flex rounded-md border border-border bg-background p-0.5 text-base font-medium">
                 <button
                   type="button"
                   onClick={() => setPriceFilter('all')}
@@ -307,7 +307,7 @@ function CoursesCatalog() {
                   { value: 'price-desc', label: 'Narx: avval qimmat' },
                 ]}
               >
-                <SelectTrigger className="h-10 w-44 rounded-xl border-border bg-background px-3 text-base">
+                <SelectTrigger className="h-10 w-44 rounded-md border-border bg-background px-3 text-base">
                   <SelectValue placeholder="Saralash" />
                 </SelectTrigger>
                 <SelectContent align="end">
@@ -446,7 +446,7 @@ function CoursesCatalog() {
             </p>
             {isAnyFilterActive && (
               <div className="mt-6 flex justify-center">
-                <Button onClick={resetAllFilters} variant="outline" className="gap-2 rounded-xl">
+                <Button onClick={resetAllFilters} variant="outline" className="gap-2 rounded-md">
                   <RotateCcw className="size-4" />
                   Barcha filtrlarni tozalash
                 </Button>

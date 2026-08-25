@@ -48,7 +48,14 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import {
@@ -109,7 +116,7 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
   });
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
   }
 
   if (isError) {
@@ -122,7 +129,10 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
         title="Kurs topilmadi"
         description="Bu kurs o'chirilgan yoki mavjud emas."
         action={
-          <Link href="/teacher/courses" className="text-sm font-medium text-primary hover:underline">
+          <Link
+            href="/teacher/courses"
+            className="text-sm font-medium text-primary hover:underline"
+          >
             Kurslarga qaytish
           </Link>
         }
@@ -205,7 +215,9 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
                 checked={course.isPublished ?? false}
                 onCheckedChange={(checked) => updateCourse.mutate({ id, isPublished: checked })}
               />
-              <Label htmlFor="course-published">{course.isPublished ? 'Nashr etilgan' : 'Qoralama'}</Label>
+              <Label htmlFor="course-published">
+                {course.isPublished ? 'Nashr etilgan' : 'Qoralama'}
+              </Label>
             </div>
             <AlertDialog>
               <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
@@ -420,13 +432,17 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
                       {lesson.title}
                     </Link>
                     <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
+                      <AlertDialogTrigger
+                        render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}
+                      >
                         <Trash2 className="size-4" />
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Darsni o&apos;chirasizmi?</AlertDialogTitle>
-                          <AlertDialogDescription>Bu amalni bekor qilib bo&apos;lmaydi.</AlertDialogDescription>
+                          <AlertDialogDescription>
+                            Bu amalni bekor qilib bo&apos;lmaydi.
+                          </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Bekor qilish</AlertDialogCancel>

@@ -33,7 +33,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonTable } from '@/components/ui/skeleton';
@@ -64,7 +71,13 @@ interface ReviewDialogProps {
 // `key={attempt._id}` bilan chaqiriladi — shu sababli har safar boshqa
 // attempt tanlanganda component qayta mount bo'lib, boshlang'ich qiymatlar
 // to'g'ri hisoblanadi (useEffect orqali sinxronlash shart emas).
-function ReviewDialog({ attempt, questions, isPending, onOpenChange, onSubmit }: ReviewDialogProps) {
+function ReviewDialog({
+  attempt,
+  questions,
+  isPending,
+  onOpenChange,
+  onSubmit,
+}: ReviewDialogProps) {
   const [scores, setScores] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     for (const q of questions) {
@@ -301,7 +314,9 @@ function ResultsContent({ quizId }: { quizId: string }) {
                         'flex items-center gap-1',
                         isOverTime && 'font-medium text-destructive'
                       )}
-                      title={isOverTime ? "Belgilangan vaqtdan (timeLimit) oshib ketgan" : undefined}
+                      title={
+                        isOverTime ? 'Belgilangan vaqtdan (timeLimit) oshib ketgan' : undefined
+                      }
                     >
                       {isOverTime && <AlertTriangle className="size-3.5 shrink-0" />}
                       {formatDuration(attempt.durationSeconds) ?? '—'}
@@ -342,9 +357,12 @@ function ResultsContent({ quizId }: { quizId: string }) {
           isPending={reviewOpenEnded.isPending}
           onOpenChange={(open) => !open && closeReview()}
           onSubmit={(reviewedAnswers) =>
-            reviewOpenEnded.mutate({ attemptId: reviewingAttempt._id, reviewedAnswers }, {
-              onSuccess: closeReview,
-            })
+            reviewOpenEnded.mutate(
+              { attemptId: reviewingAttempt._id, reviewedAnswers },
+              {
+                onSuccess: closeReview,
+              }
+            )
           }
         />
       )}
@@ -355,7 +373,7 @@ function ResultsContent({ quizId }: { quizId: string }) {
 export default function TeacherQuizResultsPage({ params }: PageProps) {
   const { id } = use(params);
   return (
-    <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-muted" />}>
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-md bg-muted" />}>
       <ResultsContent quizId={id} />
     </Suspense>
   );

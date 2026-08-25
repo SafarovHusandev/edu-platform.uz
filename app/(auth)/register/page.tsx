@@ -92,7 +92,7 @@ export default function RegisterPage() {
             ? { number: Number(values.gradeNumber), letter: values.gradeLetter! }
             : undefined,
       },
-      { onSuccess: () => router.push("/dashboard") }
+      { onSuccess: () => router.push("/register/pending") }
     )
   }
 

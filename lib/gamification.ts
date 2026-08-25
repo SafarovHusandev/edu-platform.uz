@@ -6,7 +6,12 @@ import type { Attempt } from "@/types"
 // ham 4 diamond beriladi).
 export const QUIZ_MAX_REWARD = 10
 
-export function calculateQuizDiamonds(attempt: Attempt) {
+// Premium student'lar uchun backend diamond miqdorini avtomatik 1.5 barobar
+// qilib beradi — bu yerda faqat UI'da ko'rsatiladigan taxminni moslashtiramiz.
+export const PREMIUM_DIAMOND_MULTIPLIER = 1.5
+
+export function calculateQuizDiamonds(attempt: Attempt, isPremium = false) {
   if (attempt.attemptNumber !== 1) return 0
-  return Math.round(((attempt.scorePercent ?? 0) / 100) * QUIZ_MAX_REWARD * 100) / 100
+  const base = Math.round(((attempt.scorePercent ?? 0) / 100) * QUIZ_MAX_REWARD * 100) / 100
+  return isPremium ? Math.round(base * PREMIUM_DIAMOND_MULTIPLIER * 100) / 100 : base
 }

@@ -1,42 +1,69 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import Image from "next/image"
-import { BookOpen, Gem, Award, ArrowRight, Trophy, PlayCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { StatCard } from "@/components/ui/stat-card"
-import { EmptyState } from "@/components/ui/empty-state"
-import { ErrorState } from "@/components/ui/error-state"
-import { SkeletonCardGrid } from "@/components/ui/skeleton"
-import { useAuthStore } from "@/store/auth-store"
-import { useMyEnrollments } from "@/hooks/use-enrollment"
-import { useMyCertificates } from "@/hooks/use-certificates"
-import { formatNumber } from "@/lib/format"
-import { resolveAssetUrl } from "@/lib/config"
+import Link from 'next/link';
+import Image from 'next/image';
+import { BookOpen, Award, ArrowRight, RotateCw, Trophy, PlayCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { StatCard } from '@/components/ui/stat-card';
+import { DiamondIcon } from '@/components/icons/diamond-icon';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { SkeletonCardGrid } from '@/components/ui/skeleton';
+import { useAuthStore } from '@/store/auth-store';
+import { useMyEnrollments } from '@/hooks/use-enrollment';
+import { useMyCertificates } from '@/hooks/use-certificates';
+import { formatNumber } from '@/lib/format';
+import { resolveAssetUrl } from '@/lib/config';
 
 export default function StudentDashboardPage() {
-  const user = useAuthStore((s) => s.user)
-  const { data: enrollments, isLoading, isError, refetch } = useMyEnrollments(1, 6)
-  const { data: certificates } = useMyCertificates(1, 1)
+  const user = useAuthStore((s) => s.user);
+  const { data: enrollments, isLoading, isError, refetch } = useMyEnrollments(1, 6);
+  const { data: certificates } = useMyCertificates(1, 1);
 
-  const inProgress = enrollments?.items.filter((e) => !e.isCompleted) ?? []
+  const inProgress = enrollments?.items.filter((e) => !e.isCompleted) ?? [];
 
   return (
     <div className="space-y-8">
       <div className="rounded-2xl bg-linear-to-br from-primary to-primary/70 p-6 text-primary-foreground sm:p-8">
         <h1 className="font-heading text-2xl font-semibold sm:text-3xl">
-          Xush kelibsiz, {user?.name?.split(" ")[0]}!
+          Xush kelibsiz, {user?.name?.split(' ')[0]}!
         </h1>
         <p className="mt-1 text-primary-foreground/80">
           Bugun ham o&apos;rganishni davom ettiring va yangi olmoslar to&apos;plang.
         </p>
       </div>
 
+      <Link
+        href="/student/daily-spin"
+        className="group flex items-center gap-3 rounded-md border border-gold/30 bg-gold/10 p-4 transition-colors hover:bg-gold/15"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold-foreground">
+          <RotateCw className="size-5" />
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-gold-foreground">Kunlik barabon</p>
+          <p className="text-xs text-gold-foreground/80">
+            Har kuni aylantiring va bepul olmos yutib oling
+          </p>
+        </div>
+        <ArrowRight className="size-4 shrink-0 text-gold-foreground/70 transition-transform group-hover:translate-x-0.5" />
+      </Link>
+
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={Gem} tone="gold" label="Olmoslar" value={formatNumber(user?.diamonds ?? 0)} />
+        <StatCard
+          icon={DiamondIcon}
+          tone="gold"
+          label="Olmoslar"
+          value={formatNumber(user?.diamonds ?? 0)}
+        />
         <StatCard icon={BookOpen} tone="primary" label="Kurslar" value={enrollments?.total ?? 0} />
-        <StatCard icon={Award} tone="success" label="Sertifikatlar" value={certificates?.total ?? 0} />
+        <StatCard
+          icon={Award}
+          tone="success"
+          label="Sertifikatlar"
+          value={certificates?.total ?? 0}
+        />
       </div>
 
       <div>
@@ -64,14 +91,14 @@ export default function StudentDashboardPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {inProgress.map((enrollment) => {
-              const course = typeof enrollment.course === "object" ? enrollment.course : null
-              if (!course) return null
-              const thumbnail = resolveAssetUrl(course.thumbnail)
+              const course = typeof enrollment.course === 'object' ? enrollment.course : null;
+              if (!course) return null;
+              const thumbnail = resolveAssetUrl(course.thumbnail);
               return (
                 <Link
                   key={enrollment._id}
                   href={`/student/courses/${enrollment._id}`}
-                  className="group flex flex-col gap-3 rounded-xl border border-border p-4 transition-colors hover:border-primary/40"
+                  className="group flex flex-col gap-3 rounded-md border border-border p-4 transition-colors hover:border-primary/40"
                 >
                   <div className="flex items-center gap-3">
                     {thumbnail ? (
@@ -97,11 +124,11 @@ export default function StudentDashboardPage() {
                     </p>
                   </div>
                 </Link>
-              )
+              );
             })}
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

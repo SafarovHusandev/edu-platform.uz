@@ -20,7 +20,9 @@ export function useLeaderboard(page = 1, limit = 10) {
   })
 }
 
-export function useUsers(filters: { page?: number; limit?: number; search?: string } = {}) {
+export function useUsers(
+  filters: { page?: number; limit?: number; search?: string; isVerified?: boolean } = {}
+) {
   return useQuery({
     queryKey: ["admin-users", filters],
     queryFn: () => api.get<Paginated<User>>("/users", { ...filters }),
@@ -55,6 +57,24 @@ export function useToggleUserBlock() {
   })
 }
 
+// Faqat admin/superadmin uchun: ro'yxatdan o'tgan, hali tasdiqlanmagan
+// foydalanuvchini tasdiqlaydi — shundan keyingina u tizimga kira oladi.
+export function useVerifyUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.patch<{ user: User }>(`/users/${id}/verify`)
+      return res.user
+    },
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", id] })
+      toast.success("Foydalanuvchi tasdiqlandi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Foydalanuvchini tasdiqlashda xatolik")),
+  })
+}
+
 export interface AdminUpdateUserPayload {
   id: string
   name?: string
@@ -62,6 +82,32 @@ export interface AdminUpdateUserPayload {
   role?: Role
   tarif?: Tarif
   grade?: Grade
+}
+
+export interface CreateUserPayload {
+  name: string
+  phone: string
+  password: string
+  role: Role
+  tarif?: Tarif
+  grade?: Grade
+}
+
+// Faqat superadmin uchun: istalgan rolda (o'quvchi, o'qituvchi, admin,
+// bosh admin) yangi foydalanuvchi yaratadi.
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: CreateUserPayload) => {
+      const res = await api.post<{ user: User }>("/users", payload)
+      return res.user
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      toast.success("Foydalanuvchi yaratildi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Foydalanuvchi yaratishda xatolik")),
+  })
 }
 
 // Faqat superadmin uchun: /users/:id/block'dan farqli o'laroq, foydalanuvchining

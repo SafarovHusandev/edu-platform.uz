@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Trophy, Gem, Crown, LogIn, Medal } from 'lucide-react';
+import Image from 'next/image';
+import { Trophy, Crown, LogIn, Medal } from 'lucide-react';
 import { Container } from '@/components/layout/container';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -82,16 +83,7 @@ function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
         )}
       </div>
       <span className="flex items-center gap-1.5 rounded-full bg-background px-2.5 py-1 text-sm font-semibold text-gold-foreground shadow-xs animate-pulse dark:text-white">
-        <svg
-          className="size-5 animate-pulse text-amber-500 dark:text-[#D4AF37]"
-          xmlns="http://www.w3.org/2000/svg"
-          height="24px"
-          viewBox="0 -960 960 960"
-          width="24px"
-          fill="#D4AF37"
-        >
-          <path d="M480-120 80-600l120-240h560l120 240-400 480Zm-95-520h190l-60-120h-70l-60 120Zm55 347v-267H218l222 267Zm80 0 222-267H520v267Zm144-347h106l-60-120H604l60 120Zm-474 0h106l60-120H250l-60 120Z" />
-        </svg>
+        <Image src="/diamond.png" alt="" width={32} height={32} className="size-5 animate-pulse" />
         {formatNumber(entry.diamonds ?? 0)}
       </span>
     </div>
@@ -122,7 +114,7 @@ export default function LeaderboardPage() {
       </div>
 
       {isUnauthorized && !user ? (
-        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-md border border-dashed border-border py-16 text-center">
           <LogIn className="size-8 text-muted-foreground" />
           <p className="font-medium">Reytingni ko&apos;rish uchun tizimga kiring</p>
           <Button render={<Link href="/login?redirect=/leaderboard" />}>Kirish</Button>
@@ -135,7 +127,7 @@ export default function LeaderboardPage() {
             ))}
           </div>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-muted" />
+            <div key={i} className="h-14 animate-pulse rounded-md bg-muted" />
           ))}
         </div>
       ) : (
@@ -156,7 +148,7 @@ export default function LeaderboardPage() {
                 <div
                   key={entry._id}
                   className={cn(
-                    'flex items-center gap-4 rounded-xl border px-4 py-3 shadow-sm hover:shadow-md hover:translate-x-1 transition-all duration-300',
+                    'flex items-center gap-4 rounded-md border px-4 py-3 shadow-sm hover:shadow-md hover:translate-x-1 transition-all duration-300',
                     isMe
                       ? 'border-blue-400 bg-blue-50/50 dark:border-blue-500/40 dark:bg-blue-500/10 text-slate-900 dark:text-white'
                       : 'bg-white border-slate-100 hover:bg-slate-50/80 dark:bg-slate-900/50 dark:border-slate-800 dark:text-white dark:hover:bg-slate-800/50'
@@ -187,16 +179,13 @@ export default function LeaderboardPage() {
                     )}
                   </div>
                   <span className="flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-[#D4AF37]">
-                    <svg
-                      className="size-5 animate-pulse text-amber-500 dark:text-[#D4AF37]"
-                      xmlns="http://www.w3.org/2000/svg"
-                      height="24px"
-                      viewBox="http://www.w3.org/2000/svg"
-                      width="24px"
-                      fill="#D4AF37"
-                    >
-                      <path d="M480-120 80-600l120-240h560l120 240-400 480Zm-95-520h190l-60-120h-70l-60 120Zm55 347v-267H218l222 267Zm80 0 222-267H520v267Zm144-347h106l-60-120H604l60 120Zm-474 0h106l60-120H250l-60 120Z" />
-                    </svg>
+                    <Image
+                      src="/diamond.png"
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="size-5 animate-pulse"
+                    />
                     {formatNumber(entry.diamonds ?? 0)}
                   </span>
                 </div>

@@ -1,34 +1,34 @@
-import { notFound } from "next/navigation"
-import Image from "next/image"
-import { BookOpen, GraduationCap, Star, Users, PlayCircle } from "lucide-react"
-import { Container } from "@/components/layout/container"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { EnrollCard } from "@/components/courses/enroll-card"
-import { CourseReviews } from "@/components/courses/course-reviews"
-import { api } from "@/lib/api-client"
-import { resolveAssetUrl } from "@/lib/config"
-import { initials } from "@/lib/format"
-import type { Course, Lesson, Paginated, Review } from "@/types"
+import { notFound } from 'next/navigation';
+import Image from 'next/image';
+import { BookOpen, GraduationCap, Star, Users, PlayCircle } from 'lucide-react';
+import { Container } from '@/components/layout/container';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EnrollCard } from '@/components/courses/enroll-card';
+import { CourseReviews } from '@/components/courses/course-reviews';
+import { api } from '@/lib/api-client';
+import { resolveAssetUrl } from '@/lib/config';
+import { initials } from '@/lib/format';
+import type { Course, Lesson, Paginated, Review } from '@/types';
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 async function getCourse(id: string) {
   try {
-    const res = await api.get<{ course: Course }>(`/courses/${id}`, undefined, { skipAuth: true })
-    return res.course
+    const res = await api.get<{ course: Course }>(`/courses/${id}`, undefined, { skipAuth: true });
+    return res.course;
   } catch {
-    return null
+    return null;
   }
 }
 
 export default async function CourseDetailPage({ params }: PageProps) {
-  const { id } = await params
-  const course = await getCourse(id)
-  if (!course) notFound()
+  const { id } = await params;
+  const course = await getCourse(id);
+  if (!course) notFound();
 
   const [lessons, reviews] = await Promise.all([
     api
@@ -39,18 +39,22 @@ export default async function CourseDetailPage({ params }: PageProps) {
       .get<Paginated<Review>>(`/courses/${id}/reviews`, undefined, { skipAuth: true })
       .then((res) => res.items)
       .catch(() => [] as Review[]),
-  ])
+  ]);
 
-  const category = typeof course.category === "object" ? course.category?.name : undefined
-  const teacher = typeof course.teacher === "object" ? course.teacher : undefined
-  const thumbnail = resolveAssetUrl(course.thumbnail)
+  const category = typeof course.category === 'object' ? course.category?.name : undefined;
+  const teacher = typeof course.teacher === 'object' ? course.teacher : undefined;
+  const thumbnail = resolveAssetUrl(course.thumbnail);
 
   return (
     <div className="pb-16">
       <div className="border-b border-border/60 bg-muted/30">
         <Container className="grid gap-8 py-10 lg:grid-cols-[1fr_360px] lg:py-14">
           <div className="flex flex-col justify-center gap-4">
-            {category && <Badge variant="secondary" className="w-fit">{category}</Badge>}
+            {category && (
+              <Badge variant="secondary" className="w-fit">
+                {category}
+              </Badge>
+            )}
             <h1 className="text-balance font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
               {course.title}
             </h1>
@@ -126,16 +130,16 @@ export default async function CourseDetailPage({ params }: PageProps) {
 
         <aside className="hidden lg:block">
           {thumbnail ? (
-            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
+            <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted">
               <Image src={thumbnail} alt={course.title} fill unoptimized className="object-cover" />
             </div>
           ) : (
-            <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-linear-to-br from-primary/15 to-accent/40">
+            <div className="flex aspect-video w-full items-center justify-center rounded-md bg-linear-to-br from-primary/15 to-accent/40">
               <GraduationCap className="size-10 text-primary/50" />
             </div>
           )}
         </aside>
       </Container>
     </div>
-  )
+  );
 }

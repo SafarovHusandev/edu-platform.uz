@@ -1,59 +1,59 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { CreditCard, Loader2, ShieldCheck, Wallet } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { PageHeader } from "@/components/ui/page-header"
-import { useAuthStore } from "@/store/auth-store"
-import { useCreatePayment } from "@/hooks/use-payment"
-import { formatNumber, formatPrice, toTiyin } from "@/lib/format"
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { CreditCard, Loader2, ShieldCheck, Wallet } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { useAuthStore } from '@/store/auth-store';
+import { useCreatePayment } from '@/hooks/use-payment';
+import { formatNumber, formatPrice, toTiyin } from '@/lib/format';
 
-const QUICK_AMOUNTS = [20000, 50000, 100000, 200000]
+const QUICK_AMOUNTS = [20000, 50000, 100000, 200000];
 
 export default function WalletPage() {
-  const user = useAuthStore((s) => s.user)
-  const router = useRouter()
-  const createPayment = useCreatePayment()
-  const [amount, setAmount] = useState(50000)
+  const user = useAuthStore((s) => s.user);
+  const router = useRouter();
+  const createPayment = useCreatePayment();
+  const [amount, setAmount] = useState(50000);
 
   function handleTopUp() {
     createPayment.mutate(
       {
-        purpose: "wallet",
+        purpose: 'wallet',
         amount: toTiyin(amount),
-        returnUrl: typeof window !== "undefined" ? `${window.location.origin}/student/wallet` : "",
+        returnUrl: typeof window !== 'undefined' ? `${window.location.origin}/student/wallet` : '',
       },
       {
         onSuccess: (invoice) => {
           if (invoice.checkoutUrl) {
-            window.location.href = invoice.checkoutUrl
+            window.location.href = invoice.checkoutUrl;
           } else {
-            router.push(`/student/payment/${invoice.invoiceId}`)
+            router.push(`/student/payment/${invoice.invoiceId}`);
           }
         },
       }
-    )
+    );
   }
 
   function handlePremium() {
     createPayment.mutate(
       {
-        purpose: "premium",
-        returnUrl: typeof window !== "undefined" ? `${window.location.origin}/student/wallet` : "",
+        purpose: 'premium',
+        returnUrl: typeof window !== 'undefined' ? `${window.location.origin}/student/wallet` : '',
       },
       {
         onSuccess: (invoice) => {
           if (invoice.checkoutUrl) {
-            window.location.href = invoice.checkoutUrl
+            window.location.href = invoice.checkoutUrl;
           } else {
-            router.push(`/student/payment/${invoice.invoiceId}`)
+            router.push(`/student/payment/${invoice.invoiceId}`);
           }
         },
       }
-    )
+    );
   }
 
   return (
@@ -65,7 +65,7 @@ export default function WalletPage() {
 
       <Card className="bg-linear-to-br from-primary to-primary/70 text-primary-foreground">
         <CardContent className="flex items-center gap-4 pt-2">
-          <span className="flex size-12 items-center justify-center rounded-xl bg-white/15">
+          <span className="flex size-12 items-center justify-center rounded-md bg-white/15">
             <Wallet className="size-6" />
           </span>
           <div>
@@ -86,7 +86,7 @@ export default function WalletPage() {
               <Button
                 key={value}
                 type="button"
-                variant={amount === value ? "default" : "outline"}
+                variant={amount === value ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setAmount(value)}
               >
@@ -113,7 +113,7 @@ export default function WalletPage() {
         </CardContent>
       </Card>
 
-      {user?.tarif !== "premium" && (
+      {user?.tarif !== 'premium' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -132,5 +132,5 @@ export default function WalletPage() {
         </Card>
       )}
     </div>
-  )
+  );
 }

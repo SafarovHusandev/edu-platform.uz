@@ -89,8 +89,8 @@ export default function DonatePage() {
       <Container className="grid gap-8 py-10 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
           {REASONS.map((reason) => (
-            <div key={reason.title} className="flex gap-4 rounded-xl border border-border p-5">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div key={reason.title} className="flex gap-4 rounded-md border border-border p-5">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <reason.icon className="size-5" />
               </span>
               <div>

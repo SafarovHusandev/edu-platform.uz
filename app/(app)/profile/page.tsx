@@ -5,10 +5,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import Image from 'next/image';
 import {
   Camera,
   CheckCircle2,
-  Gem,
   KeyRound,
   Loader2,
   Send,
@@ -17,6 +17,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { StatusCard } from '@/components/layout/status-card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,6 +170,8 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader title="Profil" description="Shaxsiy ma'lumotlaringizni boshqaring" />
 
+      {user.role === 'student' && <StatusCard />}
+
       <Card className="overflow-hidden rounded-2xl border-none shadow-md ring-1 ring-border/60">
         <CardContent className="flex flex-col items-center gap-5 pt-2 sm:flex-row sm:gap-6">
           <div className="relative shrink-0">
@@ -233,13 +236,14 @@ export default function ProfilePage() {
           </div>
           {user.role === 'student' && (
             <div className="flex w-full gap-3 border-t pt-5 sm:w-auto sm:border-t-0 sm:border-l sm:pl-6 sm:pt-0">
-              <div className="flex-1 rounded-xl bg-gold/10 px-4 py-3 text-center sm:flex-none">
+              <div className="flex-1 rounded-md bg-gold/10 px-4 py-3 text-center sm:flex-none">
                 <p className="flex items-center justify-center gap-1.5 text-xl font-bold text-gold-foreground">
-                  <Gem className="size-5 text-gold" /> {formatNumber(user.diamonds ?? 0)}
+                  <Image src="/diamond.png" alt="" width={32} height={32} className="size-5" />{' '}
+                  {formatNumber(user.diamonds ?? 0)}
                 </p>
                 <p className="mt-0.5 text-xs font-medium text-muted-foreground">Olmoslar</p>
               </div>
-              <div className="flex-1 rounded-xl bg-primary/10 px-4 py-3 text-center sm:flex-none">
+              <div className="flex-1 rounded-md bg-primary/10 px-4 py-3 text-center sm:flex-none">
                 <p className="flex items-center justify-center gap-1.5 text-xl font-bold text-primary">
                   <Wallet className="size-5" /> {formatPrice(user.balance ?? 0)}
                 </p>
@@ -286,7 +290,7 @@ export default function ProfilePage() {
       <Card className="rounded-2xl shadow-sm">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
               <KeyRound className="size-5" />
             </span>
             <div>
@@ -315,7 +319,7 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Joriy parol</FormLabel>
                     <FormControl>
-                      <Input type="password" className="h-11 rounded-xl text-base" {...field} />
+                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -328,7 +332,7 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Yangi parol</FormLabel>
                     <FormControl>
-                      <Input type="password" className="h-11 rounded-xl text-base" {...field} />
+                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -341,7 +345,7 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Yangi parolni tasdiqlang</FormLabel>
                     <FormControl>
-                      <Input type="password" className="h-11 rounded-xl text-base" {...field} />
+                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -350,7 +354,7 @@ export default function ProfilePage() {
               <Button
                 type="submit"
                 size="lg"
-                className="h-11 rounded-xl px-6 text-base sm:col-span-3 sm:w-fit"
+                className="h-11 rounded-md px-6 text-base sm:col-span-3 sm:w-fit"
                 disabled={changePassword.isPending}
               >
                 {changePassword.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -364,7 +368,7 @@ export default function ProfilePage() {
       <Card className="rounded-2xl shadow-sm">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
               <Send className="size-5" />
             </span>
             <div>
@@ -378,7 +382,7 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           {user.telegramId ? (
-            <div className="flex flex-col items-start justify-between gap-3 rounded-xl bg-success/10 px-4 py-3 sm:flex-row sm:items-center">
+            <div className="flex flex-col items-start justify-between gap-3 rounded-md bg-success/10 px-4 py-3 sm:flex-row sm:items-center">
               <span className="flex items-center gap-2 text-sm font-medium text-success">
                 <CheckCircle2 className="size-4" />
                 Telegram ulangan{user.telegramUsername ? ` (@${user.telegramUsername})` : ''}
@@ -404,7 +408,7 @@ export default function ProfilePage() {
               </AlertDialog>
             </div>
           ) : telegramState === 'waiting' ? (
-            <div className="flex flex-col items-start gap-3 rounded-xl bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col items-start gap-3 rounded-md bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
                 Telegram botida ulanishni yakunlang, bu yerda avtomatik yangilanadi...
@@ -422,7 +426,7 @@ export default function ProfilePage() {
               </Button>
             </div>
           ) : telegramState === 'timeout' ? (
-            <div className="flex flex-col items-start gap-3 rounded-xl bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col items-start gap-3 rounded-md bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm text-muted-foreground">
                 Ulanmadi, qayta urinib ko&apos;ring
               </span>
@@ -438,7 +442,7 @@ export default function ProfilePage() {
           ) : (
             <Button
               size="lg"
-              className="h-11 rounded-xl px-6 text-base"
+              className="h-11 rounded-md px-6 text-base"
               onClick={handleLinkTelegram}
               disabled={linkTelegram.isPending}
             >
@@ -457,7 +461,7 @@ export default function ProfilePage() {
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5 text-lg">
-              <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <KeyRound className="size-4.5" />
               </span>
               Parol o&apos;rnating
@@ -490,7 +494,7 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Yangi parol</FormLabel>
                     <FormControl>
-                      <Input type="password" className="h-11 rounded-xl text-base" {...field} />
+                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -503,7 +507,7 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Parolni tasdiqlang</FormLabel>
                     <FormControl>
-                      <Input type="password" className="h-11 rounded-xl text-base" {...field} />
+                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -513,7 +517,7 @@ export default function ProfilePage() {
                 <Button
                   type="submit"
                   size="lg"
-                  className="h-11 rounded-xl px-6 text-base"
+                  className="h-11 rounded-md px-6 text-base"
                   disabled={changePassword.isPending}
                 >
                   {changePassword.isPending && <Loader2 className="size-4 animate-spin" />}

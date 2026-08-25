@@ -36,7 +36,7 @@ export function SidebarNav({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              'group flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-md font-medium text-muted-foreground transition-all duration-200 ease-out hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              'group flex items-center gap-2.5 rounded-md px-3.5 py-2.5 text-md font-medium text-muted-foreground transition-all duration-200 ease-out hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
               active && 'bg-sidebar-primary/10 text-sidebar-primary'
             )}
           >
@@ -62,7 +62,7 @@ export function SidebarNav({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              'group flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-md font-medium text-muted-foreground transition-all duration-200 ease-out hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              'group flex items-center gap-2.5 rounded-md px-3.5 py-2.5 text-md font-medium text-muted-foreground transition-all duration-200 ease-out hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
               active && 'bg-sidebar-primary/10 text-sidebar-primary'
             )}
           >

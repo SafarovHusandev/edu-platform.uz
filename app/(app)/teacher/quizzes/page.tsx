@@ -1,7 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { ClipboardList, Plus, Trash2, BarChart3, CheckCircle2, CircleDashed } from 'lucide-react';
+import {
+  ClipboardList,
+  Plus,
+  Trash2,
+  BarChart3,
+  CheckCircle2,
+  CircleDashed,
+  Crown,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -100,6 +108,18 @@ export default function TeacherQuizzesPage() {
                     {quiz.createdAt && <span>Yaratilgan: {formatDate(quiz.createdAt)}</span>}
                     {quiz.timeLimit && <span>Vaqt: {quiz.timeLimit} daq</span>}
                   </div>
+
+                  {quiz.effectiveMaxAttempts != null &&
+                    quiz.effectiveMaxAttempts < quiz.maxAttempts && (
+                      <div className="flex items-start gap-2 rounded-md bg-gold/10 px-3 py-2 text-xs text-gold-foreground sm:text-sm">
+                        <Crown className="mt-0.5 size-4 shrink-0" />
+                        <p>
+                          Siz standart tarifdasiz — o&apos;quvchilar faqat{' '}
+                          {quiz.effectiveMaxAttempts} marta urinishi mumkin. Ko&apos;proq urinish
+                          uchun Premium oling.
+                        </p>
+                      </div>
+                    )}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">

@@ -1,7 +1,6 @@
 import type { Role } from '@/types';
 import {
   LayoutDashboard,
-  BookOpen,
   GraduationCap,
   ClipboardList,
   Trophy,
@@ -14,9 +13,9 @@ import {
   Tags,
   Tag,
   TicketPercent,
-  PackageCheck,
   BarChart3,
   Library,
+  RotateCw,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -60,6 +59,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Kutubxona', href: '/books', icon: Library },
     { label: 'Sertifikatlar', href: '/student/certificates', icon: ScrollText },
     { label: 'Mukofotlar', href: '/student/rewards', icon: Gift },
+    { label: 'Kunlik barabon', href: '/student/daily-spin', icon: RotateCw },
     { label: 'Reyting', href: '/leaderboard', icon: Trophy },
     { label: 'Hamyon', href: '/student/wallet', icon: Wallet },
   ],

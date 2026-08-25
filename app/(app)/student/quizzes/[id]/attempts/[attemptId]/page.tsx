@@ -2,11 +2,13 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Gem, Hourglass, Sparkles, Trophy, XCircle } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, CheckCircle2, Hourglass, Sparkles, Trophy, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useQuiz, useMyAttempts } from '@/hooks/use-quizzes';
+import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import { calculateQuizDiamonds } from '@/lib/gamification';
@@ -25,9 +27,10 @@ export default function QuizAttemptResultPage({ params }: PageProps) {
   const { id, attemptId } = use(params);
   const { data: quiz, isLoading: quizLoading } = useQuiz(id);
   const { data: attemptsData, isLoading: attemptsLoading } = useMyAttempts(id);
+  const isPremium = useAuthStore((s) => s.user?.tarif === 'premium');
 
   if (quizLoading || attemptsLoading || !quiz) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
   }
 
   const attempt = attemptsData?.attempts.find((a) => a._id === attemptId);
@@ -102,11 +105,11 @@ export default function QuizAttemptResultPage({ params }: PageProps) {
               >
                 {attempt.passed ? "O'tdi" : "O'ta olmadi"}
               </Badge>
-              {calculateQuizDiamonds(attempt) > 0 && (
-                <div className="flex items-center gap-2 rounded-xl bg-gold/15 px-4 py-2.5 text-base text-gold-foreground shadow-sm">
-                  <Gem className="size-5 text-gold" />
+              {calculateQuizDiamonds(attempt, isPremium) > 0 && (
+                <div className="flex items-center gap-2 rounded-md bg-gold/15 px-4 py-2.5 text-base text-gold-foreground shadow-sm">
+                  <Image src="/diamond.png" alt="" width={32} height={32} className="size-5" />
                   <span className="font-semibold">
-                    🎉 {calculateQuizDiamonds(attempt)} diamond qo&apos;lga kiritdingiz!
+                    🎉 {calculateQuizDiamonds(attempt, isPremium)} diamond qo&apos;lga kiritdingiz!
                   </span>
                 </div>
               )}

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Send, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Send, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useLogin, useTelegramLogin } from '@/hooks/use-auth';
+import { ApiError } from '@/lib/api-client';
 
 const schema = z.object({
   phone: z
@@ -58,6 +59,7 @@ function LoginForm() {
     defaultValues: { code: '' },
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // https://edu-platform.uz/login?tg_code=... — Telegram botdan yuborilgan
   // havola bosilganda kodni qo'lda kiritmasdan avtomatik login qilinadi.
@@ -97,11 +99,17 @@ function LoginForm() {
   }
 
   function onSubmit(values: FormValues) {
+    setLoginError(null);
     login.mutate(
       { ...values, phone: `998${values.phone}` },
       {
         onSuccess: () => {
           router.push(searchParams.get('redirect') || '/dashboard');
+        },
+        onError: (error) => {
+          setLoginError(
+            error instanceof ApiError ? error.message : 'Kirishda xatolik yuz berdi'
+          );
         },
       }
     );
@@ -133,18 +141,24 @@ function LoginForm() {
             <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-muted/80 p-1">
               <TabsTrigger
                 value="password"
-                className="rounded-xl text-base font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="rounded-md text-base font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 Telefon
               </TabsTrigger>
               <TabsTrigger
                 value="telegram"
-                className="rounded-xl text-base font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                className="rounded-md text-base font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
                 Telegram
               </TabsTrigger>
             </TabsList>
             <TabsContent value="password" className="mt-0">
+              {loginError && (
+                <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                  <p>{loginError}</p>
+                </div>
+              )}
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                   <FormField
@@ -198,7 +212,7 @@ function LoginForm() {
                   />
                   <Button
                     type="submit"
-                    className="h-12 w-full rounded-xl text-base font-semibold shadow-md shadow-primary/20 transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
+                    className="h-12 w-full rounded-md text-base font-semibold shadow-md shadow-primary/20 transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
                     disabled={login.isPending}
                   >
                     {login.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -245,7 +259,7 @@ function LoginForm() {
                   />
                   <Button
                     type="submit"
-                    className="h-12 w-full rounded-xl text-base font-semibold shadow-md shadow-primary/20 transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
+                    className="h-12 w-full rounded-md text-base font-semibold shadow-md shadow-primary/20 transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
                     disabled={telegramLogin.isPending}
                   >
                     {telegramLogin.isPending ? (

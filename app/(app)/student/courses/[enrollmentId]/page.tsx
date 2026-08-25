@@ -1,39 +1,46 @@
-"use client"
+'use client';
 
-import { use } from "react"
-import Link from "next/link"
-import { CheckCircle2, Circle, PlayCircle, GraduationCap } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { EmptyState } from "@/components/ui/empty-state"
-import { ErrorState } from "@/components/ui/error-state"
-import { useEnrollment } from "@/hooks/use-enrollment"
-import { useCourseLessons } from "@/hooks/use-lessons"
-import { cn } from "@/lib/utils"
+import { use } from 'react';
+import Link from 'next/link';
+import { CheckCircle2, Circle, PlayCircle, GraduationCap } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { useEnrollment } from '@/hooks/use-enrollment';
+import { useCourseLessons } from '@/hooks/use-lessons';
+import { cn } from '@/lib/utils';
 
 interface PageProps {
-  params: Promise<{ enrollmentId: string }>
+  params: Promise<{ enrollmentId: string }>;
 }
 
 export default function EnrollmentDetailPage({ params }: PageProps) {
-  const { enrollmentId } = use(params)
-  const { data: enrollment, isLoading, isError, refetch } = useEnrollment(enrollmentId)
-  const course = enrollment && typeof enrollment.course === "object" ? enrollment.course : null
-  const { data: lessons } = useCourseLessons(course?._id)
-  const completedLessons = new Set(enrollment?.completedLessons ?? [])
+  const { enrollmentId } = use(params);
+  const { data: enrollment, isLoading, isError, refetch } = useEnrollment(enrollmentId);
+  const course = enrollment && typeof enrollment.course === 'object' ? enrollment.course : null;
+  const { data: lessons } = useCourseLessons(course?._id);
+  const completedLessons = new Set(enrollment?.completedLessons ?? []);
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-24 animate-pulse rounded-xl bg-muted" />
-        <div className="h-64 animate-pulse rounded-xl bg-muted" />
+        <div className="h-24 animate-pulse rounded-md bg-muted" />
+        <div className="h-64 animate-pulse rounded-md bg-muted" />
       </div>
-    )
+    );
   }
 
   if (isError) {
-    return <ErrorState onRetry={() => refetch()} />
+    return <ErrorState onRetry={() => refetch()} />;
   }
 
   if (!enrollment || !course) {
@@ -42,9 +49,16 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
         icon={GraduationCap}
         title="Kurs topilmadi"
         description="Bu kursga yozilmagansiz yoki kurs o'chirilgan bo'lishi mumkin."
-        action={<Link href="/student/courses" className="text-sm font-medium text-primary hover:underline">Kurslarimga qaytish</Link>}
+        action={
+          <Link
+            href="/student/courses"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Kurslarimga qaytish
+          </Link>
+        }
       />
-    )
+    );
   }
 
   return (
@@ -52,7 +66,9 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/student/courses" />}>Mening kurslarim</BreadcrumbLink>
+            <BreadcrumbLink render={<Link href="/student/courses" />}>
+              Mening kurslarim
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -63,7 +79,7 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
 
       <div className="flex flex-col gap-4 rounded-2xl border border-border p-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <span className="flex size-12 items-center justify-center rounded-md bg-primary/10 text-primary">
             <GraduationCap className="size-6" />
           </span>
           <div>
@@ -88,14 +104,14 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
             {lessons
               .sort((a, b) => a.order - b.order)
               .map((lesson, idx) => {
-                const isDone = completedLessons.has(lesson._id)
+                const isDone = completedLessons.has(lesson._id);
                 return (
                   <li key={lesson._id}>
                     <Link
                       href={`/student/lessons/${lesson._id}`}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:border-primary/40",
-                        isDone && "bg-success/5"
+                        'flex items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:border-primary/40',
+                        isDone && 'bg-success/5'
                       )}
                     >
                       {isDone ? (
@@ -111,11 +127,11 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
                       <PlayCircle className="size-4 shrink-0 text-muted-foreground" />
                     </Link>
                   </li>
-                )
+                );
               })}
           </ol>
         )}
       </div>
     </div>
-  )
+  );
 }

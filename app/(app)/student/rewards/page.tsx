@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Gem, Gift, PackageCheck } from "lucide-react"
+import { Crown, Gift, Lock, PackageCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,6 +31,7 @@ export default function StudentRewardsPage() {
   const { data, isLoading, isError, refetch } = useRewards({ page: 1, limit: 24 })
   const redeem = useRedeemReward()
   const diamonds = user?.diamonds ?? 0
+  const isPremium = user?.tarif === "premium"
 
   return (
     <div>
@@ -43,7 +44,7 @@ export default function StudentRewardsPage() {
           isStudent ? (
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1.5 text-sm font-semibold text-gold-foreground">
-                <Gem className="size-4 text-gold" /> {formatNumber(diamonds)}
+                <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" /> {formatNumber(diamonds)}
               </span>
               <Button variant="outline" size="sm" render={<Link href="/student/rewards/redemptions" />}>
                 <PackageCheck className="size-4" /> Mening yutuqlarim
@@ -64,7 +65,8 @@ export default function StudentRewardsPage() {
           {data.items.map((reward) => {
             const image = resolveAssetUrl(reward.image)
             const inStock = reward.stock === null || reward.stock > 0
-            const canAfford = diamonds >= reward.cost && inStock
+            const isLocked = !!reward.premiumOnly && !isPremium
+            const canAfford = diamonds >= reward.cost && inStock && !isLocked
             return (
               <Card key={reward._id} className="py-0">
                 <div className="relative aspect-video w-full overflow-hidden bg-muted">
@@ -75,6 +77,11 @@ export default function StudentRewardsPage() {
                       <Gift className="size-8 text-gold" />
                     </div>
                   )}
+                  {reward.premiumOnly && (
+                    <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-gold px-2.5 py-1 text-xs font-semibold text-gold-foreground shadow-sm">
+                      <Crown className="size-3.5" /> Faqat Premium
+                    </span>
+                  )}
                 </div>
                 <CardContent className="flex flex-col gap-2 pt-4">
                   <h3 className="line-clamp-1 text-sm font-semibold">{reward.title}</h3>
@@ -83,7 +90,7 @@ export default function StudentRewardsPage() {
                   )}
                   <div className="mt-1 flex items-center justify-between">
                     <span className="flex items-center gap-1 text-sm font-semibold text-gold-foreground">
-                      <Gem className="size-4 text-gold" /> {formatNumber(reward.cost)}
+                      <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" /> {formatNumber(reward.cost)}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {reward.stock === null
@@ -93,29 +100,35 @@ export default function StudentRewardsPage() {
                           : "Tugagan"}
                     </span>
                   </div>
-                  {isStudent && (
-                    <AlertDialog>
-                      <AlertDialogTrigger
-                        render={<Button className="mt-1 w-full" disabled={!canAfford} />}
-                      >
-                        Almashtirish
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Mukofotga almashtirasizmi?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            &quot;{reward.title}&quot; uchun {formatNumber(reward.cost)} olmos
-                            yechiladi. Bu amalni bekor qilib bo&apos;lmaydi.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => redeem.mutate(reward._id)}>
-                            Tasdiqlash
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  {isStudent && isLocked ? (
+                    <Button className="mt-1 w-full" variant="outline" disabled>
+                      <Lock className="size-4" /> Faqat Premium uchun
+                    </Button>
+                  ) : (
+                    isStudent && (
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={<Button className="mt-1 w-full" disabled={!canAfford} />}
+                        >
+                          Almashtirish
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Mukofotga almashtirasizmi?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              &quot;{reward.title}&quot; uchun {formatNumber(reward.cost)} olmos
+                              yechiladi. Bu amalni bekor qilib bo&apos;lmaydi.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => redeem.mutate(reward._id)}>
+                              Tasdiqlash
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )
                   )}
                 </CardContent>
               </Card>

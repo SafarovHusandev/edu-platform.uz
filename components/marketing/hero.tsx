@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowRight, Sparkles, ShieldCheck, Gem } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/layout/container';
 
@@ -67,7 +68,7 @@ export function Hero() {
             Tasdiqlangan sertifikatlar
           </span>
           <span className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3.5 py-1.5 shadow-xs backdrop-blur-sm">
-            <Gem className="size-4 text-gold" />
+            <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" />
             Olmoslar bilan mukofotlash
           </span>
           <span className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3.5 py-1.5 shadow-xs backdrop-blur-sm">

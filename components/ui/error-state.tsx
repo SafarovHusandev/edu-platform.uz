@@ -1,17 +1,17 @@
-import * as React from "react"
-import { AlertTriangle, RotateCw } from "lucide-react"
+import * as React from 'react';
+import { AlertTriangle, RotateCw } from 'lucide-react';
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-interface ErrorStateProps extends React.ComponentProps<"div"> {
-  title?: string
-  description?: string
-  onRetry?: () => void
+interface ErrorStateProps extends React.ComponentProps<'div'> {
+  title?: string;
+  description?: string;
+  onRetry?: () => void;
 }
 
 function ErrorState({
-  title = "Nimadir xato ketdi",
+  title = 'Nimadir xato ketdi',
   description = "Ma'lumotlarni yuklab bo'lmadi. Iltimos, qayta urinib ko'ring.",
   onRetry,
   className,
@@ -20,7 +20,7 @@ function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-xl border border-dashed border-destructive/30 bg-destructive/5 py-16 text-center",
+        'flex flex-col items-center gap-3 rounded-md border border-dashed border-destructive/30 bg-destructive/5 py-16 text-center',
         className
       )}
       {...props}
@@ -39,7 +39,7 @@ function ErrorState({
         </Button>
       )}
     </div>
-  )
+  );
 }
 
-export { ErrorState }
+export { ErrorState };

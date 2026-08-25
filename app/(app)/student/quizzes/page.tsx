@@ -63,7 +63,8 @@ export default function StudentQuizzesPage() {
                         <Target className="size-3.5" /> O&apos;tish balli: {quiz.passingScore}%
                       </span>
                       <span className="flex items-center gap-1">
-                        <Repeat className="size-3.5" /> {quiz.maxAttempts} urinish
+                        <Repeat className="size-3.5" /> {quiz.effectiveMaxAttempts ?? quiz.maxAttempts}{' '}
+                        urinish
                       </span>
                     </div>
 

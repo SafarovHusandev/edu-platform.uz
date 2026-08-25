@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Camera, Gem, Gift, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Camera, Crown, Gift, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -29,7 +30,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -46,21 +54,22 @@ import { resolveAssetUrl } from '@/lib/config';
 import { formatNumber } from '@/lib/format';
 import type { Reward } from '@/types';
 
-const PAGE_SIZE = 12
+const PAGE_SIZE = 12;
 
 const rewardSchema = z.object({
-  title: z.string().min(2, { error: "Kamida 2 ta belgi" }),
+  title: z.string().min(2, { error: 'Kamida 2 ta belgi' }),
   description: z.string().optional(),
-  cost: z.coerce.number().min(1, { error: "Kamida 1" }),
+  cost: z.coerce.number().min(1, { error: 'Kamida 1' }),
   unlimited: z.boolean(),
   stock: z.coerce.number().min(0, { error: "0 yoki ko'proq" }).optional(),
-})
+  premiumOnly: z.boolean(),
+});
 
-type RewardFormInput = z.input<typeof rewardSchema>
-type RewardFormValues = z.output<typeof rewardSchema>
+type RewardFormInput = z.input<typeof rewardSchema>;
+type RewardFormValues = z.output<typeof rewardSchema>;
 
 export default function AdminRewardsPage() {
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(1);
   const { data, isLoading, isError, refetch } = useRewards({ page, limit: PAGE_SIZE });
   const createReward = useCreateReward();
   const updateReward = useUpdateReward();
@@ -74,13 +83,27 @@ export default function AdminRewardsPage() {
 
   const form = useForm<RewardFormInput, unknown, RewardFormValues>({
     resolver: zodResolver(rewardSchema),
-    defaultValues: { title: '', description: '', cost: 10, unlimited: false, stock: 10 },
-  })
-  const unlimited = form.watch('unlimited')
+    defaultValues: {
+      title: '',
+      description: '',
+      cost: 10,
+      unlimited: false,
+      stock: 10,
+      premiumOnly: false,
+    },
+  });
+  const unlimited = form.watch('unlimited');
 
   function openCreate() {
     setEditing(null);
-    form.reset({ title: '', description: '', cost: 10, unlimited: false, stock: 10 })
+    form.reset({
+      title: '',
+      description: '',
+      cost: 10,
+      unlimited: false,
+      stock: 10,
+      premiumOnly: false,
+    });
     setDialogOpen(true);
   }
 
@@ -92,7 +115,8 @@ export default function AdminRewardsPage() {
       cost: reward.cost,
       unlimited: reward.stock === null,
       stock: reward.stock ?? 10,
-    })
+      premiumOnly: reward.premiumOnly ?? false,
+    });
     setDialogOpen(true);
   }
 
@@ -101,10 +125,14 @@ export default function AdminRewardsPage() {
       title: values.title,
       description: values.description,
       cost: values.cost,
-      stock: values.unlimited ? null : values.stock ?? 0,
-    }
+      stock: values.unlimited ? null : (values.stock ?? 0),
+      premiumOnly: values.premiumOnly,
+    };
     if (editing) {
-      updateReward.mutate({ id: editing._id, ...payload }, { onSuccess: () => setDialogOpen(false) });
+      updateReward.mutate(
+        { id: editing._id, ...payload },
+        { onSuccess: () => setDialogOpen(false) }
+      );
     } else {
       createReward.mutate(payload, { onSuccess: () => setDialogOpen(false) });
     }
@@ -116,25 +144,28 @@ export default function AdminRewardsPage() {
         title="Mukofotlar"
         description="Olmoslarga almashtiriladigan sovg'alar"
         actions={
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} size="lg" className="h-10 rounded-md px-5 shadow-sm">
             <Plus className="size-4" /> Yangi mukofot
           </Button>
         }
       />
 
       {isLoading ? (
-        <SkeletonCardGrid count={6} itemClassName="h-56" />
+        <SkeletonCardGrid count={6} itemClassName="h-64 rounded-md" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState icon={Gift} title="Hali mukofot qo'shilmagan" />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {data.items.map((reward) => {
               const image = resolveAssetUrl(reward.image);
               return (
-                <Card key={reward._id} className="py-0">
+                <Card
+                  key={reward._id}
+                  className="gap-0 overflow-hidden rounded-md py-0 shadow-sm ring-1 ring-border/60 transition-shadow hover:shadow-md"
+                >
                   <div className="relative aspect-video w-full overflow-hidden bg-muted">
                     {image ? (
                       <Image
@@ -146,7 +177,7 @@ export default function AdminRewardsPage() {
                       />
                     ) : (
                       <div className="flex size-full items-center justify-center bg-linear-to-br from-gold/20 to-primary/10">
-                        <Gift className="size-8 text-gold" />
+                        <Gift className="size-9 text-gold" />
                       </div>
                     )}
                     <button
@@ -164,14 +195,26 @@ export default function AdminRewardsPage() {
                         <Camera className="size-5" />
                       )}
                     </button>
-                  </div>
-                  <CardContent className="flex flex-col gap-2 py-4">
-                    <h3 className="line-clamp-1 text-md font-semibold">{reward.title}</h3>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1 font-medium text-gold-foreground">
-                        <Gem className="size-4 text-gold" /> {formatNumber(reward.cost)}
+                    {reward.premiumOnly && (
+                      <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-gold px-2.5 py-1 text-xs font-semibold text-gold-foreground shadow-sm">
+                        <Crown className="size-3.5" /> Faqat Premium
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                    )}
+                  </div>
+                  <CardContent className="flex flex-col gap-3 p-4">
+                    <h3 className="line-clamp-1 text-base font-semibold">{reward.title}</h3>
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1 text-sm font-semibold text-gold-foreground">
+                        <Image
+                          src="/diamond.png"
+                          alt=""
+                          width={32}
+                          height={32}
+                          className="size-4"
+                        />{' '}
+                        {formatNumber(reward.cost)}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">
                         {reward.stock === null ? 'Cheksiz' : `${reward.stock} dona`}
                       </span>
                     </div>
@@ -179,14 +222,23 @@ export default function AdminRewardsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 rounded-md"
                         onClick={() => openEdit(reward)}
                       >
                         <Pencil className="size-4" /> Tahrirlash
                       </Button>
                       <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="outline" size="icon-sm" aria-label="O'chirish" />}>
-                          <Trash2 className="size-4" />
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              className="rounded-md"
+                              aria-label="O'chirish"
+                            />
+                          }
+                        >
+                          <Trash2 className="size-4 text-destructive" />
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
@@ -210,13 +262,15 @@ export default function AdminRewardsPage() {
             })}
           </div>
 
-          <PaginationBar
-            page={page}
-            totalPages={data.totalPages}
-            total={data.total}
-            itemLabel="mukofot"
-            onPageChange={setPage}
-          />
+          <div className="mt-4">
+            <PaginationBar
+              page={page}
+              totalPages={data.totalPages}
+              total={data.total}
+              itemLabel="mukofot"
+              onPageChange={setPage}
+            />
+          </div>
         </>
       )}
 
@@ -233,20 +287,29 @@ export default function AdminRewardsPage() {
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-md sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Mukofotni tahrirlash' : 'Yangi mukofot'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2.5 text-lg">
+              <span className="flex size-9 items-center justify-center rounded-md bg-gold/15 text-gold-foreground">
+                <Gift className="size-4.5" />
+              </span>
+              {editing ? 'Mukofotni tahrirlash' : 'Yangi mukofot'}
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              O&apos;quvchilar olmoslarga almashtira oladigan sovg&apos;a ma&apos;lumotlarini
+              kiriting
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mukofot nomi</FormLabel>
+                    <FormLabel className="text-sm font-medium">Mukofot nomi</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input className="h-11 rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -257,9 +320,9 @@ export default function AdminRewardsPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tavsif (ixtiyoriy)</FormLabel>
+                    <FormLabel className="text-sm font-medium">Tavsif (ixtiyoriy)</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea className="rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -271,9 +334,15 @@ export default function AdminRewardsPage() {
                   name="cost"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Narxi (olmos)</FormLabel>
+                      <FormLabel className="text-sm font-medium">Narxi (olmos)</FormLabel>
                       <FormControl>
-                        <Input type="number" min={1} {...field} value={field.value as number} />
+                        <Input
+                          type="number"
+                          min={1}
+                          className="h-11 rounded-md text-base"
+                          {...field}
+                          value={field.value as number}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -284,9 +353,16 @@ export default function AdminRewardsPage() {
                   name="stock"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Miqdori</FormLabel>
+                      <FormLabel className="text-sm font-medium">Miqdori</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} disabled={unlimited} {...field} value={field.value as number} />
+                        <Input
+                          type="number"
+                          min={0}
+                          disabled={unlimited}
+                          className="h-11 rounded-md text-base"
+                          {...field}
+                          value={field.value as number}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -297,16 +373,35 @@ export default function AdminRewardsPage() {
                 control={form.control}
                 name="unlimited"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                  <FormItem className="flex flex-row items-center justify-between gap-2 space-y-0 rounded-md bg-muted/50 px-3 py-2.5">
+                    <FormLabel className="text-sm font-medium">Cheksiz miqdor</FormLabel>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <FormLabel className="font-normal">Cheksiz miqdor</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="premiumOnly"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between gap-2 space-y-0 rounded-md bg-gold/10 px-3 py-2.5">
+                    <FormLabel className="flex items-center gap-1.5 text-sm font-medium text-gold-foreground">
+                      <Crown className="size-4" /> Faqat Premium foydalanuvchilar uchun
+                    </FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
                   </FormItem>
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={createReward.isPending || updateReward.isPending}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="h-11 w-full rounded-md text-base sm:w-fit"
+                  disabled={createReward.isPending || updateReward.isPending}
+                >
                   {(createReward.isPending || updateReward.isPending) && (
                     <Loader2 className="size-4 animate-spin" />
                   )}

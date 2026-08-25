@@ -7,6 +7,13 @@ export interface Grade {
 
 export type Tarif = "standart" | "premium"
 
+export interface VerifiedByUser {
+  _id: string
+  name: string
+  phone: string
+  role: Role
+}
+
 export interface User {
   _id: string
   name: string
@@ -19,6 +26,8 @@ export interface User {
   tarif?: Tarif
   isBlocked?: boolean
   isVerified?: boolean
+  verifiedBy?: VerifiedByUser | string | null
+  verifiedAt?: string | null
   telegramId?: number | null
   telegramUsername?: string | null
   lastLogin?: string | null
@@ -148,6 +157,7 @@ export interface Quiz {
   createdBy?: User | string
   passingScore: number
   maxAttempts: number
+  effectiveMaxAttempts?: number
   timeLimit?: number | null
   availableFrom?: string | null
   availableUntil?: string | null
@@ -210,10 +220,17 @@ export interface Reward {
   cost: number
   stock: number | null
   image?: string
+  premiumOnly?: boolean
   createdAt?: string
 }
 
-export type RedemptionStatus = "pending" | "delivered" | "rejected"
+export type RedemptionStatus = "pending" | "approved" | "delivered" | "rejected"
+
+export interface RedemptionActor {
+  _id: string
+  name: string
+  phone: string
+}
 
 export interface Redemption {
   _id: string
@@ -222,6 +239,14 @@ export interface Redemption {
   diamondsSpent: number
   status: RedemptionStatus
   adminNote?: string
+  approvedBy?: RedemptionActor | string | null
+  approvedAt?: string | null
+  rejectedBy?: RedemptionActor | string | null
+  rejectedAt?: string | null
+  rejectReason?: string
+  deliveredBy?: RedemptionActor | string | null
+  deliveredAt?: string | null
+  deliveryNote?: string
   createdAt: string
 }
 

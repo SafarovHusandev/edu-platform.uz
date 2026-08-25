@@ -1,13 +1,13 @@
-import * as React from "react"
-import type { LucideIcon } from "lucide-react"
+import * as React from 'react';
+import type { LucideIcon } from 'lucide-react';
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils';
 
-interface EmptyStateProps extends React.ComponentProps<"div"> {
-  icon?: LucideIcon
-  title: string
-  description?: string
-  action?: React.ReactNode
+interface EmptyStateProps extends React.ComponentProps<'div'> {
+  icon?: LucideIcon;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
 }
 
 function EmptyState({
@@ -21,7 +21,7 @@ function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center",
+        'flex flex-col items-center gap-3 rounded-md border border-dashed border-border py-16 text-center',
         className
       )}
       {...props}
@@ -37,7 +37,7 @@ function EmptyState({
       </div>
       {action}
     </div>
-  )
+  );
 }
 
-export { EmptyState }
+export { EmptyState };

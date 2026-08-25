@@ -2,13 +2,13 @@
 
 import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
   Clock,
-  Gem,
   Hourglass,
   Loader2,
   Repeat,
@@ -21,9 +21,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useQuiz, useStartAttempt, useSubmitAttempt, useMyAttempts } from '@/hooks/use-quizzes';
+import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
 import { formatDateTime, formatDuration, formatTashkentDateTime } from '@/lib/format';
-import { QUIZ_MAX_REWARD, calculateQuizDiamonds } from '@/lib/gamification';
+import {
+  QUIZ_MAX_REWARD,
+  PREMIUM_DIAMOND_MULTIPLIER,
+  calculateQuizDiamonds,
+} from '@/lib/gamification';
 import type { Attempt, AttemptAnswer } from '@/types';
 
 interface PageProps {
@@ -36,6 +41,7 @@ export default function TakeQuizPage({ params }: PageProps) {
   const { data: attemptsData, isLoading: attemptsLoading } = useMyAttempts(id);
   const startAttempt = useStartAttempt();
   const submitAttempt = useSubmitAttempt();
+  const isPremium = useAuthStore((s) => s.user?.tarif === 'premium');
 
   const attempts = attemptsData?.attempts;
   const attemptsLeft = attemptsData?.attemptsRemaining ?? 0;
@@ -79,7 +85,7 @@ export default function TakeQuizPage({ params }: PageProps) {
   });
 
   if (isLoading || attemptsLoading || !quiz) {
-    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
   }
 
   const questions = quiz.questions ?? [];
@@ -126,7 +132,7 @@ export default function TakeQuizPage({ params }: PageProps) {
   }
 
   if (result) {
-    const diamondsEarned = calculateQuizDiamonds(result);
+    const diamondsEarned = calculateQuizDiamonds(result, isPremium);
     return (
       <div className="mx-auto max-w-xl">
         <Card>
@@ -153,8 +159,8 @@ export default function TakeQuizPage({ params }: PageProps) {
               </p>
             )}
             {diamondsEarned > 0 && (
-              <div className="flex items-center gap-2 rounded-xl bg-gold/15 px-4 py-2.5 text-gold-foreground">
-                <Gem className="size-5 text-gold" />
+              <div className="flex items-center gap-2 rounded-md bg-gold/15 px-4 py-2.5 text-gold-foreground">
+                <Image src="/diamond.png" alt="" width={32} height={32} className="size-5" />
                 <span className="font-semibold">
                   🎉 {diamondsEarned} diamond qo&apos;lga kiritdingiz!
                 </span>
@@ -197,7 +203,8 @@ export default function TakeQuizPage({ params }: PageProps) {
   }
 
   if (effectiveAttempt) {
-    const mm = remainingSec !== null ? String(Math.floor(remainingSec / 60)).padStart(2, '0') : null;
+    const mm =
+      remainingSec !== null ? String(Math.floor(remainingSec / 60)).padStart(2, '0') : null;
     const ss = remainingSec !== null ? String(remainingSec % 60).padStart(2, '0') : null;
     return (
       <div className="mx-auto max-w-2xl space-y-6">
@@ -300,7 +307,8 @@ export default function TakeQuizPage({ params }: PageProps) {
               <Target className="size-4" /> O&apos;tish balli: {quiz.passingScore}%
             </span>
             <span className="flex items-center gap-1.5">
-              <Repeat className="size-4" /> {attemptsLeft} / {quiz.maxAttempts} urinish qoldi
+              <Repeat className="size-4" /> {attemptsLeft} /{' '}
+              {quiz.effectiveMaxAttempts ?? quiz.maxAttempts} urinish qoldi
             </span>
           </div>
 
@@ -317,9 +325,18 @@ export default function TakeQuizPage({ params }: PageProps) {
 
           {attemptsData?.attemptsUsed === 0 && (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Gem className="size-3.5 text-gold" />
-              Bu test uchun maksimal {QUIZ_MAX_REWARD} diamond olishingiz mumkin (natijangizga
-              qarab)
+              <Image src="/diamond.png" alt="" width={32} height={32} className="size-3.5" />
+              {isPremium ? (
+                <>
+                  ⭐ Premium: maksimal {QUIZ_MAX_REWARD * PREMIUM_DIAMOND_MULTIPLIER} diamond
+                  olishingiz mumkin (natijangizga qarab)
+                </>
+              ) : (
+                <>
+                  Bu test uchun maksimal {QUIZ_MAX_REWARD} diamond olishingiz mumkin (natijangizga
+                  qarab)
+                </>
+              )}
             </p>
           )}
 
@@ -334,9 +351,14 @@ export default function TakeQuizPage({ params }: PageProps) {
               Testni boshlash
             </Button>
           ) : (
-            <Badge variant="destructive" className="mt-4">
-              Urinishlar tugadi
-            </Badge>
+            <div className="mt-4 flex flex-col items-center gap-1.5">
+              <Badge variant="destructive">Urinishlar tugadi</Badge>
+              {quiz.effectiveMaxAttempts != null && quiz.effectiveMaxAttempts < quiz.maxAttempts && (
+                <p className="max-w-xs text-xs text-muted-foreground">
+                  Ko&apos;proq urinish uchun o&apos;qituvchi premium tarifga o&apos;tishi kerak
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

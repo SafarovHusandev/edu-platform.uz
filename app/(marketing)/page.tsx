@@ -27,9 +27,7 @@ async function getLandingData() {
     api
       .get<Paginated<Course>>('/courses', { page: 1, limit: 8 }, { skipAuth: true })
       .catch(() => null),
-    api
-      .get<Paginated<Book>>('/books', { page: 1, limit: 4 }, { skipAuth: true })
-      .catch(() => null),
+    api.get<Paginated<Book>>('/books', { page: 1, limit: 4 }, { skipAuth: true }).catch(() => null),
   ]);
 
   return { categories, courses: courses?.items ?? [], books: books?.items ?? [] };
@@ -71,7 +69,7 @@ export default async function HomePage() {
                 <Link
                   key={category._id}
                   href={`/courses?category=${category._id}`}
-                  className="group relative flex flex-col gap-3 rounded-xl border border-border bg-background p-5 shadow-xs transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                  className="group relative flex flex-col gap-3 rounded-md border border-border bg-background p-5 shadow-xs transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
                   <ArrowUpRight className="absolute top-4 right-4 size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                   <span

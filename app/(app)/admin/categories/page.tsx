@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -87,25 +88,31 @@ export default function AdminCategoriesPage() {
         title="Kategoriyalar"
         description="Kurs kategoriyalarini boshqaring"
         actions={
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} size="lg" className="h-10 rounded-md px-5 shadow-sm">
             <Plus className="size-4" /> Yangi kategoriya
           </Button>
         }
       />
 
       {isLoading ? (
-        <SkeletonCardGrid count={6} itemClassName="h-24" />
+        <SkeletonCardGrid count={6} itemClassName="h-24 rounded-md" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !categories || categories.length === 0 ? (
         <EmptyState icon={FolderTree} title="Hali kategoriya qo'shilmagan" />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
-            <Card key={category._id}>
-              <CardContent className="flex items-start justify-between gap-3 pt-2">
-                <div>
-                  <h3 className="font-medium">{category.name}</h3>
+            <Card
+              key={category._id}
+              className="rounded-md shadow-sm ring-1 ring-border/60 transition-shadow hover:shadow-md"
+            >
+              <CardContent className="flex items-start gap-3 pt-2">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <FolderTree className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-semibold">{category.name}</h3>
                   {category.description && (
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {category.description}
@@ -116,14 +123,24 @@ export default function AdminCategoriesPage() {
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    className="rounded-md"
                     aria-label="Tahrirlash"
                     onClick={() => openEdit(category)}
                   >
                     <Pencil className="size-4" />
                   </Button>
                   <AlertDialog>
-                    <AlertDialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}>
-                      <Trash2 className="size-4" />
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="rounded-md"
+                          aria-label="O'chirish"
+                        />
+                      }
+                    >
+                      <Trash2 className="size-4 text-destructive" />
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
@@ -148,20 +165,28 @@ export default function AdminCategoriesPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-md sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editing ? "Kategoriyani tahrirlash" : "Yangi kategoriya"}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2.5 text-lg">
+              <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <FolderTree className="size-4.5" />
+              </span>
+              {editing ? "Kategoriyani tahrirlash" : "Yangi kategoriya"}
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Kurslarni guruhlash uchun kategoriya nomi va tavsifini kiriting
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kategoriya nomi</FormLabel>
+                    <FormLabel className="text-sm font-medium">Kategoriya nomi</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input className="h-11 rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -172,16 +197,21 @@ export default function AdminCategoriesPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tavsif (ixtiyoriy)</FormLabel>
+                    <FormLabel className="text-sm font-medium">Tavsif (ixtiyoriy)</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea className="rounded-md text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={createCategory.isPending || updateCategory.isPending}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="h-11 w-full rounded-md text-base sm:w-fit"
+                  disabled={createCategory.isPending || updateCategory.isPending}
+                >
                   {(createCategory.isPending || updateCategory.isPending) && (
                     <Loader2 className="size-4 animate-spin" />
                   )}

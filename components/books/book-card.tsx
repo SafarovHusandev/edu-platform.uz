@@ -1,15 +1,15 @@
-import Link from "next/link"
-import Image from "next/image"
-import { BookMarked, Download } from "lucide-react"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import type { Book } from "@/types"
-import { formatNumber } from "@/lib/format"
-import { resolveAssetUrl } from "@/lib/config"
+import Link from 'next/link';
+import Image from 'next/image';
+import { BookMarked, Download } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import type { Book } from '@/types';
+import { formatNumber } from '@/lib/format';
+import { resolveAssetUrl } from '@/lib/config';
 
 export function BookCard({ book }: { book: Book }) {
-  const category = typeof book.category === "object" ? book.category?.name : undefined
-  const cover = resolveAssetUrl(book.coverImage)
+  const category = typeof book.category === 'object' ? book.category?.name : undefined;
+  const cover = resolveAssetUrl(book.coverImage);
 
   return (
     <Link href={`/books/${book._id}`}>
@@ -56,17 +56,17 @@ export function BookCard({ book }: { book: Book }) {
         </CardFooter>
       </Card>
     </Link>
-  )
+  );
 }
 
 export function BookCardSkeleton() {
   return (
-    <div className="flex h-full flex-col gap-3 overflow-hidden rounded-xl ring-1 ring-foreground/10">
+    <div className="flex h-full flex-col gap-3 overflow-hidden rounded-md ring-1 ring-foreground/10">
       <div className="aspect-3/4 w-full animate-pulse bg-muted" />
       <div className="flex flex-col gap-2 px-4 pb-4">
         <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
         <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
       </div>
     </div>
-  )
+  );
 }

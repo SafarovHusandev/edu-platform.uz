@@ -1,4 +1,4 @@
-import { GraduationCap, Presentation, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { GraduationCap, Presentation, ShieldCheck, CheckCircle2, BadgeCheck } from 'lucide-react';
 import { Container } from '@/components/layout/container';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,7 @@ const ROLES = [
       'Kurs, dars va materiallarni boshqarish',
       'Test va savollar bankini tuzish',
       "O'quvchilar natijalarini baholash",
-      'Statistika va daromad hisobotlari',
+      "O'quvchilar soni, o'tish foizi va daromad statistikasi",
     ],
   },
   {
@@ -75,6 +75,11 @@ export function RoleShowcase() {
           <p className="mt-3 text-muted-foreground">
             Tizimga kirganingizdan so&apos;ng, platforma sizning rolingizga mos boshqaruv panelini
             avtomatik taqdim etadi.
+          </p>
+          <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3.5 py-1.5 text-xs font-medium text-success">
+            <BadgeCheck className="size-3.5" />
+            Har bir yangi hisob administrator tomonidan tasdiqlanadi — faqat tekshirilgan
+            foydalanuvchilar
           </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">

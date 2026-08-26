@@ -4,6 +4,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
@@ -22,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useQuiz, useStartAttempt, useSubmitAttempt, useMyAttempts } from '@/hooks/use-quizzes';
 import { useAuthStore } from '@/store/auth-store';
+import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { formatDateTime, formatDuration, formatTashkentDateTime } from '@/lib/format';
 import {
@@ -41,7 +43,8 @@ export default function TakeQuizPage({ params }: PageProps) {
   const { data: attemptsData, isLoading: attemptsLoading } = useMyAttempts(id);
   const startAttempt = useStartAttempt();
   const submitAttempt = useSubmitAttempt();
-  const isPremium = useAuthStore((s) => s.user?.tarif === 'premium');
+  const user = useAuthStore((s) => s.user);
+  const isPremium = user?.tarif === 'premium';
 
   const attempts = attemptsData?.attempts;
   const attemptsLeft = attemptsData?.attemptsRemaining ?? 0;
@@ -51,6 +54,7 @@ export default function TakeQuizPage({ params }: PageProps) {
   const [result, setResult] = useState<Attempt | null>(null);
   const [pendingReview, setPendingReview] = useState<Attempt | null>(null);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const autoSubmittedRef = useRef(false);
   const handleSubmitRef = useRef<() => void>(() => {});
@@ -91,13 +95,34 @@ export default function TakeQuizPage({ params }: PageProps) {
   const questions = quiz.questions ?? [];
   const pastAttempts = attempts?.filter((a) => a.status !== 'in_progress') ?? [];
 
+  // my-attempts javobidagi maxAttempts allaqachon shu student uchun to'g'ri
+  // hisoblangan (sinfi + tarif chegarasi) — shuni ko'rsatamiz. "Standart tarif"
+  // izohini aniqlash uchun esa o'z sinfiga mos targetGrades yozuvi kerak.
+  const myTargetGrade = user?.grade?.number
+    ? quiz.targetGrades.find(
+        (tg) =>
+          tg.number === user.grade!.number && (!tg.letter || tg.letter === user.grade!.letter)
+      )
+    : undefined;
+  const displayedMaxAttempts = attemptsData?.maxAttempts ?? quiz.maxAttempts;
+  const configuredAttempts = myTargetGrade?.maxAttempts ?? quiz.maxAttempts;
+  const isCappedByStandardTarif =
+    myTargetGrade?.effectiveMaxAttempts != null &&
+    myTargetGrade.effectiveMaxAttempts < configuredAttempts;
+
   function handleStart() {
+    setStartError(null);
     startAttempt.mutate(id, {
       onSuccess: (attempt) => {
         setActiveAttempt(attempt);
         setAnswers({});
         setResult(null);
         setPendingReview(null);
+      },
+      onError: (error) => {
+        if (error instanceof ApiError && error.message.includes("sinfingiz uchun mo'ljallanmagan")) {
+          setStartError(error.message);
+        }
       },
     });
   }
@@ -307,10 +332,16 @@ export default function TakeQuizPage({ params }: PageProps) {
               <Target className="size-4" /> O&apos;tish balli: {quiz.passingScore}%
             </span>
             <span className="flex items-center gap-1.5">
-              <Repeat className="size-4" /> {attemptsLeft} /{' '}
-              {quiz.effectiveMaxAttempts ?? quiz.maxAttempts} urinish qoldi
+              <Repeat className="size-4" /> {attemptsLeft} / {displayedMaxAttempts} urinish qoldi
             </span>
           </div>
+
+          {startError && (
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-left text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>{startError}</p>
+            </div>
+          )}
 
           {(quiz.availableFrom || quiz.availableUntil) && (
             <div className="flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-xs text-gold-foreground">
@@ -353,7 +384,7 @@ export default function TakeQuizPage({ params }: PageProps) {
           ) : (
             <div className="mt-4 flex flex-col items-center gap-1.5">
               <Badge variant="destructive">Urinishlar tugadi</Badge>
-              {quiz.effectiveMaxAttempts != null && quiz.effectiveMaxAttempts < quiz.maxAttempts && (
+              {isCappedByStandardTarif && (
                 <p className="max-w-xs text-xs text-muted-foreground">
                   Ko&apos;proq urinish uchun o&apos;qituvchi premium tarifga o&apos;tishi kerak
                 </p>

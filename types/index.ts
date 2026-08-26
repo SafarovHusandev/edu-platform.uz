@@ -148,6 +148,17 @@ export interface Question {
 
 export type QuizTargetType = "standalone" | "course" | "lesson"
 
+export interface TargetGrade {
+  number: number
+  letter?: string | null
+  availableFrom?: string | null
+  availableUntil?: string | null
+  maxAttempts?: number | null
+  timeLimit?: number | null
+  effectiveMaxAttempts?: number
+  effectiveTimeLimit?: number
+}
+
 export interface Quiz {
   _id: string
   title: string
@@ -157,11 +168,10 @@ export interface Quiz {
   createdBy?: User | string
   passingScore: number
   maxAttempts: number
-  effectiveMaxAttempts?: number
   timeLimit?: number | null
   availableFrom?: string | null
   availableUntil?: string | null
-  grade?: number
+  targetGrades: TargetGrade[]
   isActive?: boolean
   questions?: Question[]
   questionsCount?: number

@@ -81,7 +81,12 @@ import {
   tashkentLocalToIso,
 } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { getMinQuestions } from '@/lib/quiz-rules';
+import { getMinQuestionsForGrades } from '@/lib/quiz-rules';
+import {
+  ALL_LETTERS_VALUE,
+  TargetGradesEditor,
+  type TargetGradeEntry,
+} from '@/components/quizzes/target-grades-editor';
 import type { Question } from '@/types';
 
 interface PageProps {
@@ -136,6 +141,8 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
     availableUntil: '',
   });
   const [limitAvailability, setLimitAvailability] = useState(false);
+  const [targetGrades, setTargetGrades] = useState<TargetGradeEntry[]>([]);
+  const [targetGradesError, setTargetGradesError] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="h-96 animate-pulse rounded-md bg-muted" />;
@@ -166,7 +173,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
   const linkedTitle = linkedCourseData?.course.title ?? linkedLesson?.title;
 
   const questionCount = quiz.questions?.length ?? 0;
-  const minQuestions = getMinQuestions(quiz.grade);
+  const minQuestions = getMinQuestionsForGrades(quiz.targetGrades);
   const canActivate = questionCount >= minQuestions;
   const questionsMissing = Math.max(0, minQuestions - questionCount);
 
@@ -181,11 +188,27 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
       availableUntil: quiz!.availableUntil ? isoToTashkentLocal(quiz!.availableUntil) : '',
     });
     setLimitAvailability(!!(quiz!.availableFrom || quiz!.availableUntil));
+    setTargetGrades(
+      quiz!.targetGrades.map((tg) => ({
+        number: String(tg.number),
+        letter: tg.letter ? tg.letter : ALL_LETTERS_VALUE,
+        availableFrom: tg.availableFrom ? isoToTashkentLocal(tg.availableFrom) : '',
+        availableUntil: tg.availableUntil ? isoToTashkentLocal(tg.availableUntil) : '',
+        maxAttempts: tg.maxAttempts != null ? String(tg.maxAttempts) : '',
+        timeLimit: tg.timeLimit != null ? String(tg.timeLimit) : '',
+      }))
+    );
+    setTargetGradesError(null);
     setSettingsOpen(true);
   }
 
   function handleSettingsSubmit() {
     if (!settingsForm.title.trim()) return;
+    if (targetGrades.length === 0) {
+      setTargetGradesError("Kamida bitta sinf qo'shing");
+      return;
+    }
+    setTargetGradesError(null);
 
     if (limitAvailability) {
       if (!settingsForm.availableFrom || !settingsForm.availableUntil) return;
@@ -200,6 +223,16 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
         passingScore: settingsForm.passingScore,
         maxAttempts: settingsForm.maxAttempts,
         timeLimit: settingsForm.timeLimit,
+        targetGrades: targetGrades.map((entry) => ({
+          number: Number(entry.number),
+          letter: entry.letter === ALL_LETTERS_VALUE ? undefined : entry.letter,
+          availableFrom: entry.availableFrom ? tashkentLocalToIso(entry.availableFrom) : undefined,
+          availableUntil: entry.availableUntil
+            ? tashkentLocalToIso(entry.availableUntil)
+            : undefined,
+          maxAttempts: entry.maxAttempts ? Number(entry.maxAttempts) : undefined,
+          timeLimit: entry.timeLimit ? Number(entry.timeLimit) : undefined,
+        })),
         availableFrom: limitAvailability ? tashkentLocalToIso(settingsForm.availableFrom) : null,
         availableUntil: limitAvailability ? tashkentLocalToIso(settingsForm.availableUntil) : null,
       },
@@ -276,14 +309,15 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                 >
                   {quiz.isActive ? 'Faol' : 'Nofaol'}
                 </Badge>
-                {quiz.grade != null && (
+                {quiz.targetGrades.map((tg, i) => (
                   <Badge
+                    key={i}
                     variant="secondary"
                     className="border-white/20 bg-white/15 text-primary-foreground"
                   >
-                    {quiz.grade}-sinf
+                    {tg.letter ? `${tg.number}-${tg.letter}` : `${tg.number}-sinf (barchasi)`}
                   </Badge>
-                )}
+                ))}
               </div>
               <h1 className="font-heading text-2xl font-semibold text-balance sm:text-3xl">
                 {quiz.title}
@@ -404,16 +438,46 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          {quiz.effectiveMaxAttempts != null && quiz.effectiveMaxAttempts < quiz.maxAttempts && (
-            <div className="flex items-start gap-2 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-sm text-gold-foreground">
-              <Crown className="mt-0.5 size-4 shrink-0" />
-              <p>
-                Siz standart tarifdasiz — o&apos;quvchilar bu testda faqat{' '}
-                {quiz.effectiveMaxAttempts} marta urinishi mumkin ({quiz.maxAttempts} emas).
-                Ko&apos;proq urinish uchun Premium oling.
-              </p>
+          <div className="overflow-hidden rounded-lg border border-border/70">
+            <div className="border-b border-border/70 bg-muted/40 px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Sinflar bo&apos;yicha sozlamalar
             </div>
-          )}
+            <div className="divide-y divide-border/70">
+              {quiz.targetGrades.map((tg, i) => {
+                const label = tg.letter
+                  ? `${tg.number}-${tg.letter}`
+                  : `${tg.number}-sinf (barcha guruhlar)`;
+                const configuredAttempts = tg.maxAttempts ?? quiz.maxAttempts;
+                const isCapped =
+                  tg.effectiveMaxAttempts != null && tg.effectiveMaxAttempts < configuredAttempts;
+                return (
+                  <div
+                    key={i}
+                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+                  >
+                    <Badge variant="secondary" className="rounded-full">
+                      {label}
+                    </Badge>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <Repeat className="size-3.5" />
+                        {tg.effectiveMaxAttempts ?? configuredAttempts} marta
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="size-3.5" />
+                        {tg.effectiveTimeLimit ?? (tg.timeLimit ?? quiz.timeLimit ?? '—')} daqiqa
+                      </span>
+                      {isCapped && (
+                        <span className="flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-xs font-medium text-gold-foreground">
+                          <Crown className="size-3.5" /> standart tarif
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -445,7 +509,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
       )}
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className={'max-w-150! w-full!'}>
+        <DialogContent className={'max-w-150! w-full! max-h-[85vh] overflow-y-auto'}>
           <DialogHeader>
             <DialogTitle>Test sozlamalari</DialogTitle>
           </DialogHeader>
@@ -476,7 +540,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                 />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground">Urinishlar soni</label>
+                <label className="text-sm text-muted-foreground">Umumiy urinishlar soni</label>
                 <Input
                   type="number"
                   min={1}
@@ -487,7 +551,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                 />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground">Vaqt (daqiqa)</label>
+                <label className="text-sm text-muted-foreground">Umumiy vaqt (daqiqa)</label>
                 <Input
                   type="number"
                   min={1}
@@ -497,6 +561,15 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                   }
                 />
               </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-foreground">Sinflar *</label>
+              <div className="rounded-lg border border-input p-3">
+                <TargetGradesEditor value={targetGrades} onChange={setTargetGrades} />
+              </div>
+              {targetGradesError && (
+                <p className="text-sm font-medium text-destructive">{targetGradesError}</p>
+              )}
             </div>
             <div className="space-y-3 rounded-lg border border-input p-3">
               <div className="flex items-center gap-2">

@@ -83,6 +83,15 @@ export function useQuizWithAnswers(id: string | undefined) {
   });
 }
 
+export interface TargetGradeInput {
+  number: number;
+  letter?: string;
+  availableFrom?: string | null;
+  availableUntil?: string | null;
+  maxAttempts?: number;
+  timeLimit?: number;
+}
+
 export interface QuizPayload {
   title: string;
   description?: string;
@@ -93,7 +102,7 @@ export interface QuizPayload {
   timeLimit: number;
   availableFrom?: string | null;
   availableUntil?: string | null;
-  grade: number;
+  targetGrades: TargetGradeInput[];
   isActive?: boolean;
 }
 
@@ -193,13 +202,19 @@ export function useDeleteQuestion(quizId: string) {
   });
 }
 
+// "Bu test sizning sinfingiz uchun mo'ljallanmagan" xatosi alohida ko'rsatiladi
+// (chaqiruvchi komponentda banner sifatida) — shu sabab bu yerda toast chiqarilmaydi.
 export function useStartAttempt() {
   return useMutation({
     mutationFn: async (quizId: string) => {
       const res = await api.post<{ attempt: Attempt }>(`/quizzes/${quizId}/start`);
       return res.attempt;
     },
-    onError: (error) => toast.error(errorMessage(error, 'Testni boshlashda xatolik')),
+    onError: (error) => {
+      if (error instanceof ApiError && error.message.includes("sinfingiz uchun mo'ljallanmagan"))
+        return;
+      toast.error(errorMessage(error, 'Testni boshlashda xatolik'));
+    },
   });
 }
 

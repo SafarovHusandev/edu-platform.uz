@@ -13,3 +13,10 @@ export function getMinQuestions(grade: number | undefined) {
   if (g <= MIDDLE_MAX_GRADE) return MIN_QUESTIONS_MIDDLE;
   return MIN_QUESTIONS_SENIOR;
 }
+
+// Bitta quiz endi bir nechta sinfga tayinlanishi mumkin — eng qattiq talabga
+// (eng yuqori bosqichga) mos son qaytariladi.
+export function getMinQuestionsForGrades(grades: { number: number }[]) {
+  if (grades.length === 0) return MIN_QUESTIONS_ELEMENTARY;
+  return Math.max(...grades.map((g) => getMinQuestions(g.number)));
+}

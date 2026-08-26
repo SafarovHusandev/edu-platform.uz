@@ -1,8 +1,15 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, FolderOpen } from 'lucide-react';
 import { Hero } from '@/components/marketing/hero';
+import { StatsStrip } from '@/components/marketing/stats-strip';
+import { EconomySteps } from '@/components/marketing/economy-steps';
+import { DailySpinShowcase } from '@/components/marketing/daily-spin-showcase';
+import { RewardsPreview } from '@/components/marketing/rewards-preview';
+import { PremiumPricing } from '@/components/marketing/premium-pricing';
+import { CertificateVerifyTeaser } from '@/components/marketing/certificate-verify-teaser';
 import { RoleShowcase } from '@/components/marketing/role-showcase';
-import { GamificationSection } from '@/components/marketing/gamification-section';
+import { LeaderboardPreview } from '@/components/marketing/leaderboard-preview';
+import { TelegramCallout } from '@/components/marketing/telegram-callout';
 import { CtaSection } from '@/components/marketing/cta-section';
 import { Container } from '@/components/layout/container';
 import { CourseCard } from '@/components/courses/course-card';
@@ -27,7 +34,7 @@ async function getLandingData() {
     api
       .get<Paginated<Course>>('/courses', { page: 1, limit: 8 }, { skipAuth: true })
       .catch(() => null),
-    api.get<Paginated<Book>>('/books', { page: 1, limit: 4 }, { skipAuth: true }).catch(() => null),
+    api.get<Paginated<Book>>('/books', { page: 1, limit: 8 }, { skipAuth: true }).catch(() => null),
   ]);
 
   return { categories, courses: courses?.items ?? [], books: books?.items ?? [] };
@@ -39,6 +46,7 @@ export default async function HomePage() {
   return (
     <>
       <Hero />
+      <StatsStrip />
 
       {categories.length > 0 && (
         <div className="border-b border-border/60 bg-muted/20 py-16">
@@ -125,6 +133,11 @@ export default async function HomePage() {
         </div>
       )}
 
+      <EconomySteps />
+      <DailySpinShowcase />
+      <RewardsPreview />
+      <PremiumPricing />
+
       {books.length > 0 && (
         <div className="border-b border-border/60 bg-muted/20 py-16">
           <Container>
@@ -166,8 +179,10 @@ export default async function HomePage() {
         </div>
       )}
 
+      <CertificateVerifyTeaser />
       <RoleShowcase />
-      <GamificationSection />
+      <LeaderboardPreview />
+      <TelegramCallout />
       <CtaSection />
     </>
   );

@@ -40,9 +40,10 @@ export function Hero() {
           qo&apos;lga kiriting
         </h1>
         <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
-          Kurslar, interaktiv testlar, bepul kitoblar, sertifikatlar va gamifikatsiya — bir
-          platformada. O&apos;quvchi, o&apos;qituvchi va administrator uchun moslashtirilgan
-          tajriba.
+          Darslarni tugating, testlardan o&apos;ting — olmos ishlab toping. Kunlik barabonni
+          aylantiring, reytingda ko&apos;tariling va olmoslaringizni haqiqiy sovg&apos;alarga
+          almashtiring. Bularning barchasi bepul kutubxona va tasdiqlangan sertifikatlar bilan
+          birga — bir platformada.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button
@@ -67,9 +68,9 @@ export function Hero() {
             <ShieldCheck className="size-4 text-success" />
             Tasdiqlangan sertifikatlar
           </span>
-          <span className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3.5 py-1.5 shadow-xs backdrop-blur-sm">
+          <span className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-1.5 text-gold-foreground shadow-xs backdrop-blur-sm">
             <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" />
-            Olmoslar bilan mukofotlash
+            Kunlik barabon va olmos mukofotlari
           </span>
           <span className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-3.5 py-1.5 shadow-xs backdrop-blur-sm">
             <Sparkles className="size-4 text-primary" />

@@ -30,6 +30,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { useDeleteQuiz, useQuizzesMy } from '@/hooks/use-quizzes';
 import { formatDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 export default function TeacherQuizzesPage() {
   const { data, isLoading, isError, refetch } = useQuizzesMy({ page: 1, limit: 100 });
@@ -97,7 +98,6 @@ export default function TeacherQuizzesPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground sm:text-base">
-                    {quiz.grade != null && <Badge variant="outline">{quiz.grade}-sinf</Badge>}
                     <Badge variant="outline">
                       {quiz.questionsCount ?? quiz.questions?.length ?? 0} savol
                     </Badge>
@@ -106,20 +106,31 @@ export default function TeacherQuizzesPage() {
 
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:text-base">
                     {quiz.createdAt && <span>Yaratilgan: {formatDate(quiz.createdAt)}</span>}
-                    {quiz.timeLimit && <span>Vaqt: {quiz.timeLimit} daq</span>}
                   </div>
 
-                  {quiz.effectiveMaxAttempts != null &&
-                    quiz.effectiveMaxAttempts < quiz.maxAttempts && (
-                      <div className="flex items-start gap-2 rounded-md bg-gold/10 px-3 py-2 text-xs text-gold-foreground sm:text-sm">
-                        <Crown className="mt-0.5 size-4 shrink-0" />
-                        <p>
-                          Siz standart tarifdasiz — o&apos;quvchilar faqat{' '}
-                          {quiz.effectiveMaxAttempts} marta urinishi mumkin. Ko&apos;proq urinish
-                          uchun Premium oling.
-                        </p>
-                      </div>
-                    )}
+                  <div className="flex flex-wrap gap-1.5">
+                    {quiz.targetGrades.map((tg, i) => {
+                      const label = tg.letter ? `${tg.number}-${tg.letter}` : `${tg.number}-sinf`;
+                      const configured = tg.maxAttempts ?? quiz.maxAttempts;
+                      const capped =
+                        tg.effectiveMaxAttempts != null && tg.effectiveMaxAttempts < configured;
+                      return (
+                        <span
+                          key={i}
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
+                            capped
+                              ? 'bg-gold/10 text-gold-foreground'
+                              : 'bg-muted text-muted-foreground'
+                          )}
+                        >
+                          {capped && <Crown className="size-3" />}
+                          {label}: {tg.effectiveMaxAttempts ?? configured} marta /{' '}
+                          {tg.effectiveTimeLimit ?? (tg.timeLimit ?? quiz.timeLimit ?? '—')} daq
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">

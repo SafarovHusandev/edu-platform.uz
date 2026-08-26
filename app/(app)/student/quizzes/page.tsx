@@ -17,10 +17,21 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { useQuizzes } from '@/hooks/use-quizzes';
+import { useAuthStore } from '@/store/auth-store';
 import { formatDate } from '@/lib/format';
 
 export default function StudentQuizzesPage() {
   const { data, isLoading, isError, refetch } = useQuizzes({ page: 1, limit: 50 });
+  const grade = useAuthStore((s) => s.user?.grade);
+
+  // GET /quizzes hali studentning sinfi bo'yicha filtrlamaydi — shuning uchun
+  // frontend o'zi targetGrades ichidan mos kelmagan testlarni yashiradi.
+  const items = (data?.items ?? []).filter((quiz) => {
+    if (!grade?.number) return true;
+    return quiz.targetGrades.some(
+      (tg) => tg.number === grade.number && (!tg.letter || tg.letter === grade.letter)
+    );
+  });
 
   return (
     <div className="space-y-4">
@@ -30,11 +41,18 @@ export default function StudentQuizzesPage() {
         <SkeletonList count={5} itemClassName="h-24" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
-      ) : !data || data.items.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState icon={ClipboardList} title="Hozircha testlar mavjud emas" />
       ) : (
         <div className="flex flex-col gap-4">
-          {data.items.map((quiz) => (
+          {items.map((quiz) => {
+            const myTargetGrade = grade?.number
+              ? quiz.targetGrades.find(
+                  (tg) => tg.number === grade.number && (!tg.letter || tg.letter === grade.letter)
+                )
+              : undefined;
+            const attempts = myTargetGrade?.effectiveMaxAttempts ?? quiz.maxAttempts;
+            return (
             <Link key={quiz._id} href={`/student/quizzes/${quiz._id}`} className="block">
               <Card className="overflow-hidden border-border/70 shadow-sm transition-all duration-200 p-0 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
                 <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
@@ -55,7 +73,6 @@ export default function StudentQuizzesPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
-                      <Badge variant="outline">{quiz.grade ?? 'Umumiy'}-sinf</Badge>
                       <Badge variant="outline">
                         {quiz.questionsCount ?? quiz.questions?.length ?? 0} savol
                       </Badge>
@@ -63,8 +80,7 @@ export default function StudentQuizzesPage() {
                         <Target className="size-3.5" /> O&apos;tish balli: {quiz.passingScore}%
                       </span>
                       <span className="flex items-center gap-1">
-                        <Repeat className="size-3.5" /> {quiz.effectiveMaxAttempts ?? quiz.maxAttempts}{' '}
-                        urinish
+                        <Repeat className="size-3.5" /> {attempts} urinish
                       </span>
                     </div>
 
@@ -86,7 +102,8 @@ export default function StudentQuizzesPage() {
                 </CardContent>
               </Card>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

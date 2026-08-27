@@ -152,7 +152,7 @@ export default function NewQuizPage() {
       { onSuccess: (quiz) => router.push(`/teacher/quizzes/${quiz._id}`) }
     );
   }
-
+  // yangi
   return (
     <div className="mx-auto max-w-8xl">
       <Card className="overflow-hidden rounded-2xl shadow-md ring-1 ring-border/60 p-0!">

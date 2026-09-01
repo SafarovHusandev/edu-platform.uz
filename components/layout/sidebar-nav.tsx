@@ -83,11 +83,14 @@ export function SidebarNav({
       </div>
 
       <button
-        className="flex gap-3 p-2.5 bg-red-200 rounded-md text-red-500 "
+        type="button"
+        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all duration-200 cursor-pointer active:scale-98"
         onClick={() => logout.mutate()}
       >
-        <LogOut /> Chiqish
+        <LogOut className="size-4 shrink-0" />
+        <span>Chiqish</span>
       </button>
     </nav>
   );
 }
+

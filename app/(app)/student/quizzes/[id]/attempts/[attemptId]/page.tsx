@@ -3,7 +3,15 @@
 import { use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, CheckCircle2, Hourglass, Sparkles, Trophy, XCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Hourglass,
+  PartyPopper,
+  Sparkles,
+  Trophy,
+  XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -108,8 +116,9 @@ export default function QuizAttemptResultPage({ params }: PageProps) {
               {calculateQuizDiamonds(attempt, isPremium) > 0 && (
                 <div className="flex items-center gap-2 rounded-md bg-gold/15 px-4 py-2.5 text-base text-gold-foreground shadow-sm">
                   <Image src="/diamond.png" alt="" width={32} height={32} className="size-5" />
-                  <span className="font-semibold">
-                    🎉 {calculateQuizDiamonds(attempt, isPremium)} diamond qo&apos;lga kiritdingiz!
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <PartyPopper className="size-4 shrink-0" />{' '}
+                    {calculateQuizDiamonds(attempt, isPremium)} diamond qo&apos;lga kiritdingiz!
                   </span>
                 </div>
               )}

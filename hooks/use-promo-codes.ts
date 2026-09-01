@@ -11,19 +11,22 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+export interface PromoPreview {
+  code: string
+  discountPercent: number
+  baseAmount?: number
+  finalAmount?: number
+}
+
 export function usePromoPreview(params: {
   code?: string
   purpose?: string
   courseId?: string
+  plan?: string
 }) {
   return useQuery({
     queryKey: ["promo-preview", params],
-    queryFn: () =>
-      api.get<{ discountPercent: number; finalAmount?: number }>(
-        "/promo-codes/preview",
-        params,
-        { skipAuth: true }
-      ),
+    queryFn: () => api.get<PromoPreview>("/promo-codes/preview", params, { skipAuth: true }),
     enabled: !!params.code,
     retry: false,
   })

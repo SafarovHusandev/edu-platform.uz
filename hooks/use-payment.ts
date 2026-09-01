@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api, ApiError } from "@/lib/api-client"
-import type { Invoice } from "@/types"
+import type { Invoice, PremiumPlanKey, PremiumPlans } from "@/types"
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) return error.message
@@ -15,6 +15,7 @@ export interface CreatePaymentPayload {
   purpose: "wallet" | "course" | "premium" | "donation"
   amount?: number
   courseId?: string
+  plan?: PremiumPlanKey
   promoCode?: string
   returnUrl: string
 }
@@ -23,6 +24,21 @@ export function useCreatePayment() {
   return useMutation({
     mutationFn: (payload: CreatePaymentPayload) => api.post<Invoice>("/payment/create", payload),
     onError: (error) => toast.error(errorMessage(error, "To'lovni yaratishda xatolik")),
+  })
+}
+
+// Public — token shart emas. Narxlarni frontendda qattiq kodlab qo'ymaslik
+// uchun shu endpoint orqali dinamik olinadi (backend keyin o'zgartirishi mumkin).
+export function usePremiumPlans() {
+  return useQuery({
+    queryKey: ["premium-plans"],
+    queryFn: async () => {
+      const res = await api.get<{ plans: PremiumPlans }>("/payment/premium-plans", undefined, {
+        skipAuth: true,
+      })
+      return res.plans
+    },
+    staleTime: 5 * 60 * 1000,
   })
 }
 

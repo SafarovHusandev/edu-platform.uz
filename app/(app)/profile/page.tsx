@@ -5,10 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import Image from 'next/image';
 import {
   Camera,
   CheckCircle2,
+  Crown,
   KeyRound,
   Loader2,
   Send,
@@ -62,7 +64,7 @@ import { refreshCurrentUser } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
 import { ROLE_LABELS } from '@/lib/roles';
 import { resolveAssetUrl, TELEGRAM_BOT_USERNAME } from '@/lib/config';
-import { formatNumber, formatPrice, initials } from '@/lib/format';
+import { daysUntil, formatDate, formatNumber, formatPrice, initials } from '@/lib/format';
 
 const TELEGRAM_POLL_INTERVAL_MS = 2500;
 const TELEGRAM_POLL_TIMEOUT_MS = 60_000;
@@ -166,6 +168,8 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
+  const premiumDaysLeft = user.premiumExpiresAt ? daysUntil(user.premiumExpiresAt) : null;
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader title="Profil" description="Shaxsiy ma'lumotlaringizni boshqaring" />
@@ -229,10 +233,21 @@ export default function ProfilePage() {
               </Badge>
               {user.tarif === 'premium' && (
                 <Badge className="rounded-full bg-gold px-3 py-1 text-sm text-gold-foreground">
-                  <ShieldCheck className="size-3.5" /> Premium
+                  <ShieldCheck className="size-3.5" />
+                  Premium{user.premiumExpiresAt ? `: ${formatDate(user.premiumExpiresAt)} gacha` : ''}
                 </Badge>
               )}
             </div>
+            {user.tarif === 'premium' && premiumDaysLeft !== null && premiumDaysLeft <= 5 && (
+              <Link
+                href="/premium"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-foreground hover:underline"
+              >
+                <Crown className="size-4" />
+                Muddat {premiumDaysLeft <= 0 ? 'tugadi' : `${premiumDaysLeft} kundan keyin tugaydi`}
+                — Premiumni uzaytiring
+              </Link>
+            )}
           </div>
           {user.role === 'student' && (
             <div className="flex w-full gap-3 border-t pt-5 sm:w-auto sm:border-t-0 sm:border-l sm:pl-6 sm:pt-0">

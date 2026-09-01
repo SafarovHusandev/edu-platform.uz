@@ -12,6 +12,7 @@ import {
   Clock,
   Crown,
   EyeOff,
+  Lightbulb,
   ListChecks,
   Loader2,
   Megaphone,
@@ -72,6 +73,8 @@ import {
 } from '@/hooks/use-quizzes';
 import { useCourse } from '@/hooks/use-courses';
 import { useLesson } from '@/hooks/use-lessons';
+import { useDismissedBanner } from '@/hooks/use-dismissed-banner';
+import { useAuthStore } from '@/store/auth-store';
 import {
   formatDate,
   formatDateTime,
@@ -114,6 +117,11 @@ const TARGET_LABELS: Record<string, string> = {
 export default function TeacherQuizDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const isPremium = user?.tarif === 'premium';
+  const { dismissed: nudgeDismissed, dismiss: dismissNudge } = useDismissedBanner(
+    'edu_premium_attempts_nudge'
+  );
   const { data: quiz, isLoading, isError, refetch } = useQuizWithAnswers(id);
   const addQuestion = useAddQuestion(id);
   const updateQuestion = useUpdateQuestion(id);
@@ -176,6 +184,13 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
   const minQuestions = getMinQuestionsForGrades(quiz.targetGrades);
   const canActivate = questionCount >= minQuestions;
   const questionsMissing = Math.max(0, minQuestions - questionCount);
+
+  // Backend standart tarifdagi o'qituvchi uchun urinishlar sonini cheklaydi —
+  // effectiveMaxAttempts konfiguratsiya qilingandan kam bo'lsa, shu cheklov ishlagan.
+  const hasCappedAttempts = quiz.targetGrades.some((tg) => {
+    const configured = tg.maxAttempts ?? quiz.maxAttempts;
+    return tg.effectiveMaxAttempts != null && tg.effectiveMaxAttempts < configured;
+  });
 
   function openSettings() {
     setSettingsForm({
@@ -451,28 +466,29 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                 const isCapped =
                   tg.effectiveMaxAttempts != null && tg.effectiveMaxAttempts < configuredAttempts;
                 return (
-                  <div
-                    key={i}
-                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
-                  >
-                    <Badge variant="secondary" className="rounded-full">
-                      {label}
-                    </Badge>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Repeat className="size-3.5" />
-                        {tg.effectiveMaxAttempts ?? configuredAttempts} marta
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="size-3.5" />
-                        {tg.effectiveTimeLimit ?? (tg.timeLimit ?? quiz.timeLimit ?? '—')} daqiqa
-                      </span>
-                      {isCapped && (
-                        <span className="flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-xs font-medium text-gold-foreground">
-                          <Crown className="size-3.5" /> standart tarif
+                  <div key={i} className="flex flex-col gap-1.5 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Badge variant="secondary" className="rounded-full">
+                        {label}
+                      </Badge>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Repeat className="size-3.5" />
+                          {tg.effectiveMaxAttempts ?? configuredAttempts} marta
                         </span>
-                      )}
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="size-3.5" />
+                          {tg.effectiveTimeLimit ?? tg.timeLimit ?? quiz.timeLimit ?? '—'} daqiqa
+                        </span>
+                      </div>
                     </div>
+                    {isCapped && (
+                      <p className="flex items-center gap-1.5 text-xs text-gold-foreground">
+                        <Sparkles className="size-3.5 shrink-0" />
+                        Bu sinf uchun {configuredAttempts} marta belgilagansiz, hozir{' '}
+                        {tg.effectiveMaxAttempts} marta ishlayapti (standart tarif cheklovi)
+                      </p>
+                    )}
                   </div>
                 );
               })}
@@ -480,6 +496,42 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {hasCappedAttempts && !nudgeDismissed && (
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-gold/30 bg-linear-to-r from-gold/15 to-transparent p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/20 text-gold-foreground">
+              <Target className="size-4.5" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-gold-foreground">
+                O&apos;quvchilaringiz ko&apos;proq urinishlar
+              </p>
+              <p className="mt-0.5 text-xs text-gold-foreground/80">
+                Siz ba&apos;zi testlaringizda bir nechta urinishni rejalashtirgansiz. Premium bilan
+                bu darhol faollashadi — hech narsani qayta sozlashning hojati yo&apos;q.
+              </p>
+            </div>
+          </div>
+          <div className="flex w-full shrink-0 items-center gap-2 sm:w-fit">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-md text-gold-foreground/80 hover:text-gold-foreground"
+              onClick={dismissNudge}
+            >
+              Keyinroq
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 rounded-md sm:flex-none"
+              render={<Link href="/premium" />}
+            >
+              <Crown className="size-4" /> Premiumni ko&apos;rish
+            </Button>
+          </div>
+        </div>
+      )}
 
       {!quiz.isActive && (
         <div className="flex flex-col items-start gap-3 rounded-md border border-gold/30 bg-gold/10 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -549,6 +601,15 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                     setSettingsForm((prev) => ({ ...prev, maxAttempts: Number(e.target.value) }))
                   }
                 />
+                {!isPremium && settingsForm.maxAttempts > 1 && (
+                  <p className="mt-1.5 flex items-start gap-1.5 text-xs text-gold-foreground">
+                    <Lightbulb className="mt-0.5 size-3.5 shrink-0" />
+                    Ajoyib! Endi bu sonni ishga tushirish uchun Premium kerak bo&apos;ladi —{' '}
+                    <Link href="/premium" className="font-medium underline underline-offset-2">
+                      batafsil
+                    </Link>
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm text-muted-foreground">Umumiy vaqt (daqiqa)</label>
@@ -565,7 +626,11 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
             <div className="space-y-1">
               <label className="text-sm font-medium text-foreground">Sinflar *</label>
               <div className="rounded-lg border border-input p-3">
-                <TargetGradesEditor value={targetGrades} onChange={setTargetGrades} />
+                <TargetGradesEditor
+                  value={targetGrades}
+                  onChange={setTargetGrades}
+                  isPremium={isPremium}
+                />
               </div>
               {targetGradesError && (
                 <p className="text-sm font-medium text-destructive">{targetGradesError}</p>

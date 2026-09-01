@@ -2,7 +2,15 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Hourglass, Sparkles, Trophy, XCircle } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Hourglass,
+  Sparkles,
+  Trophy,
+  XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -192,16 +200,18 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
           {attempt.durationSeconds != null && (
             <p
               className={cn(
-                'text-xs',
+                'flex items-center gap-1.5 text-xs',
                 quiz.timeLimit != null && attempt.durationSeconds > quiz.timeLimit * 60
                   ? 'font-medium text-destructive'
                   : 'text-muted-foreground'
               )}
             >
               Davomiyligi: {formatDuration(attempt.durationSeconds)}
-              {quiz.timeLimit != null &&
-                attempt.durationSeconds > quiz.timeLimit * 60 &&
-                ' ⚠️ (belgilangan vaqtdan oshgan)'}
+              {quiz.timeLimit != null && attempt.durationSeconds > quiz.timeLimit * 60 && (
+                <span className="flex items-center gap-1">
+                  <AlertTriangle className="size-3.5 shrink-0" /> (belgilangan vaqtdan oshgan)
+                </span>
+              )}
             </p>
           )}
         </CardContent>

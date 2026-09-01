@@ -2,7 +2,7 @@
 
 import { use, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
+import { Loader2, Star } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/error-state"
@@ -61,6 +61,12 @@ export default function PaymentStatusPage({ params }: PageProps) {
           {invoice.purpose === "donation" && invoice.status === "success" && (
             <p className="text-sm text-muted-foreground">
               Homiyligingiz uchun rahmat! Sizning yordamingiz platformani rivojlantirishda muhim.
+            </p>
+          )}
+          {invoice.purpose === "premium" && invoice.status === "success" && (
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Star className="size-4 shrink-0 text-gold" /> Premium faollashtirildi! Yangi
+              imkoniyatlar profilingizda faol.
             </p>
           )}
           <Button className="mt-4" render={<Link href={user ? ROLE_HOME[user.role] : "/"} />}>

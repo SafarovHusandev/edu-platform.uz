@@ -24,6 +24,7 @@ export interface User {
   diamonds?: number
   balance?: number
   tarif?: Tarif
+  premiumExpiresAt?: string | null
   isBlocked?: boolean
   isVerified?: boolean
   verifiedBy?: VerifiedByUser | string | null
@@ -220,8 +221,20 @@ export interface Invoice {
   status: PaymentStatus
   checkoutUrl?: string
   courseId?: string
+  plan?: PremiumPlanKey
   createdAt?: string
 }
+
+export type PremiumPlanKey = "30d" | "90d" | "180d" | "365d"
+
+export interface PremiumPlan {
+  days: number
+  price: number
+  pricePerMonth: number
+  discountPercent: number
+}
+
+export type PremiumPlans = Record<PremiumPlanKey, PremiumPlan>
 
 export interface Reward {
   _id: string

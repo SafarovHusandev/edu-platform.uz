@@ -16,6 +16,7 @@ import {
   BarChart3,
   Library,
   RotateCw,
+  Crown,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -76,6 +77,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
 };
 
 export const COMMON_NAV_ITEMS: NavItem[] = [
+  { label: 'Premium', href: '/premium', icon: Crown },
   { label: 'Bildirishnomalar', href: '/notifications', icon: Bell },
   { label: 'Profil', href: '/profile', icon: CircleUserRound },
 ];

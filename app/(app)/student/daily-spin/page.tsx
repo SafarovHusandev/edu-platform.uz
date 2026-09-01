@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { Clock, Crown, Flame, Loader2, Play, RotateCw, Sparkles } from "lucide-react"
+import Link from "next/link"
+import { Clock, Crown, Flame, Loader2, PartyPopper, Play, RotateCw, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog"
 import { ErrorState } from "@/components/ui/error-state"
 import { useDailySpinStatus, useDailySpin, type DailySpinResult } from "@/hooks/use-daily-spin"
-import { useCreatePayment } from "@/hooks/use-payment"
 import { useAuthStore } from "@/store/auth-store"
 
 const SEGMENTS = 8
@@ -34,29 +33,8 @@ const WHEEL_GRADIENT = [
 export default function DailySpinPage() {
   const user = useAuthStore((s) => s.user)
   const isPremium = user?.tarif === "premium"
-  const router = useRouter()
   const { data: status, isLoading, isError, refetch } = useDailySpinStatus()
   const spin = useDailySpin()
-  const createPayment = useCreatePayment()
-
-  function handleBuyPremium() {
-    createPayment.mutate(
-      {
-        purpose: "premium",
-        returnUrl:
-          typeof window !== "undefined" ? `${window.location.origin}/student/daily-spin` : "",
-      },
-      {
-        onSuccess: (invoice) => {
-          if (invoice.checkoutUrl) {
-            window.location.href = invoice.checkoutUrl
-          } else {
-            router.push(`/student/payment/${invoice.invoiceId}`)
-          }
-        },
-      }
-    )
-  }
 
   const [rotation, setRotation] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
@@ -224,14 +202,9 @@ export default function DailySpinPage() {
               <Button
                 size="sm"
                 className="w-full shrink-0 rounded-md sm:w-fit"
-                onClick={handleBuyPremium}
-                disabled={createPayment.isPending}
+                render={<Link href="/premium" />}
               >
-                {createPayment.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Crown className="size-4" />
-                )}
+                <Crown className="size-4" />
                 Premium sotib olish
               </Button>
             </div>
@@ -246,8 +219,8 @@ export default function DailySpinPage() {
             className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-b from-gold/20 via-primary/10 to-transparent"
           />
           <DialogHeader className="relative">
-            <DialogTitle className="justify-center text-center text-xl">
-              Tabriklaymiz! 🎉
+            <DialogTitle className="flex items-center justify-center gap-2 text-center text-xl">
+              Tabriklaymiz! <PartyPopper className="size-5 text-gold" />
             </DialogTitle>
           </DialogHeader>
           <div className="relative flex flex-col items-center gap-2 py-2">

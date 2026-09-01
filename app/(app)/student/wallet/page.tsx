@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Loader2, ShieldCheck, Wallet } from 'lucide-react';
+import { CreditCard, Crown, Loader2, ShieldCheck, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,24 +25,6 @@ export default function WalletPage() {
       {
         purpose: 'wallet',
         amount: toTiyin(amount),
-        returnUrl: typeof window !== 'undefined' ? `${window.location.origin}/student/wallet` : '',
-      },
-      {
-        onSuccess: (invoice) => {
-          if (invoice.checkoutUrl) {
-            window.location.href = invoice.checkoutUrl;
-          } else {
-            router.push(`/student/payment/${invoice.invoiceId}`);
-          }
-        },
-      }
-    );
-  }
-
-  function handlePremium() {
-    createPayment.mutate(
-      {
-        purpose: 'premium',
         returnUrl: typeof window !== 'undefined' ? `${window.location.origin}/student/wallet` : '',
       },
       {
@@ -124,8 +107,8 @@ export default function WalletPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={handlePremium} disabled={createPayment.isPending}>
-              {createPayment.isPending && <Loader2 className="size-4 animate-spin" />}
+            <Button variant="outline" render={<Link href="/premium" />}>
+              <Crown className="size-4" />
               Premium sotib olish
             </Button>
           </CardContent>

@@ -1,11 +1,10 @@
 "use client"
 
 import Image from "next/image"
-import { useRouter, usePathname } from "next/navigation"
-import { Crown, Loader2, Wallet } from "lucide-react"
+import Link from "next/link"
+import { Crown, Wallet } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuthStore } from "@/store/auth-store"
-import { useCreatePayment } from "@/hooks/use-payment"
 import { fromTiyin, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -50,31 +49,10 @@ function StatusCardSkeleton() {
 
 export function StatusCard() {
   const user = useAuthStore((s) => s.user)
-  const router = useRouter()
-  const pathname = usePathname()
-  const createPayment = useCreatePayment()
 
   if (!user) return <StatusCardSkeleton />
 
   const isPremium = user.tarif === "premium"
-
-  function handleBuyPremium() {
-    createPayment.mutate(
-      {
-        purpose: "premium",
-        returnUrl: typeof window !== "undefined" ? `${window.location.origin}${pathname}` : "",
-      },
-      {
-        onSuccess: (invoice) => {
-          if (invoice.checkoutUrl) {
-            window.location.href = invoice.checkoutUrl
-          } else {
-            router.push(`/student/payment/${invoice.invoiceId}`)
-          }
-        },
-      }
-    )
-  }
 
   return (
     <div className="inline-flex max-w-full flex-col overflow-hidden rounded-[13px] border border-[#E1E5EE] bg-white shadow-sm min-[480px]:flex-row dark:border-[#2B3040] dark:bg-[#1B1E2A]">
@@ -125,19 +103,13 @@ export function StatusCard() {
       </Tooltip>
 
       {!isPremium && (
-        <button
-          type="button"
-          onClick={handleBuyPremium}
-          disabled={createPayment.isPending}
-          className="flex items-center justify-center gap-1.5 whitespace-nowrap border-t border-[#E1E5EE] bg-[#E9EDF5] px-3.5 py-2 text-xs font-bold text-[#171A24] transition-colors hover:bg-[#CBD1E0] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5457A6] disabled:pointer-events-none disabled:opacity-60 min-[480px]:border-l min-[480px]:border-t-0 dark:border-[#2B3040] dark:bg-[#242838] dark:text-[#EDEFF6] dark:hover:bg-[#3A4058] dark:focus-visible:outline-[#9DA0EC]"
+        <Link
+          href="/premium"
+          className="flex items-center justify-center gap-1.5 whitespace-nowrap border-t border-[#E1E5EE] bg-[#E9EDF5] px-3.5 py-2 text-xs font-bold text-[#171A24] transition-colors hover:bg-[#CBD1E0] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5457A6] min-[480px]:border-l min-[480px]:border-t-0 dark:border-[#2B3040] dark:bg-[#242838] dark:text-[#EDEFF6] dark:hover:bg-[#3A4058] dark:focus-visible:outline-[#9DA0EC]"
         >
-          {createPayment.isPending ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Crown className={cn("size-3.5", PREMIUM_2)} />
-          )}
+          <Crown className={cn("size-3.5", PREMIUM_2)} />
           Premium olish
-        </button>
+        </Link>
       )}
     </div>
   )

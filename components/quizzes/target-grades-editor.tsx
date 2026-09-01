@@ -1,7 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarClock, ChevronDown, Layers, Plus, SlidersHorizontal, X } from 'lucide-react';
+import Link from 'next/link';
+import {
+  CalendarClock,
+  ChevronDown,
+  Layers,
+  Lightbulb,
+  Plus,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,9 +47,13 @@ function entryLabel(entry: TargetGradeEntry) {
 interface TargetGradesEditorProps {
   value: TargetGradeEntry[];
   onChange: (value: TargetGradeEntry[]) => void;
+  // O'quvchiga qancha urinish berilgan holda, foydalanuvchi (o'qituvchi)
+  // premium emasligini bildiradi — shunda 1dan katta qiymatlar uchun
+  // muloyim Premium eslatmasi ko'rsatiladi.
+  isPremium?: boolean;
 }
 
-export function TargetGradesEditor({ value, onChange }: TargetGradesEditorProps) {
+export function TargetGradesEditor({ value, onChange, isPremium }: TargetGradesEditorProps) {
   const [addNumber, setAddNumber] = useState('');
   const [addLetter, setAddLetter] = useState(ALL_LETTERS_VALUE);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -239,6 +252,15 @@ export function TargetGradesEditor({ value, onChange }: TargetGradesEditorProps)
                         value={entry.maxAttempts}
                         onChange={(e) => updateEntry(idx, { maxAttempts: e.target.value })}
                       />
+                      {!isPremium && Number(entry.maxAttempts) > 1 && (
+                        <p className="mt-1.5 flex items-start gap-1.5 text-xs text-gold-foreground">
+                          <Lightbulb className="mt-0.5 size-3.5 shrink-0" />
+                          Ajoyib! Endi bu sonni ishga tushirish uchun Premium kerak bo&apos;ladi —{' '}
+                          <Link href="/premium" className="font-medium underline underline-offset-2">
+                            batafsil
+                          </Link>
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-xs font-medium text-muted-foreground">

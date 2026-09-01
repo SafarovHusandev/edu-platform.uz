@@ -131,8 +131,12 @@ export default function StudentRewardsPage() {
                     </span>
                   </div>
                   {isStudent && isLocked ? (
-                    <Button className="mt-1 w-full rounded-md" variant="outline" disabled>
-                      <Lock className="size-4" /> Faqat Premium uchun
+                    <Button
+                      className="mt-1 w-full rounded-md"
+                      variant="outline"
+                      render={<Link href="/premium" />}
+                    >
+                      <Lock className="size-4" /> Premium oling
                     </Button>
                   ) : (
                     isStudent && (

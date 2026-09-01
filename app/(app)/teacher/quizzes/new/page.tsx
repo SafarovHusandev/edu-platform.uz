@@ -1,11 +1,20 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarClock, ClipboardList, Layers, ListChecks, Loader2, Target } from 'lucide-react';
+import {
+  CalendarClock,
+  ClipboardList,
+  Layers,
+  Lightbulb,
+  ListChecks,
+  Loader2,
+  Target,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +75,7 @@ type FormValues = z.output<typeof schema>;
 export default function NewQuizPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const isPremium = user?.tarif === 'premium';
   const createQuiz = useCreateQuiz();
   const { data: courses } = useCourses({ page: 1, limit: 100 });
 
@@ -374,6 +384,19 @@ export default function NewQuizPage() {
                               />
                             </FormControl>
                             <FormMessage className="text-[16px]" />
+                            {!isPremium && Number(field.value) > 1 && (
+                              <p className="flex items-start gap-1.5 text-xs text-gold-foreground">
+                                <Lightbulb className="mt-0.5 size-3.5 shrink-0" />
+                                Ajoyib! Endi bu sonni ishga tushirish uchun Premium kerak
+                                bo&apos;ladi —{' '}
+                                <Link
+                                  href="/premium"
+                                  className="font-medium underline underline-offset-2"
+                                >
+                                  batafsil
+                                </Link>
+                              </p>
+                            )}
                           </FormItem>
                         )}
                       />
@@ -414,7 +437,11 @@ export default function NewQuizPage() {
                       — bo&apos;sh qoldirilsa, yuqoridagi umumiy qiymatlar ishlatiladi.
                     </p>
                     <div className="rounded-lg border border-input bg-background p-3 sm:p-4">
-                      <TargetGradesEditor value={targetGrades} onChange={setTargetGrades} />
+                      <TargetGradesEditor
+                        value={targetGrades}
+                        onChange={setTargetGrades}
+                        isPremium={isPremium}
+                      />
                     </div>
                     {targetGradesError && (
                       <p className="text-[16px] font-medium text-destructive">

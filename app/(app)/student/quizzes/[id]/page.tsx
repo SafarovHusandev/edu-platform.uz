@@ -12,7 +12,9 @@ import {
   Clock,
   Hourglass,
   Loader2,
+  PartyPopper,
   Repeat,
+  Star,
   Target,
   Trophy,
   XCircle,
@@ -186,8 +188,9 @@ export default function TakeQuizPage({ params }: PageProps) {
             {diamondsEarned > 0 && (
               <div className="flex items-center gap-2 rounded-md bg-gold/15 px-4 py-2.5 text-gold-foreground">
                 <Image src="/diamond.png" alt="" width={32} height={32} className="size-5" />
-                <span className="font-semibold">
-                  🎉 {diamondsEarned} diamond qo&apos;lga kiritdingiz!
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <PartyPopper className="size-4 shrink-0" /> {diamondsEarned} diamond
+                  qo&apos;lga kiritdingiz!
                 </span>
               </div>
             )}
@@ -359,8 +362,9 @@ export default function TakeQuizPage({ params }: PageProps) {
               <Image src="/diamond.png" alt="" width={32} height={32} className="size-3.5" />
               {isPremium ? (
                 <>
-                  ⭐ Premium: maksimal {QUIZ_MAX_REWARD * PREMIUM_DIAMOND_MULTIPLIER} diamond
-                  olishingiz mumkin (natijangizga qarab)
+                  <Star className="size-3.5 shrink-0 text-gold" /> Premium: maksimal{' '}
+                  {QUIZ_MAX_REWARD * PREMIUM_DIAMOND_MULTIPLIER} diamond olishingiz mumkin
+                  (natijangizga qarab)
                 </>
               ) : (
                 <>

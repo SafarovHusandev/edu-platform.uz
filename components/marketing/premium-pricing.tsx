@@ -19,7 +19,7 @@ const FEATURES = [
   },
   {
     icon: Lock,
-    label: "Faqat Premium sovg'alar",
+    label: "Premium sovg'alar",
     standard: false,
     premium: true,
   },
@@ -104,7 +104,7 @@ export function PremiumPricing() {
             <Button
               size="lg"
               className="mt-7 h-11 w-full bg-gold text-base text-gold-foreground shadow-md hover:bg-gold/90"
-              render={<Link href="/student/wallet" />}
+              render={<Link href="/premium" />}
             >
               <Crown className="size-4" /> Premiumga o&apos;ting
             </Button>

@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   CircleDashed,
   Crown,
+  Star,
+  Target,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,12 +31,26 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { useDeleteQuiz, useQuizzesMy } from '@/hooks/use-quizzes';
+import { useDismissedBanner } from '@/hooks/use-dismissed-banner';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { Quiz } from '@/types';
+
+function isQuizCapped(quiz: Quiz) {
+  return quiz.targetGrades.some((tg) => {
+    const configured = tg.maxAttempts ?? quiz.maxAttempts;
+    return tg.effectiveMaxAttempts != null && tg.effectiveMaxAttempts < configured;
+  });
+}
 
 export default function TeacherQuizzesPage() {
   const { data, isLoading, isError, refetch } = useQuizzesMy({ page: 1, limit: 100 });
   const deleteQuiz = useDeleteQuiz();
+  const { dismissed: nudgeDismissed, dismiss: dismissNudge } = useDismissedBanner(
+    'edu_premium_attempts_nudge'
+  );
+
+  const anyCapped = data?.items.some(isQuizCapped) ?? false;
 
   return (
     <div>
@@ -50,6 +66,42 @@ export default function TeacherQuizzesPage() {
           </Button>
         }
       />
+
+      {anyCapped && !nudgeDismissed && (
+        <div className="mb-5 flex flex-col items-start gap-3 rounded-2xl border border-gold/30 bg-linear-to-r from-gold/15 to-transparent p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/20 text-gold-foreground">
+              <Target className="size-4.5" />
+            </span>
+            <div>
+              <p className="text-md font-semibold text-gold-foreground">
+                O&apos;quvchilaringiz ko&apos;proq urinishlar
+              </p>
+              <p className="mt-0.5 text-sm text-gold-foreground/80">
+                Siz ba&apos;zi testlaringizda bir nechta urinishni rejalashtirgansiz. Premium bilan
+                bu darhol faollashadi — hech narsani qayta sozlashning hojati yo&apos;q.
+              </p>
+            </div>
+          </div>
+          <div className="flex w-full shrink-0 items-center gap-2 sm:w-fit">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-md text-gold-foreground/80 hover:text-gold-foreground"
+              onClick={dismissNudge}
+            >
+              Keyinroq
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 rounded-md sm:flex-none"
+              render={<Link href="/premium" />}
+            >
+              <Crown className="size-4" /> Premiumni ko&apos;rish
+            </Button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <SkeletonList count={4} itemClassName="h-24" />
@@ -95,6 +147,14 @@ export default function TeacherQuizzesPage() {
                         </span>
                       )}
                     </Badge>
+                    {isQuizCapped(quiz) && (
+                      <Link
+                        href="/premium"
+                        className="inline-flex items-center gap-1 rounded-full bg-gold/10 px-2.5 py-1 text-xs font-medium text-gold-foreground transition-colors hover:bg-gold/20"
+                      >
+                        <Star className="size-3.5" /> Ko&apos;proq urinish — Premium bilan
+                      </Link>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground sm:text-base">
@@ -126,7 +186,7 @@ export default function TeacherQuizzesPage() {
                         >
                           {capped && <Crown className="size-3" />}
                           {label}: {tg.effectiveMaxAttempts ?? configured} marta /{' '}
-                          {tg.effectiveTimeLimit ?? (tg.timeLimit ?? quiz.timeLimit ?? '—')} daq
+                          {tg.effectiveTimeLimit ?? tg.timeLimit ?? quiz.timeLimit ?? '—'} daq
                         </span>
                       );
                     })}

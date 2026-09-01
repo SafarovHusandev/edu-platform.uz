@@ -2,7 +2,7 @@
 
 import { use, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
+import { Loader2, Star } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/ui/error-state"
@@ -54,6 +54,12 @@ export default function PaymentStatusPage({ params }: PageProps) {
           <h1 className="font-heading text-xl font-semibold">{config.label}</h1>
           <p className="text-2xl font-semibold">{formatPrice(invoice.amount)}</p>
           <p className="text-xs text-muted-foreground">Invoys: {invoice.invoiceId}</p>
+          {invoice.purpose === "premium" && invoice.status === "success" && (
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Star className="size-4 shrink-0 text-gold" /> Premium faollashtirildi! Yangi
+              imkoniyatlar profilingizda faol.
+            </p>
+          )}
           <Button className="mt-4" render={<Link href="/student/wallet" />}>
             Hamyonga qaytish
           </Button>

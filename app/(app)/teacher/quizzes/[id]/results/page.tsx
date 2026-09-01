@@ -153,8 +153,12 @@ function ReviewDialog({
                       setIsCorrectMap((prev) => ({ ...prev, [question._id]: checked === true }))
                     }
                   />
-                  <Label htmlFor={`correct-${question._id}`} className="cursor-pointer font-normal">
-                    ✅ To&apos;g&apos;ri deb belgilash
+                  <Label
+                    htmlFor={`correct-${question._id}`}
+                    className="flex cursor-pointer items-center gap-1.5 font-normal"
+                  >
+                    <CheckCircle2 className="size-4 shrink-0 text-success" /> To&apos;g&apos;ri deb
+                    belgilash
                   </Label>
                 </div>
                 <div className="space-y-1">

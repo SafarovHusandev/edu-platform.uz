@@ -100,6 +100,13 @@ export function formatDuration(durationSeconds: number | null | undefined) {
   return minutes > 0 ? `${minutes} daqiqa ${seconds} soniya` : `${seconds} soniya`;
 }
 
+// ISO sanagacha necha kun qolganini hisoblaydi (masalan, premium muddati tugashi).
+// Alohida funksiyada — komponent render tanasida to'g'ridan-to'g'ri Date.now()
+// chaqirilsa, react-compiler "impure function during render" xatosini beradi.
+export function daysUntil(iso: string) {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+}
+
 export function initials(name: string | null | undefined) {
   if (!name) return '?';
   return name

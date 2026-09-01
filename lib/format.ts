@@ -100,6 +100,19 @@ export function formatDuration(durationSeconds: number | null | undefined) {
   return minutes > 0 ? `${minutes} daqiqa ${seconds} soniya` : `${seconds} soniya`;
 }
 
+// Premium reja kalitini ("30d", "90d", ...) o'qiladigan nomga o'giradi —
+// to'lovlar tarixida qaysi reja sotib olinganini ko'rsatish uchun.
+export function planKeyToLabel(key: string) {
+  const days = parseInt(key, 10);
+  if (!Number.isFinite(days)) return key;
+  if (days === 30) return '1 oylik';
+  if (days === 90) return '3 oylik';
+  if (days === 180) return '6 oylik';
+  if (days === 365) return '1 yillik';
+  if (days > 0 && days % 30 === 0) return `${days / 30} oylik`;
+  return `${days} kunlik`;
+}
+
 // ISO sanagacha necha kun qolganini hisoblaydi (masalan, premium muddati tugashi).
 // Alohida funksiyada — komponent render tanasida to'g'ridan-to'g'ri Date.now()
 // chaqirilsa, react-compiler "impure function during render" xatosini beradi.

@@ -17,6 +17,7 @@ import {
   Library,
   RotateCw,
   Crown,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -50,6 +51,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: 'Mukofotlar', href: '/admin/rewards', icon: Gift },
   { label: 'Yutuqlar', href: '/admin/redemptions', icon: Trophy },
   { label: 'Promo kodlar', href: '/admin/promo-codes', icon: TicketPercent },
+  { label: "To'lovlar", href: '/admin/payments', icon: Receipt },
 ];
 
 export const NAV_ITEMS: Record<Role, NavItem[]> = {
@@ -78,6 +80,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
 
 export const COMMON_NAV_ITEMS: NavItem[] = [
   { label: 'Premium', href: '/premium', icon: Crown },
+  { label: "To'lovlar tarixi", href: '/payments', icon: Receipt },
   { label: 'Bildirishnomalar', href: '/notifications', icon: Bell },
   { label: 'Profil', href: '/profile', icon: CircleUserRound },
 ];

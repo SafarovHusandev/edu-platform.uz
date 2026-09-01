@@ -1,4 +1,13 @@
-import { CheckCircle2, Clock, XCircle, type LucideIcon } from "lucide-react"
+import {
+  CheckCircle2,
+  Clock,
+  Crown,
+  GraduationCap,
+  Heart,
+  Wallet,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react"
 
 import type { PaymentPurpose, PaymentStatus } from "@/types"
 
@@ -51,6 +60,13 @@ export const PAYMENT_PURPOSE_LABELS: Record<PaymentPurpose, string> = {
   course: "Kurs sotib olish",
   premium: "Premium a'zolik",
   donation: "Homiylik",
+}
+
+export const PAYMENT_PURPOSE_ICONS: Record<PaymentPurpose, LucideIcon> = {
+  wallet: Wallet,
+  course: GraduationCap,
+  premium: Crown,
+  donation: Heart,
 }
 
 export function getPaymentStatusConfig(status: PaymentStatus): PaymentStatusConfig {

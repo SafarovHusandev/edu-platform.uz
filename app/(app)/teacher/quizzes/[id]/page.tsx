@@ -10,6 +10,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
+  Copy,
   Crown,
   EyeOff,
   Lightbulb,
@@ -138,6 +139,11 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  // Nusxalash uchun: forma shu savol asosida oldindan to'ldiriladi, lekin
+  // saqlanganda YANGI savol sifatida (addQuestion) yuboriladi, editingQuestion
+  // esa faqat haqiqiy tahrirlashda o'rnatiladi.
+  const [duplicateSource, setDuplicateSource] = useState<Question | null>(null);
+  const [questionResetSignal, setQuestionResetSignal] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsForm, setSettingsForm] = useState({
     title: '',
@@ -260,15 +266,30 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
     updateQuiz.mutate({ id, isActive: !quiz!.isActive });
   }
 
-  function handleSubmit(values: QuestionFormValues) {
+  function handleSubmit(values: QuestionFormValues, keepOpen: boolean) {
     if (editingQuestion) {
       updateQuestion.mutate(
         { id: editingQuestion._id, ...values },
         { onSuccess: () => setDialogOpen(false) }
       );
     } else {
-      addQuestion.mutate(values, { onSuccess: () => setDialogOpen(false) });
+      addQuestion.mutate(values, {
+        onSuccess: () => {
+          if (keepOpen) {
+            setDuplicateSource(null);
+            setQuestionResetSignal((s) => s + 1);
+          } else {
+            setDialogOpen(false);
+          }
+        },
+      });
     }
+  }
+
+  function handleDuplicateQuestion(question: Question) {
+    setEditingQuestion(null);
+    setDuplicateSource(question);
+    setDialogOpen(true);
   }
 
   const stats = [
@@ -708,6 +729,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
             size="sm"
             onClick={() => {
               setEditingQuestion(null);
+              setDuplicateSource(null);
               setDialogOpen(true);
             }}
             className="text-sm sm:text-base"
@@ -825,10 +847,20 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
                       aria-label="Tahrirlash"
                       onClick={() => {
                         setEditingQuestion(question);
+                        setDuplicateSource(null);
                         setDialogOpen(true);
                       }}
                     >
                       <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Nusxalash"
+                      title="Nusxalash"
+                      onClick={() => handleDuplicateQuestion(question)}
+                    >
+                      <Copy className="size-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger
@@ -862,9 +894,11 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
       <QuestionFormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        initialQuestion={editingQuestion}
+        initialQuestion={editingQuestion ?? duplicateSource}
+        isEditing={!!editingQuestion}
         onSubmit={handleSubmit}
         isPending={addQuestion.isPending || updateQuestion.isPending}
+        resetSignal={questionResetSignal}
       />
     </div>
   );

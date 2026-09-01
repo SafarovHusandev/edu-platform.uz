@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Loader2, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,10 +43,14 @@ function QuestionForm({
   initialQuestion,
   onSubmit,
   isPending,
+  // "Saqlash va yana qo'shish" faqat yangi savol qo'shishda ko'rsatiladi
+  // (tahrirlashda emas) — bosilganda forma tozalanib, dialog ochiq qoladi.
+  allowSaveAndAddAnother,
 }: {
   initialQuestion?: Question | null
-  onSubmit: (values: QuestionFormValues) => void
+  onSubmit: (values: QuestionFormValues, keepOpen: boolean) => void
   isPending: boolean
+  allowSaveAndAddAnother?: boolean
 }) {
   const [text, setText] = useState(initialQuestion?.text ?? "")
   const [type, setType] = useState<QuestionType>(initialQuestion?.type ?? "multiple_choice")
@@ -63,11 +67,48 @@ function QuestionForm({
   )
   const [sampleAnswer, setSampleAnswer] = useState(initialQuestion?.sampleAnswer ?? "")
   const [points, setPoints] = useState(initialQuestion?.points ?? 1)
+  // "Saqlash va yana qo'shish" bosilganda qaysi tugma band ekanini bilish uchun
+  // (spinnerni to'g'ri tugmada ko'rsatish maqsadida).
+  const [pendingMode, setPendingMode] = useState<"close" | "continue" | null>(null)
 
-  function handleSubmit() {
-    if (!text.trim()) return
+  const textRef = useRef<HTMLTextAreaElement>(null)
+  const optionRefs = useRef<(HTMLInputElement | null)[]>([])
+  const focusOptionIdxRef = useRef<number | null>(null)
+
+  // Dialog ochilganda darhol savol matniga fokus tushsin. "Saqlash va yana
+  // qo'shish" bosilgach ham bu komponent qayta mount bo'ladi (ota komponent
+  // resetSignal'ni key'ga qo'shadi) — shu orqali forma tabiiy ravishda
+  // bo'sh holatga qaytadi, alohida reset-effekt kerak emas.
+  useEffect(() => {
+    textRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (focusOptionIdxRef.current == null) return
+    optionRefs.current[focusOptionIdxRef.current]?.focus()
+    focusOptionIdxRef.current = null
+  }, [options.length])
+
+  function addOption(focusNew: boolean) {
+    if (options.length >= LABELS.length) return
+    setOptions((prev) => [...prev, ""])
+    if (focusNew) focusOptionIdxRef.current = options.length
+  }
+
+  function handleOptionKeyDown(e: React.KeyboardEvent<HTMLInputElement>, idx: number) {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    if (idx < options.length - 1) {
+      optionRefs.current[idx + 1]?.focus()
+    } else {
+      addOption(true)
+    }
+  }
+
+  function buildValues(): QuestionFormValues | null {
+    if (!text.trim()) return null
     if (type === "multiple_choice") {
-      onSubmit({
+      return {
         text,
         type,
         points,
@@ -75,9 +116,10 @@ function QuestionForm({
         options: options
           .filter((o) => o.trim())
           .map((o, idx) => ({ label: LABELS[idx], text: o })),
-      })
-    } else if (type === "true_false") {
-      onSubmit({
+      }
+    }
+    if (type === "true_false") {
+      return {
         text,
         type,
         points,
@@ -86,10 +128,16 @@ function QuestionForm({
           { label: "A", text: "To'g'ri" },
           { label: "B", text: "Noto'g'ri" },
         ],
-      })
-    } else {
-      onSubmit({ text, type, points, sampleAnswer: sampleAnswer.trim() || undefined })
+      }
     }
+    return { text, type, points, sampleAnswer: sampleAnswer.trim() || undefined }
+  }
+
+  function handleSubmit(keepOpen: boolean) {
+    const values = buildValues()
+    if (!values) return
+    setPendingMode(keepOpen ? "continue" : "close")
+    onSubmit(values, keepOpen)
   }
 
   return (
@@ -97,7 +145,12 @@ function QuestionForm({
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label>Savol matni</Label>
-          <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="2 + 2 = ?" />
+          <Textarea
+            ref={textRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="2 + 2 = ?"
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -148,11 +201,15 @@ function QuestionForm({
                   {LABELS[idx]}
                 </button>
                 <Input
+                  ref={(el) => {
+                    optionRefs.current[idx] = el
+                  }}
                   value={option}
                   onChange={(e) =>
                     setOptions((prev) => prev.map((o, i) => (i === idx ? e.target.value : o)))
                   }
-                  placeholder={`Variant ${LABELS[idx]}`}
+                  onKeyDown={(e) => handleOptionKeyDown(e, idx)}
+                  placeholder={`Variant ${LABELS[idx]} — Enter bilan keyingisini qo'shing`}
                 />
                 {options.length > 2 && (
                   <Button
@@ -167,12 +224,7 @@ function QuestionForm({
               </div>
             ))}
             {options.length < LABELS.length && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setOptions((prev) => [...prev, ""])}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={() => addOption(false)}>
                 <Plus className="size-3.5" /> Variant qo&apos;shish
               </Button>
             )}
@@ -214,8 +266,19 @@ function QuestionForm({
         )}
       </div>
       <DialogFooter>
-        <Button onClick={handleSubmit} disabled={isPending || !text.trim()}>
-          {isPending && <Loader2 className="size-4 animate-spin" />}
+        {allowSaveAndAddAnother && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleSubmit(true)}
+            disabled={isPending || !text.trim()}
+          >
+            {isPending && pendingMode === "continue" && <Loader2 className="size-4 animate-spin" />}
+            Saqlash va yana qo&apos;shish
+          </Button>
+        )}
+        <Button onClick={() => handleSubmit(false)} disabled={isPending || !text.trim()}>
+          {isPending && pendingMode === "close" && <Loader2 className="size-4 animate-spin" />}
           Saqlash
         </Button>
       </DialogFooter>
@@ -227,27 +290,36 @@ export function QuestionFormDialog({
   open,
   onOpenChange,
   initialQuestion,
+  isEditing,
   onSubmit,
   isPending,
+  resetSignal,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   initialQuestion?: Question | null
-  onSubmit: (values: QuestionFormValues) => void
+  // true — mavjud savolni tahrirlash; false/undefined — yangi savol (bo'sh yoki
+  // boshqa savoldan nusxalab boshlangan bo'lishi mumkin).
+  isEditing?: boolean
+  onSubmit: (values: QuestionFormValues, keepOpen: boolean) => void
   isPending: boolean
+  resetSignal?: number
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{initialQuestion ? "Savolni tahrirlash" : "Yangi savol"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Savolni tahrirlash" : "Yangi savol"}</DialogTitle>
         </DialogHeader>
         {open && (
           <QuestionForm
-            key={initialQuestion?._id ?? "new"}
+            // resetSignal o'zgarishi "Saqlash va yana qo'shish"dan keyingi
+            // qayta mount qilishni majburlaydi — forma shu orqali tozalanadi.
+            key={`${initialQuestion?._id ?? "new"}-${resetSignal ?? 0}`}
             initialQuestion={initialQuestion}
             onSubmit={onSubmit}
             isPending={isPending}
+            allowSaveAndAddAnother={!isEditing}
           />
         )}
       </DialogContent>

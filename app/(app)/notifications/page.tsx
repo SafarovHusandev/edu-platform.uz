@@ -27,6 +27,7 @@ import {
   useNotifications,
 } from '@/hooks/use-notifications';
 import { formatDateTime } from '@/lib/format';
+import { resolveNotificationLink } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -69,42 +70,24 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-3">
           {items.map((notification) => {
-            let href: string | undefined;
-            let actionLabel: string | undefined;
+            const resolved = resolveNotificationLink(notification, user?.role);
+            const href = resolved?.href;
+            const actionLabel = resolved ? (resolved.external ? 'Ochish' : "Ko'rish") : undefined;
 
-            if (
-              notification.type === 'quiz' &&
-              notification.meta?.quizId &&
-              notification.meta?.attemptId
-            ) {
-              if (user?.role === 'student') {
-                href = `/student/quizzes/${notification.meta.quizId}/attempts/${notification.meta.attemptId}`;
-                actionLabel = "Natijani ko'rish";
-              } else if (
-                user?.role === 'teacher' &&
-                notification.title.includes('Tekshirish kerak')
-              ) {
-                href = `/teacher/quizzes/${notification.meta.quizId}/results/${notification.meta.attemptId}`;
-                actionLabel = 'Tekshirish';
-              } else if (
-                user?.role === 'teacher' &&
-                notification.title.includes('Talaba testni yakunladi')
-              ) {
-                href = `/teacher/quizzes/${notification.meta.quizId}/results/${notification.meta.attemptId}`;
-                actionLabel = "Ko'rish";
+            function handleActivate() {
+              if (!resolved) return;
+              if (!notification.isRead) markRead.mutate(notification._id);
+              if (resolved.external) {
+                window.open(resolved.href, '_blank', 'noopener,noreferrer');
+              } else {
+                router.push(resolved.href);
               }
             }
-
-            console.log(href);
 
             return (
               <Card
                 key={notification._id}
-                onClick={() => {
-                  if (!href) return;
-                  if (!notification.isRead) markRead.mutate(notification._id);
-                  router.push(href);
-                }}
+                onClick={handleActivate}
                 className={cn(
                   'flex-row items-start gap-3 p-4 shadow-sm transition-all duration-200',
                   href && 'cursor-pointer hover:border-primary/40 hover:shadow-md',
@@ -148,7 +131,13 @@ export default function NotificationsPage() {
                         variant="outline"
                         size="sm"
                         className="h-8 text-xs sm:text-sm"
-                        render={<Link href={href} />}
+                        render={
+                          <Link
+                            href={href}
+                            target={resolved?.external ? '_blank' : undefined}
+                            rel={resolved?.external ? 'noopener noreferrer' : undefined}
+                          />
+                        }
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!notification.isRead) markRead.mutate(notification._id);

@@ -16,7 +16,7 @@ import { CourseCard } from '@/components/courses/course-card';
 import { BookCard } from '@/components/books/book-card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api-client';
-import type { Book, Category, Course, Paginated } from '@/types';
+import type { Book, Category, Course, Paginated, Reward, User } from '@/types';
 
 const CATEGORY_ACCENTS = [
   'bg-primary/10 text-primary',
@@ -26,27 +26,47 @@ const CATEGORY_ACCENTS = [
 ];
 
 async function getLandingData() {
-  const [categories, courses, books] = await Promise.all([
+  // Barchasi ochiq (skipAuth) endpoint'lar — mehmon foydalanuvchi uchun ham
+  // ishlaydi. /users/leaderboard token talab qiladi, shuning uchun anonim
+  // ziyoratchi uchun bo'sh massiv qaytadi va bo'lim sahifada yashiriladi.
+  const [categoriesRes, coursesRes, booksRes, rewardsRes, leaderboardRes] = await Promise.all([
     api
       .get<Paginated<Category>>('/categories', { limit: 100 }, { skipAuth: true })
-      .then((res) => res.items)
-      .catch(() => [] as Category[]),
+      .catch(() => null),
     api
       .get<Paginated<Course>>('/courses', { page: 1, limit: 8 }, { skipAuth: true })
       .catch(() => null),
     api.get<Paginated<Book>>('/books', { page: 1, limit: 8 }, { skipAuth: true }).catch(() => null),
+    api
+      .get<Paginated<Reward>>('/rewards', { page: 1, limit: 4 }, { skipAuth: true })
+      .catch(() => null),
+    api
+      .get<Paginated<User>>('/users/leaderboard', { page: 1, limit: 3 }, { skipAuth: true })
+      .catch(() => null),
   ]);
 
-  return { categories, courses: courses?.items ?? [], books: books?.items ?? [] };
+  return {
+    categories: categoriesRes?.items ?? [],
+    courses: coursesRes?.items ?? [],
+    books: booksRes?.items ?? [],
+    rewards: rewardsRes?.items ?? [],
+    leaderboard: leaderboardRes?.items ?? [],
+    stats: {
+      courses: coursesRes?.total ?? 0,
+      categories: categoriesRes?.total ?? 0,
+      books: booksRes?.total ?? 0,
+      rewards: rewardsRes?.total ?? 0,
+    },
+  };
 }
 
 export default async function HomePage() {
-  const { categories, courses, books } = await getLandingData();
+  const { categories, courses, books, rewards, leaderboard, stats } = await getLandingData();
 
   return (
     <>
       <Hero />
-      <StatsStrip />
+      <StatsStrip stats={stats} />
 
       {categories.length > 0 && (
         <div className="border-b border-border/60 bg-muted/20 py-16">
@@ -135,7 +155,7 @@ export default async function HomePage() {
 
       <EconomySteps />
       <DailySpinShowcase />
-      <RewardsPreview />
+      {rewards.length > 0 && <RewardsPreview rewards={rewards} />}
       <PremiumPricing />
 
       {books.length > 0 && (
@@ -181,7 +201,7 @@ export default async function HomePage() {
 
       <CertificateVerifyTeaser />
       <RoleShowcase />
-      <LeaderboardPreview />
+      {leaderboard.length > 0 && <LeaderboardPreview students={leaderboard} />}
       <TelegramCallout />
       <CtaSection />
     </>

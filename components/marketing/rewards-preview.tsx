@@ -1,15 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Check, Clock, Gift, PackageCheck } from 'lucide-react';
+import { ArrowRight, Check, Clock, Crown, Gift, PackageCheck } from 'lucide-react';
 import { Container } from '@/components/layout/container';
 import { Button } from '@/components/ui/button';
-
-const REWARDS = [
-  { title: 'Simsiz quloqchin', cost: 1200 },
-  { title: "Kitoblar to'plami", cost: 450 },
-  { title: 'Fitnes-brend futbolka', cost: 800 },
-  { title: 'Powerbank', cost: 950 },
-];
+import { resolveAssetUrl } from '@/lib/config';
+import { formatNumber } from '@/lib/format';
+import type { Reward } from '@/types';
 
 const PROCESS = [
   { icon: Clock, label: "So'ralgan", description: "O'quvchi olmosga sovg'a so'raydi" },
@@ -17,7 +13,7 @@ const PROCESS = [
   { icon: PackageCheck, label: 'Yetkazilgan', description: "Sovg'a qo'lga topshiriladi" },
 ];
 
-export function RewardsPreview() {
+export function RewardsPreview({ rewards }: { rewards: Reward[] }) {
   return (
     <div className="border-b border-border/60 py-20">
       <Container>
@@ -40,23 +36,43 @@ export function RewardsPreview() {
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {REWARDS.map((reward) => (
-            <div
-              key={reward.title}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-all hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div className="flex aspect-square w-full items-center justify-center bg-linear-to-br from-gold/15 to-primary/10">
-                <Gift className="size-10 text-gold transition-transform group-hover:scale-110" />
+          {rewards.map((reward) => {
+            const image = resolveAssetUrl(reward.image);
+            return (
+              <div
+                key={reward._id}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-all hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-linear-to-br from-gold/15 to-primary/10">
+                  {image ? (
+                    <Image
+                      src={image}
+                      alt={reward.title}
+                      fill
+                      unoptimized
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <Gift className="size-10 text-gold transition-transform group-hover:scale-110" />
+                  )}
+                  {reward.premiumOnly && (
+                    <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold text-gold-foreground shadow-sm">
+                      <Crown className="size-3" /> Premium
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col gap-2 p-4">
+                  <h3 className="line-clamp-1 font-heading text-sm font-semibold">
+                    {reward.title}
+                  </h3>
+                  <span className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1 text-sm font-semibold text-gold-foreground">
+                    <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" />
+                    {formatNumber(reward.cost)}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-1 flex-col gap-2 p-4">
-                <h3 className="font-heading text-sm font-semibold">{reward.title}</h3>
-                <span className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1 text-sm font-semibold text-gold-foreground">
-                  <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" />
-                  {reward.cost}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-12 rounded-2xl border border-border/70 bg-muted/30 p-6 sm:p-8">

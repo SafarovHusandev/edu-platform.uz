@@ -123,7 +123,7 @@ export interface Notification {
   title: string
   message: string
   type?: string
-  meta?: { quizId?: string; attemptId?: string; studentId?: string }
+  meta?: { quizId?: string; attemptId?: string; studentId?: string; url?: string }
   isRead: boolean
   createdAt: string
 }
@@ -235,6 +235,20 @@ export interface PremiumPlan {
 }
 
 export type PremiumPlans = Record<PremiumPlanKey, PremiumPlan>
+
+export interface PaymentRecord {
+  invoiceId: string
+  amount: number
+  purpose: PaymentPurpose
+  plan?: PremiumPlanKey | null
+  course?: { _id: string; title?: string } | string | null
+  status: PaymentStatus
+  cardPan?: string | null
+  paymentTime?: string | null
+  createdAt: string
+  // Faqat GET /payment (admin) javobida keladi
+  user?: { name: string; phone: string }
+}
 
 export interface Reward {
   _id: string

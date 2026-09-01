@@ -3,14 +3,10 @@ import Image from 'next/image';
 import { ArrowRight, Crown, Medal, Trophy } from 'lucide-react';
 import { Container } from '@/components/layout/container';
 import { Button } from '@/components/ui/button';
+import { formatNumber } from '@/lib/format';
+import type { User } from '@/types';
 
-const SAMPLE = [
-  { rank: 1, name: 'Amirbek Yusupov', grade: '9-A', diamonds: 4820, icon: Crown },
-  { rank: 2, name: 'Madina Qodirova', grade: '11-B', diamonds: 4310, icon: Medal },
-  { rank: 3, name: 'Sardor Aliyev', grade: '10-A', diamonds: 3960, icon: Medal },
-];
-
-export function LeaderboardPreview() {
+export function LeaderboardPreview({ students }: { students: User[] }) {
   return (
     <div className="border-b border-border/60 bg-muted/20 py-20">
       <Container>
@@ -25,30 +21,39 @@ export function LeaderboardPreview() {
         </div>
 
         <div className="mx-auto mt-10 max-w-xl space-y-2.5">
-          {SAMPLE.map((entry) => (
-            <div
-              key={entry.rank}
-              className="flex items-center gap-4 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs"
-            >
-              <span
-                className={
-                  entry.rank === 1
-                    ? 'flex size-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold-foreground'
-                    : 'flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground'
-                }
+          {students.map((entry, idx) => {
+            const rank = idx + 1;
+            const Icon = rank === 1 ? Crown : Medal;
+            return (
+              <div
+                key={entry._id}
+                className="flex items-center gap-4 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs"
               >
-                <entry.icon className="size-4.5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{entry.name}</p>
-                <p className="text-xs text-muted-foreground">{entry.grade} sinf</p>
+                <span
+                  className={
+                    rank === 1
+                      ? 'flex size-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold-foreground'
+                      : 'flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground'
+                  }
+                >
+                  <Icon className="size-4.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{entry.name}</p>
+                  {entry.grade?.number && (
+                    <p className="text-xs text-muted-foreground">
+                      {entry.grade.number}
+                      {entry.grade.letter ? `-${entry.grade.letter}` : ''} sinf
+                    </p>
+                  )}
+                </div>
+                <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold text-gold-foreground">
+                  <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" />
+                  {formatNumber(entry.diamonds ?? 0)}
+                </span>
               </div>
-              <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold text-gold-foreground">
-                <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" />
-                {entry.diamonds.toLocaleString('uz-UZ')}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-8 flex justify-center">

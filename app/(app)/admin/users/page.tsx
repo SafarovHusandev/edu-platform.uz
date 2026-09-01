@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -144,10 +145,22 @@ const userCreateSchema = z
 
 type UserCreateFormValues = z.infer<typeof userCreateSchema>;
 
-export default function AdminUsersPage() {
+type VerifiedTab = 'all' | 'unverified' | 'verified';
+
+function isVerifiedTab(value: string | null): value is VerifiedTab {
+  return value === 'all' || value === 'unverified' || value === 'verified';
+}
+
+function AdminUsersPageContent() {
+  const searchParams = useSearchParams();
+  // Bildirishnomadan "/admin/users?tab=unverified" kabi to'g'ridan-to'g'ri
+  // havola bilan kelinganda tegishli tab ochilishi uchun.
+  const initialTab = searchParams.get('tab');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [verifiedTab, setVerifiedTab] = useState<'all' | 'unverified' | 'verified'>('unverified');
+  const [verifiedTab, setVerifiedTab] = useState<VerifiedTab>(
+    isVerifiedTab(initialTab) ? initialTab : 'unverified'
+  );
   const { data, isLoading, isError, refetch } = useUsers({
     page,
     limit: PAGE_SIZE,
@@ -861,5 +874,13 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-md bg-muted" />}>
+      <AdminUsersPageContent />
+    </Suspense>
   );
 }

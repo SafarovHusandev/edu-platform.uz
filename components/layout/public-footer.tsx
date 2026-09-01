@@ -7,7 +7,6 @@ const COLUMNS = [
     title: "Platforma",
     links: [
       { label: "Kurslar", href: "/courses" },
-      { label: "Reyting", href: "/leaderboard" },
       { label: "Sertifikat tekshirish", href: "/certificates/verify" },
       { label: "Homiylik", href: "/donate" },
     ],

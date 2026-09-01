@@ -42,10 +42,11 @@ export default function TeacherDashboardPage() {
             </div>
 
             <h1 className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Xush kelibsiz, {user?.name || 'Ustoz'}! 👨‍🏫
+              Xush kelibsiz, {user?.name || 'Ustoz'}!
             </h1>
             <p className="text-white/90 text-sm sm:text-base leading-relaxed">
-              O&apos;quvchilaringizga yangi bilimlarni ulashing, kurslar sifatini oshiring va ta&apos;lim natijalarini kuzatib boring.
+              O&apos;quvchilaringizga yangi bilimlarni ulashing, kurslar sifatini oshiring va
+              ta&apos;lim natijalarini kuzatib boring.
             </p>
           </div>
 
@@ -269,14 +270,19 @@ export default function TeacherDashboardPage() {
         <div className="flex-1 space-y-1">
           <h4 className="text-sm font-bold text-foreground">Ustoz uchun foydali maslahat:</h4>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Darslar so&apos;ngida qisqa 3-5 savolli testlar qo&apos;shish o&apos;quvchilarning bilimni o&apos;zlashtirish darajasini va kurs reytingini sezilarli darajada oshiradi!
+            Darslar so&apos;ngida qisqa 3-5 savolli testlar qo&apos;shish o&apos;quvchilarning
+            bilimni o&apos;zlashtirish darajasini va kurs reytingini sezilarli darajada oshiradi!
           </p>
         </div>
-        <Button render={<Link href="/teacher/courses/new" />} variant="outline" size="sm" className="rounded-xl shrink-0 font-bold">
+        <Button
+          render={<Link href="/teacher/courses/new" />}
+          variant="outline"
+          size="sm"
+          className="rounded-xl shrink-0 font-bold"
+        >
           Dars yuklash
         </Button>
       </div>
     </div>
   );
 }
-

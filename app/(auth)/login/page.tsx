@@ -114,9 +114,7 @@ function LoginForm() {
           router.push(searchParams.get('redirect') || '/dashboard');
         },
         onError: (error) => {
-          setLoginError(
-            error instanceof ApiError ? error.message : 'Kirishda xatolik yuz berdi'
-          );
+          setLoginError(error instanceof ApiError ? error.message : 'Kirishda xatolik yuz berdi');
         },
       }
     );
@@ -143,7 +141,8 @@ function LoginForm() {
             O&apos;quvchi va Ustozlar uchun yagona makon
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Darslarni o&apos;zlashtiring, testlar yeching, ballar va sertifikatlarga ega bo&apos;ling yoki o&apos;z darslaringizni minglab o&apos;quvchilarga taqdim eting!
+            Darslarni o&apos;zlashtiring, testlar yeching, ballar va sertifikatlarga ega
+            bo&apos;ling yoki o&apos;z darslaringizni minglab o&apos;quvchilarga taqdim eting!
           </p>
         </div>
 
@@ -154,7 +153,7 @@ function LoginForm() {
               <BookOpen className="size-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground">Sifatli video darslar</p>
+              <p className="text-sm font-bold text-foreground">Sifatli video darslar va testlar</p>
               <p className="text-xs text-muted-foreground">Maktab darsliklari va maxsus kurslar</p>
             </div>
           </div>
@@ -165,7 +164,9 @@ function LoginForm() {
             </div>
             <div>
               <p className="text-sm font-bold text-foreground">Olmoslar & Mukofotlar</p>
-              <p className="text-xs text-muted-foreground">Kunlik baraban va qiziqarli sovg&apos;alar</p>
+              <p className="text-xs text-muted-foreground">
+                Kunlik baraban va qiziqarli sovg&apos;alar
+              </p>
             </div>
           </div>
 
@@ -319,7 +320,10 @@ function LoginForm() {
                 >
                   @edu_platform_bot
                 </a>{' '}
-                <code className="rounded-md bg-sky-500/20 px-1.5 py-0.5 font-mono text-[11px] font-bold">/start</code> yuboring va olingan tasdiqlash kodini kiriting.
+                <code className="rounded-md bg-sky-500/20 px-1.5 py-0.5 font-mono text-[11px] font-bold">
+                  /start
+                </code>{' '}
+                yuboring va olingan tasdiqlash kodini kiriting.
               </div>
 
               <Form {...telegramForm}>
@@ -337,6 +341,15 @@ function LoginForm() {
                             placeholder="Masalan: 123456"
                             inputMode="numeric"
                             {...field}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value);
+                              // 6 ta belgi kiritilishi bilan avtomatik yuborish —
+                              // foydalanuvchi "Tasdiqlash" tugmasini bosishi shart emas.
+                              if (value.length === 6 && !telegramLogin.isPending) {
+                                telegramForm.handleSubmit(onTelegramSubmit)();
+                              }
+                            }}
                             className="h-12 text-center text-lg font-mono tracking-widest rounded-xl border-border/80 bg-background/70"
                           />
                         </FormControl>
@@ -387,4 +400,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-

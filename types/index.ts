@@ -327,6 +327,20 @@ export interface CourseStats {
   quizzes: QuizStatsSummary
 }
 
+export interface TeacherRanking {
+  rank: number
+  _id: string
+  name: string
+  avatar?: string | null
+  coursesCount: number
+  quizzesCount: number
+  lessonsCount: number
+  booksCount: number
+  studentsCount: number
+  avgRating: number
+  activityScore: number
+}
+
 export interface Paginated<T> {
   items: T[]
   total: number

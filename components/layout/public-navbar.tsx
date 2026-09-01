@@ -3,19 +3,28 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Award, BookOpen, HeartHandshake, Home, Library, Menu, Trophy, X } from 'lucide-react';
+import {
+  Award,
+  BookOpen,
+  HeartHandshake,
+  Home,
+  LayoutDashboard,
+  Library,
+  Menu,
+  X,
+} from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/layout/user-menu';
 import { useAuthStore } from '@/store/auth-store';
+import { ROLE_HOME } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
 const LINKS = [
   { label: 'Bosh sahifa', href: '/', icon: Home },
   { label: 'Kurslar', href: '/courses', icon: BookOpen },
   { label: 'Kutubxona', href: '/books', icon: Library },
-  { label: 'Reyting', href: '/leaderboard', icon: Trophy },
   { label: 'Sertifikat tekshirish', href: '/certificates/verify', icon: Award },
   { label: 'Homiylik', href: '/donate', icon: HeartHandshake },
 ];
@@ -26,10 +35,10 @@ export function PublicNavbar() {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 shadow-xs backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/75 shadow-xs backdrop-blur-lg">
       <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between px-4 py-2 sm:px-6 lg:px-8">
         <div className="flex items-center gap-6">
-          <Logo />
+          <Logo className="transition-transform hover:scale-[1.03]" />
           <nav className="hidden items-center gap-1 md:flex">
             {LINKS.map((link) => {
               const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
@@ -56,7 +65,16 @@ export function PublicNavbar() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {user ? (
-            <UserMenu />
+            <>
+              <Button
+                render={<Link href={ROLE_HOME[user.role]} />}
+                className="hidden items-center gap-1.5 rounded-full bg-linear-to-r from-primary to-primary/80 px-4 shadow-md shadow-primary/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 sm:flex"
+              >
+                <LayoutDashboard className="size-4" />
+                Boshqaruv paneli
+              </Button>
+              <UserMenu />
+            </>
           ) : (
             <div className="hidden items-center gap-2 sm:flex">
               <Button variant="ghost" render={<Link href="/login" />}>
@@ -106,7 +124,17 @@ export function PublicNavbar() {
                 </Link>
               );
             })}
-            {!user && (
+            {user ? (
+              <div className="mt-2 border-t border-border/60 pt-3">
+                <Button
+                  className="w-full rounded-xl bg-linear-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
+                  render={<Link href={ROLE_HOME[user.role]} onClick={() => setOpen(false)} />}
+                >
+                  <LayoutDashboard className="size-4" />
+                  Boshqaruv paneliga o&apos;tish
+                </Button>
+              </div>
+            ) : (
               <div className="mt-2 flex items-center gap-2 border-t border-border/60 pt-3">
                 <Button variant="outline" className="flex-1" render={<Link href="/login" />}>
                   Kirish

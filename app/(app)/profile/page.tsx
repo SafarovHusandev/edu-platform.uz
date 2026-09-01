@@ -176,9 +176,10 @@ export default function ProfilePage() {
 
       {user.role === 'student' && <StatusCard />}
 
-      <Card className="overflow-hidden rounded-2xl border-none shadow-md ring-1 ring-border/60">
-        <CardContent className="flex flex-col items-center gap-5 pt-2 sm:flex-row sm:gap-6">
-          <div className="relative shrink-0">
+      <Card className="overflow-hidden rounded-2xl border-none pt-0 shadow-md ring-1 ring-border/60">
+        <div className="h-20 bg-linear-to-r from-primary via-primary/80 to-gold/50 sm:h-28" />
+        <CardContent className="flex flex-col items-center gap-5 pt-0 sm:flex-row sm:gap-6">
+          <div className="relative -mt-16 shrink-0 sm:-mt-24">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -186,17 +187,17 @@ export default function ProfilePage() {
               aria-label="Profil rasmini o'zgartirish"
             >
               <Avatar
-                size="lg"
-                className="size-36 shadow-lg ring-4 ring-background transition-transform group-hover/avatar:scale-[1.03] sm:size-44"
+                size="xl"
+                className="size-44 shadow-lg ring-4 ring-background transition-transform group-hover/avatar:scale-[1.03] sm:size-72"
               >
                 <AvatarImage src={resolveAssetUrl(user.avatar)} alt={user.name} />
-                <AvatarFallback className="text-4xl font-semibold sm:text-5xl">
+                <AvatarFallback className="text-5xl font-semibold sm:text-6xl">
                   {initials(user.name)}
                 </AvatarFallback>
               </Avatar>
-              <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover/avatar:opacity-100">
+              {/* <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover/avatar:opacity-100">
                 <Camera className="size-7 text-white" />
-              </span>
+              </span> */}
             </button>
             <button
               type="button"
@@ -234,7 +235,8 @@ export default function ProfilePage() {
               {user.tarif === 'premium' && (
                 <Badge className="rounded-full bg-gold px-3 py-1 text-sm text-gold-foreground">
                   <ShieldCheck className="size-3.5" />
-                  Premium{user.premiumExpiresAt ? `: ${formatDate(user.premiumExpiresAt)} gacha` : ''}
+                  Premium
+                  {user.premiumExpiresAt ? `: ${formatDate(user.premiumExpiresAt)} gacha` : ''}
                 </Badge>
               )}
             </div>
@@ -251,14 +253,14 @@ export default function ProfilePage() {
           </div>
           {user.role === 'student' && (
             <div className="flex w-full gap-3 border-t pt-5 sm:w-auto sm:border-t-0 sm:border-l sm:pl-6 sm:pt-0">
-              <div className="flex-1 rounded-md bg-gold/10 px-4 py-3 text-center sm:flex-none">
+              <div className="flex-1 rounded-xl bg-gold/10 px-4 py-3 text-center ring-1 ring-gold/15 sm:flex-none">
                 <p className="flex items-center justify-center gap-1.5 text-xl font-bold text-gold-foreground">
                   <Image src="/diamond.png" alt="" width={32} height={32} className="size-5" />{' '}
                   {formatNumber(user.diamonds ?? 0)}
                 </p>
                 <p className="mt-0.5 text-xs font-medium text-muted-foreground">Olmoslar</p>
               </div>
-              <div className="flex-1 rounded-md bg-primary/10 px-4 py-3 text-center sm:flex-none">
+              <div className="flex-1 rounded-xl bg-primary/10 px-4 py-3 text-center ring-1 ring-primary/15 sm:flex-none">
                 <p className="flex items-center justify-center gap-1.5 text-xl font-bold text-primary">
                   <Wallet className="size-5" /> {formatPrice(user.balance ?? 0)}
                 </p>
@@ -302,10 +304,10 @@ export default function ProfilePage() {
         </CardContent>
       </Card> */}
 
-      <Card className="rounded-2xl shadow-sm">
+      <Card className="rounded-2xl shadow-sm ring-1 ring-border/60">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
               <KeyRound className="size-5" />
             </span>
             <div>
@@ -380,10 +382,10 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl shadow-sm">
+      <Card className="rounded-2xl shadow-sm ring-1 ring-border/60">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
               <Send className="size-5" />
             </span>
             <div>
@@ -476,7 +478,7 @@ export default function ProfilePage() {
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5 text-lg">
-              <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 <KeyRound className="size-4.5" />
               </span>
               Parol o&apos;rnating

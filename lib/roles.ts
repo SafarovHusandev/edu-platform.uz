@@ -63,7 +63,6 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Sertifikatlar', href: '/student/certificates', icon: ScrollText },
     { label: 'Mukofotlar', href: '/student/rewards', icon: Gift },
     { label: 'Kunlik barabon', href: '/student/daily-spin', icon: RotateCw },
-    { label: 'Reyting', href: '/leaderboard', icon: Trophy },
     { label: 'Hamyon', href: '/student/wallet', icon: Wallet },
   ],
   teacher: [
@@ -79,6 +78,7 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
 };
 
 export const COMMON_NAV_ITEMS: NavItem[] = [
+  { label: 'Reyting', href: '/leaderboard', icon: Trophy },
   { label: 'Premium', href: '/premium', icon: Crown },
   { label: "To'lovlar tarixi", href: '/payments', icon: Receipt },
   { label: 'Bildirishnomalar', href: '/notifications', icon: Bell },

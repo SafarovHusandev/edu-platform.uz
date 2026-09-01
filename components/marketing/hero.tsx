@@ -6,7 +6,7 @@ import { Container } from '@/components/layout/container';
 
 export function Hero() {
   return (
-    <div className="relative overflow-hidden border-b border-border/60">
+    <div className="relative overflow-hidden  border-border/60">
       {/* Background radial glows & grids */}
       <div
         aria-hidden
@@ -25,7 +25,7 @@ export function Hero() {
         className="pointer-events-none absolute top-24 -right-20 -z-10 size-80 rounded-full bg-amber-400/25 blur-3xl"
       />
 
-      <Container className="flex flex-col items-center gap-6 py-20 text-center sm:py-28">
+      <Container className="flex flex-col items-center gap-6 pt-15 text-center sm:pt-20">
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary shadow-xs backdrop-blur-md">
           <span className="relative flex size-2">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/60" />
@@ -85,4 +85,3 @@ export function Hero() {
     </div>
   );
 }
-

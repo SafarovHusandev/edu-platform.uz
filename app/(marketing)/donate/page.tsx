@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Heart, Loader2, ShieldCheck, Sparkles, Users, ArrowRight } from 'lucide-react';
 import { Container } from '@/components/layout/container';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -45,6 +46,7 @@ export default function DonatePage() {
 
   function handleDonate() {
     if (!user) {
+      toast.info("Platformamizga homiylik qilish uchun avval tizimga kirishingiz kerak bo'ladi");
       router.push('/login?redirect=/donate');
       return;
     }
@@ -162,11 +164,14 @@ export default function DonatePage() {
               )}
               {formatNumber(finalAmount)} so&apos;m qo&apos;llab-quvvatlash
             </Button>
-            {!isValid && <p className="text-xs font-medium text-destructive text-center">Eng kam miqdor 1 000 so&apos;m</p>}
+            {!isValid && (
+              <p className="text-xs font-medium text-destructive text-center">
+                Eng kam miqdor 1 000 so&apos;m
+              </p>
+            )}
           </div>
         </div>
       </Container>
     </div>
   );
 }
-

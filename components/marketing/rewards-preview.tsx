@@ -1,17 +1,40 @@
+import { Fragment } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Check, Clock, Crown, Gift, PackageCheck } from 'lucide-react';
+import { ArrowRight, Check, Clock, Crown, Gift, PackageCheck, ShieldCheck } from 'lucide-react';
 import { Container } from '@/components/layout/container';
 import { Button } from '@/components/ui/button';
 import { resolveAssetUrl } from '@/lib/config';
 import { formatNumber } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Reward } from '@/types';
 
 const PROCESS = [
-  { icon: Clock, label: "So'ralgan", description: "O'quvchi olmosga sovg'a so'raydi" },
-  { icon: Check, label: 'Tasdiqlangan', description: "Administrator ko'rib chiqadi" },
-  { icon: PackageCheck, label: 'Yetkazilgan', description: "Sovg'a qo'lga topshiriladi" },
+  {
+    icon: Clock,
+    label: "So'ralgan",
+    description: "O'quvchi olmosga sovg'a so'raydi",
+    accent: 'primary' as const,
+  },
+  {
+    icon: Check,
+    label: 'Tasdiqlangan',
+    description: "Administrator ko'rib chiqadi va tasdiqlaydi",
+    accent: 'success' as const,
+  },
+  {
+    icon: PackageCheck,
+    label: 'Topshirilgan',
+    description: "Sovg'a qo'lga topshiriladi",
+    accent: 'gold' as const,
+  },
 ];
+
+const STEP_ACCENTS = {
+  primary: 'bg-primary/10 text-primary ring-primary/20',
+  success: 'bg-success/15 text-success ring-success/20',
+  gold: 'bg-gold/15 text-gold-foreground ring-gold/25',
+} as const;
 
 export function RewardsPreview({ rewards }: { rewards: Reward[] }) {
   return (
@@ -23,13 +46,17 @@ export function RewardsPreview({ rewards }: { rewards: Reward[] }) {
               Mukofotlar do&apos;koni
             </p>
             <h2 className="mt-1.5 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-              Olmoslaringizni haqiqiy sovg&apos;alarga yeching
+              Olmoslaringizni haqiqiy sovg&apos;alarga almashtiring
             </h2>
             <p className="mt-3 max-w-md text-muted-foreground">
               Bu — reklama emas. To&apos;plagan olmoslaringiz haqiqiy buyumlarga almashtiriladi.
             </p>
           </div>
-          <Button variant="ghost" render={<Link href="/student/rewards" />} className="group shrink-0">
+          <Button
+            variant="ghost"
+            render={<Link href="/student/rewards" />}
+            className="group shrink-0"
+          >
             Barchasi{' '}
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Button>
@@ -76,22 +103,40 @@ export function RewardsPreview({ rewards }: { rewards: Reward[] }) {
         </div>
 
         <div className="mt-12 rounded-2xl border border-border/70 bg-muted/30 p-6 sm:p-8">
-          <p className="text-center text-sm font-semibold text-muted-foreground">
+          <p className="flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-muted-foreground">
+            <ShieldCheck className="size-4 text-success" />
             Har bir so&apos;rov shaffof, 3 bosqichli jarayondan o&apos;tadi
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+
+          <div className="mt-7 flex items-center">
             {PROCESS.map((step, idx) => (
-              <div key={step.label} className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-background text-sm font-bold text-gold-foreground shadow-sm ring-1 ring-border">
-                  {idx + 1}
-                </span>
-                <div>
-                  <p className="flex items-center gap-1.5 text-sm font-semibold">
-                    <step.icon className="size-4 text-muted-foreground" />
-                    {step.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
+              <Fragment key={step.label}>
+                <div className="flex flex-1 justify-center">
+                  <span
+                    className={cn(
+                      'relative flex size-12 shrink-0 items-center justify-center rounded-full ring-1 transition-transform duration-300 hover:scale-110',
+                      STEP_ACCENTS[step.accent]
+                    )}
+                  >
+                    <step.icon className="size-5" />
+                    <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-background text-[16px] font-bold text-foreground ring-1 ring-border shadow-sm">
+                      {idx + 1}
+                    </span>
+                  </span>
                 </div>
+                {idx < PROCESS.length - 1 && (
+                  <div aria-hidden className="h-px w-8 shrink-0 bg-border sm:w-16" />
+                )}
+              </Fragment>
+            ))}
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            {PROCESS.map((step) => (
+              <div key={step.label} className="px-1">
+                <p className="text-xs font-semibold sm:text-sm">{step.label}</p>
+                <p className="mt-0.5 hidden text-xs text-muted-foreground sm:block">
+                  {step.description}
+                </p>
               </div>
             ))}
           </div>

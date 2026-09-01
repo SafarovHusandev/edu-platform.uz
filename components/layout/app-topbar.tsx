@@ -12,15 +12,25 @@ import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { StatusCard } from "@/components/layout/status-card"
 import { Logo } from "@/components/logo"
 import { useNotifications } from "@/hooks/use-notifications"
+import { useAuthStore } from "@/store/auth-store"
+import { cn } from "@/lib/utils"
 import type { Role } from "@/types"
 
 export function AppTopbar({ role }: { role: Role }) {
   const [open, setOpen] = useState(false)
   const { data } = useNotifications(1, 50)
   const unread = data?.items.filter((n) => !n.isRead).length ?? 0
+  const isPremium = useAuthStore((s) => s.user?.tarif === "premium")
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-md sm:px-6">
+    <header
+      className={cn(
+        "sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-md sm:px-6",
+        isPremium
+          ? "border-gold/30 bg-linear-to-r from-gold/8 via-background/85 to-background/85"
+          : "border-border/60"
+      )}
+    >
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           render={

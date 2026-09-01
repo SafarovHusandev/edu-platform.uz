@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { LayoutDashboard, LogOut, User as UserIcon } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Crown, LayoutDashboard, LogOut, User as UserIcon } from "lucide-react"
+import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,12 +25,23 @@ export function UserMenu() {
 
   if (!user) return null
 
+  const isPremium = user.tarif === "premium"
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-        <Avatar>
+        <Avatar
+          className={cn(
+            isPremium && "ring-2 ring-gold ring-offset-2 ring-offset-background"
+          )}
+        >
           <AvatarImage src={resolveAssetUrl(user.avatar)} alt={user.name} />
           <AvatarFallback>{initials(user.name)}</AvatarFallback>
+          {isPremium && (
+            <AvatarBadge className="bg-gold text-gold-foreground">
+              <Crown />
+            </AvatarBadge>
+          )}
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

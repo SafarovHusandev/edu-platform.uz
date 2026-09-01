@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Trophy, Crown, LogIn, Medal } from 'lucide-react';
+import { Trophy, Crown, LogIn, Medal, Sparkles } from 'lucide-react';
 import { Container } from '@/components/layout/container';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,27 +18,30 @@ import type { User } from '@/types';
 const PODIUM_STYLES = [
   {
     order: 'sm:order-2',
-    ring: 'ring-gold',
-    badge: 'bg-gold text-gold-foreground',
-    card: 'sm:-translate-y-4 hover:scale-105 transition-all duration-300 bg-amber-50/60 border border-amber-300 shadow-xl shadow-amber-500/30 dark:bg-amber-500/10 dark:border-[#D4AF37]/40 dark:shadow-2xl dark:shadow-[#D4AF37]/40',
-    avatarSize: 'size-20',
+    ring: 'ring-amber-400 dark:ring-amber-400',
+    badge: 'bg-linear-to-r from-amber-400 to-amber-500 text-slate-950 font-bold',
+    card: 'sm:-translate-y-5 bg-linear-to-b from-amber-500/15 via-card to-card border-2 border-amber-400/50 shadow-2xl shadow-amber-500/20 card-hover-glow',
+    avatarSize: 'size-20 sm:size-24',
     icon: Crown,
+    rankNum: '1',
   },
   {
     order: 'sm:order-1',
-    ring: 'ring-muted-foreground/50',
-    badge: 'bg-muted-foreground text-background',
-    card: 'hover:scale-105 transition-all duration-300 bg-slate-100/70 border border-slate-300 shadow-xl shadow-slate-400/40 dark:bg-slate-500/10 dark:border-slate-500/30 dark:shadow-2xl dark:shadow-slate-500/30',
-    avatarSize: 'size-16',
+    ring: 'ring-slate-300 dark:ring-slate-400',
+    badge: 'bg-linear-to-r from-slate-300 to-slate-400 text-slate-900 font-bold',
+    card: 'bg-linear-to-b from-slate-400/15 via-card to-card border border-slate-300 dark:border-slate-700 shadow-xl shadow-slate-500/10 card-hover-glow',
+    avatarSize: 'size-16 sm:size-18',
     icon: Medal,
+    rankNum: '2',
   },
   {
     order: 'sm:order-3',
-    ring: 'ring-amber-700/50',
-    badge: 'bg-amber-700 text-white',
-    card: 'hover:scale-105 transition-all duration-300 bg-orange-50/70 border border-orange-300 shadow-xl shadow-orange-600/30 dark:bg-amber-700/10 dark:border-amber-700/40 dark:shadow-2xl dark:shadow-[#CD7F32]/40',
-    avatarSize: 'size-16',
+    ring: 'ring-orange-400 dark:ring-orange-500',
+    badge: 'bg-linear-to-r from-orange-400 to-orange-600 text-white font-bold',
+    card: 'bg-linear-to-b from-orange-500/15 via-card to-card border border-orange-400/40 dark:border-orange-500/30 shadow-xl shadow-orange-500/10 card-hover-glow',
+    avatarSize: 'size-16 sm:size-18',
     icon: Medal,
+    rankNum: '3',
   },
 ];
 
@@ -49,7 +52,7 @@ function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-2 rounded-2xl border px-4 py-5 text-center shadow-sm transition-transform',
+        'relative flex flex-col items-center gap-2.5 rounded-3xl p-5 text-center transition-all duration-300',
         style.order,
         style.card
       )}
@@ -58,32 +61,32 @@ function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
         <Avatar
           className={cn(
             style.avatarSize,
-            'ring-3 ring-offset-2 ring-offset-background',
+            'ring-4 ring-offset-2 ring-offset-background shadow-md',
             style.ring
           )}
         >
           <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
-          <AvatarFallback className="text-lg">{initials(entry.name)}</AvatarFallback>
+          <AvatarFallback className="text-xl font-bold">{initials(entry.name)}</AvatarFallback>
         </Avatar>
         <span
           className={cn(
-            'absolute -bottom-1.5 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center rounded-full shadow-sm',
+            'absolute -bottom-2 left-1/2 flex size-7 -translate-x-1/2 items-center justify-center rounded-full shadow-lg',
             style.badge
           )}
         >
-          <Icon className="size-3.5" />
+          <Icon className="size-4" />
         </span>
       </div>
-      <div className="mt-1.5">
-        <p className="line-clamp-1 max-w-32 text-sm font-semibold">{entry.name}</p>
+      <div className="mt-2 w-full">
+        <p className="line-clamp-1 text-sm sm:text-base font-extrabold text-foreground">{entry.name}</p>
         {entry.grade?.number && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground mt-0.5">
             {entry.grade.number}-{entry.grade.letter} sinf
           </p>
         )}
       </div>
-      <span className="flex items-center gap-1.5 rounded-full bg-background px-2.5 py-1 text-sm font-semibold text-gold-foreground shadow-xs animate-pulse dark:text-white">
-        <Image src="/diamond.png" alt="" width={32} height={32} className="size-5 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-sm font-extrabold text-amber-600 dark:text-amber-400 shadow-xs">
+        <Image src="/diamond.png" alt="" width={32} height={32} className="size-4.5" />
         {formatNumber(entry.diamonds ?? 0)}
       </span>
     </div>
@@ -102,45 +105,55 @@ export default function LeaderboardPage() {
   const rest = hasPodium ? items.slice(3) : items;
 
   return (
-    <Container className="py-12">
-      <div className="mx-auto mb-10 max-w-xl text-center">
-        <span className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-gold/15 text-gold shadow-sm">
-          <Trophy className="size-7" />
-        </span>
-        <h1 className="font-heading text-3xl font-semibold tracking-tight">Reyting jadvali</h1>
-        <p className="mt-1 text-muted-foreground">
-          Eng ko&apos;p olmos to&apos;plagan faol o&apos;quvchilar
+    <Container className="py-12 max-w-4xl">
+      <div className="mx-auto mb-10 max-w-xl text-center space-y-3">
+        <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+          <Sparkles className="size-3.5" />
+          <span>Eng Faol O&apos;quvchilar</span>
+        </div>
+        <h1 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+          Reyting Jadvali
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          Darslar va testlarni muvaffaqiyatli topshirib eng ko&apos;p olmos to&apos;plagan peshqadamlar
         </p>
       </div>
 
       {isUnauthorized && !user ? (
-        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-md border border-dashed border-border py-16 text-center">
-          <LogIn className="size-8 text-muted-foreground" />
-          <p className="font-medium">Reytingni ko&apos;rish uchun tizimga kiring</p>
-          <Button render={<Link href="/login?redirect=/leaderboard" />}>Kirish</Button>
+        <div className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl border border-dashed border-border/80 p-8 sm:p-12 text-center bg-card/60">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <LogIn className="size-7" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-base font-bold text-foreground">Reytingni ko&apos;rish uchun tizimga kiring</p>
+            <p className="text-xs text-muted-foreground">O&apos;z o&apos;rningizni bilish va raqobatda qatnashish uchun kiring</p>
+          </div>
+          <Button render={<Link href="/login?redirect=/leaderboard" />} className="rounded-xl px-6 font-bold shadow-md shadow-primary/20">
+            Tizimga kirish
+          </Button>
         </div>
       ) : isLoading ? (
-        <div className="mx-auto max-w-2xl space-y-2">
+        <div className="mx-auto max-w-2xl space-y-3">
           <div className="mb-6 grid grid-cols-3 gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-44 animate-pulse rounded-2xl bg-muted" />
+              <div key={i} className="h-48 animate-pulse rounded-3xl bg-muted" />
             ))}
           </div>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-md bg-muted" />
+            <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />
           ))}
         </div>
       ) : (
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto max-w-2xl space-y-6">
           {hasPodium && (
-            <div className="mb-8 grid grid-cols-3 items-end gap-3">
+            <div className="mb-10 grid grid-cols-3 items-end gap-3 sm:gap-4">
               {podium.map((entry, idx) => (
                 <PodiumCard key={entry._id} entry={entry} rank={idx + 1} />
               ))}
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {rest.map((entry, idx) => {
               const rank = idx + (hasPodium ? 4 : 1);
               const isMe = !!user && entry._id === user._id;
@@ -148,43 +161,41 @@ export default function LeaderboardPage() {
                 <div
                   key={entry._id}
                   className={cn(
-                    'flex items-center gap-4 rounded-md border px-4 py-3 shadow-sm hover:shadow-md hover:translate-x-1 transition-all duration-300',
+                    'flex items-center gap-4 rounded-2xl border p-4 shadow-xs transition-all duration-200 card-hover-glow',
                     isMe
-                      ? 'border-blue-400 bg-blue-50/50 dark:border-blue-500/40 dark:bg-blue-500/10 text-slate-900 dark:text-white'
-                      : 'bg-white border-slate-100 hover:bg-slate-50/80 dark:bg-slate-900/50 dark:border-slate-800 dark:text-white dark:hover:bg-slate-800/50'
+                      ? 'border-primary/50 bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/20'
+                      : 'border-border/80 bg-card hover:border-primary/30'
                   )}
                 >
-                  <div className="flex w-8 shrink-0 items-center justify-center">
-                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                      {rank}
-                    </span>
+                  <div className="flex size-8 shrink-0 items-center justify-center font-mono font-extrabold text-sm text-muted-foreground">
+                    #{rank}
                   </div>
-                  <Avatar className="border border-slate-200 dark:border-slate-700">
+                  <Avatar className="size-10 border border-border">
                     <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
-                    <AvatarFallback>{initials(entry.name)}</AvatarFallback>
+                    <AvatarFallback className="font-bold">{initials(entry.name)}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
-                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-white">
-                      {entry.name}
+                  <div className="flex-1 min-w-0">
+                    <p className="flex items-center gap-2 text-sm font-bold text-foreground truncate">
+                      <span>{entry.name}</span>
                       {isMe && (
-                        <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 dark:bg-blue-400/20">
+                        <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-extrabold text-primary">
                           Siz
                         </span>
                       )}
                     </p>
                     {entry.grade?.number && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {entry.grade.number}-{entry.grade.letter} sinf
                       </p>
                     )}
                   </div>
-                  <span className="flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-[#D4AF37]">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-extrabold text-amber-600 dark:text-amber-400 shrink-0">
                     <Image
                       src="/diamond.png"
                       alt=""
                       width={32}
                       height={32}
-                      className="size-5 animate-pulse"
+                      className="size-4.5"
                     />
                     {formatNumber(entry.diamonds ?? 0)}
                   </span>
@@ -197,3 +208,4 @@ export default function LeaderboardPage() {
     </Container>
   );
 }
+

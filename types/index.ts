@@ -93,7 +93,8 @@ export interface Lesson {
   description?: string
   content?: string
   order: number
-  material?: string
+  videoUrl?: string | null
+  attachments?: string[]
   isCompleted?: boolean
   createdAt?: string
 }

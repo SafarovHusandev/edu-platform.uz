@@ -426,7 +426,7 @@ export default function TeacherCourseDetailPage({ params }: PageProps) {
                       {idx + 1}
                     </span>
                     <Link
-                      href={`/teacher/lessons/${lesson._id}`}
+                      href={`/teacher/lessons/${lesson._id}?courseId=${id}`}
                       className="flex-1 text-sm font-medium hover:underline"
                     >
                       {lesson.title}

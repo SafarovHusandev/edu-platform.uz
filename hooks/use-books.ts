@@ -117,6 +117,27 @@ export function useUploadBookCover() {
   })
 }
 
+// Fayl /books/:id/download orqali oddiy <a> havola bilan ochiladi (lib/config.ts dagi
+// bookDownloadUrl), backend so'rov kelganda downloadsCount ni oshiradi. Frontend bu haqda
+// javob olmagani uchun kesh ichidagi sonni shu yerda optimistik ravishda yangilaymiz.
+export function useRegisterBookDownload() {
+  const queryClient = useQueryClient()
+  return (id: string) => {
+    queryClient.setQueriesData<Paginated<Book>>({ queryKey: ["books"] }, (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        items: old.items.map((book) =>
+          book._id === id ? { ...book, downloadsCount: (book.downloadsCount ?? 0) + 1 } : book
+        ),
+      }
+    })
+    queryClient.setQueryData<Book>(["book", id], (old) =>
+      old ? { ...old, downloadsCount: (old.downloadsCount ?? 0) + 1 } : old
+    )
+  }
+}
+
 export function useUploadBookFile() {
   const queryClient = useQueryClient()
   return useMutation({

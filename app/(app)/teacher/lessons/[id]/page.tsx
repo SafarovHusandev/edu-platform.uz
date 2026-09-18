@@ -1,8 +1,8 @@
 'use client';
 
-import { use, useRef } from 'react';
+import { Suspense, use, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -52,13 +52,16 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export default function TeacherLessonEditPage({ params }: PageProps) {
-  const { id } = use(params);
+function LessonEditContent({ id }: { id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: lesson, isLoading, isError, refetch } = useLesson(id);
-  const updateLesson = useUpdateLesson(lesson?.course);
-  const deleteLesson = useDeleteLesson(lesson?.course);
-  const uploadMaterial = useUploadMaterial(lesson?.course);
+  // Backend /lessons/:id javobida `course` maydoni bo'sh kelishi mumkin, shuning
+  // uchun kurs sahifasidan o'tilganda query orqali uzatilgan courseId'ga tayanamiz.
+  const courseId = lesson?.course || searchParams.get('courseId') || undefined;
+  const updateLesson = useUpdateLesson(courseId);
+  const deleteLesson = useDeleteLesson(courseId);
+  const uploadMaterial = useUploadMaterial(courseId);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
@@ -96,7 +99,11 @@ export default function TeacherLessonEditPage({ params }: PageProps) {
     );
   }
 
-  const material = resolveAssetUrl(lesson.material);
+  const attachments = (lesson.attachments ?? []).map((path) => ({
+    path,
+    url: resolveAssetUrl(path),
+    name: path.split('/').pop() ?? path,
+  }));
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -104,7 +111,7 @@ export default function TeacherLessonEditPage({ params }: PageProps) {
         <Button
           variant="ghost"
           size="sm"
-          render={<Link href={`/teacher/courses/${lesson.course}`} />}
+          render={<Link href={courseId ? `/teacher/courses/${courseId}` : '/teacher/courses'} />}
         >
           <ArrowLeft className="size-4" /> Kursga qaytish
         </Button>
@@ -122,7 +129,8 @@ export default function TeacherLessonEditPage({ params }: PageProps) {
               <AlertDialogAction
                 onClick={() =>
                   deleteLesson.mutate(id, {
-                    onSuccess: () => router.push(`/teacher/courses/${lesson.course}`),
+                    onSuccess: () =>
+                      router.push(courseId ? `/teacher/courses/${courseId}` : '/teacher/courses'),
                   })
                 }
               >
@@ -193,18 +201,27 @@ export default function TeacherLessonEditPage({ params }: PageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Qo&apos;shimcha material</CardTitle>
+          <CardTitle className="text-base">Qo&apos;shimcha materiallar</CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center justify-between">
-          {material ? (
-            <a
-              href={material}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-primary hover:underline"
-            >
-              Joriy materialni ko&apos;rish
-            </a>
+        <CardContent className="space-y-3">
+          {attachments.length > 0 ? (
+            <ul className="space-y-1.5">
+              {attachments.map(({ path, url, name }) => (
+                <li
+                  key={path}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                >
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-sm text-primary hover:underline"
+                  >
+                    {name}
+                  </a>
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className="text-sm text-muted-foreground">Material yuklanmagan</p>
           )}
@@ -219,7 +236,7 @@ export default function TeacherLessonEditPage({ params }: PageProps) {
             ) : (
               <FileUp className="size-4" />
             )}
-            Yuklash
+            Fayl qo&apos;shish
           </Button>
           <input
             ref={fileInputRef}
@@ -234,5 +251,14 @@ export default function TeacherLessonEditPage({ params }: PageProps) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function TeacherLessonEditPage({ params }: PageProps) {
+  const { id } = use(params);
+  return (
+    <Suspense fallback={<div className="h-96 animate-pulse rounded-md bg-muted" />}>
+      <LessonEditContent id={id} />
+    </Suspense>
   );
 }

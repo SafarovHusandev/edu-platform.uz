@@ -129,7 +129,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto grid lg:grid-cols-12 gap-8 items-center">
+    <div className="w-full max-w-5xl mx-auto grid lg:grid-cols-12 gap-8 items-start">
       {/* Left visual showcase (Desktop) */}
       <div className="hidden lg:flex lg:col-span-5 flex-col justify-between space-y-8 p-6">
         <div className="space-y-4">
@@ -188,7 +188,7 @@ function LoginForm() {
       </div>
 
       {/* Right Login Card */}
-      <div className="lg:col-span-7 w-full max-w-md mx-auto">
+      <div className="lg:col-span-7 w-full max-w-md mx-auto pt-12">
         <div className="glass-card relative rounded-3xl p-6 sm:p-8 shadow-2xl border border-border/80 backdrop-blur-2xl">
           {/* Top badge */}
           <div className="flex items-center justify-between pb-4 border-b border-border/60 mb-6">
@@ -205,8 +205,8 @@ function LoginForm() {
             </div>
           </div>
 
-          <Tabs defaultValue={tgCode ? 'telegram' : 'password'} className="space-y-5">
-            <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/80 dark:bg-muted/50 p-1">
+          <Tabs defaultValue={tgCode ? 'telegram' : 'password'} className="space-y-5 ">
+            <TabsList className="grid w-full grid-cols-2  rounded-xl bg-muted/80 dark:bg-muted/50  h-11!">
               <TabsTrigger
                 value="password"
                 className="flex items-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm cursor-pointer"

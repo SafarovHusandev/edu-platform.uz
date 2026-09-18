@@ -256,6 +256,14 @@
   animation: pulse-glow 6s ease-in-out infinite;
 }
 
+.animate-glow {
+  box-shadow: 0 0 12px 2px oklch(0.52 0.22 264 / 45%);
+}
+
+.dark .animate-glow {
+  box-shadow: 0 0 14px 2px oklch(0.68 0.19 264 / 45%);
+}
+
 .shimmer-btn {
   background-size: 200% auto;
   transition: all 0.3s ease;

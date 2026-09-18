@@ -1,15 +1,26 @@
 'use client';
 
-import { Suspense, use, useState } from 'react';
+import { Suspense, use, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
+  ArrowUpDown,
   CheckCircle2,
   ClipboardCheck,
+  Download,
   Eye,
+  FileSpreadsheet,
+  FileText,
   Loader2,
+  Search,
+  SlidersHorizontal,
+  Users,
+  X,
   XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,13 +33,22 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -45,9 +65,46 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonTable } from '@/components/ui/skeleton';
 import { useQuizWithAnswers, useQuizResults, useReviewOpenEnded } from '@/hooks/use-quizzes';
-import { formatDateTime, formatDuration, formatTashkentDateTime } from '@/lib/format';
+import { formatDateTime, formatDuration, formatTashkentDateTime, initials } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Attempt, Question } from '@/types';
+import {
+  exportRowsToExcel,
+  exportRowsToPdf,
+  type ExportColumn,
+  type ExportRow,
+} from '@/lib/export-results';
+import type { Attempt, Question, User } from '@/types';
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'name', label: "O'quvchi" },
+  { key: 'grade', label: 'Sinf' },
+  { key: 'attempts', label: 'Urinishlar soni' },
+  { key: 'score', label: 'Ball (%)' },
+  { key: 'status', label: 'Holat' },
+  { key: 'startedAt', label: 'Boshlagan vaqti' },
+  { key: 'submittedAt', label: 'Yakunlangan vaqti' },
+  { key: 'duration', label: 'Davomiyligi' },
+];
+
+type SortKey = 'name' | 'grade' | 'score' | 'status' | 'startedAt' | 'submittedAt' | 'duration';
+type StatusFilter = 'all' | 'passed' | 'failed' | 'pending';
+
+function attemptStudent(attempt: Attempt): User | null {
+  return typeof attempt.student === 'object' ? attempt.student : null;
+}
+
+function attemptStudentId(attempt: Attempt): string {
+  return typeof attempt.student === 'object' ? attempt.student._id : attempt.student;
+}
+
+function statusRank(attempt: Attempt) {
+  if (attempt.status === 'submitted') return 0;
+  return attempt.passed ? 2 : 1;
+}
+
+function toTime(value?: string | null) {
+  return value ? new Date(value).getTime() : 0;
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -199,6 +256,45 @@ function ReviewDialog({
   );
 }
 
+interface SortableHeadProps {
+  sortKeyValue: SortKey;
+  activeKey: SortKey;
+  dir: 'asc' | 'desc';
+  onToggle: (key: SortKey) => void;
+  className?: string;
+  children: ReactNode;
+}
+
+function SortableHead({
+  sortKeyValue,
+  activeKey,
+  dir,
+  onToggle,
+  className,
+  children,
+}: SortableHeadProps) {
+  const active = activeKey === sortKeyValue;
+  return (
+    <TableHead
+      className={cn('cursor-pointer select-none', className)}
+      onClick={() => onToggle(sortKeyValue)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {children}
+        {active ? (
+          dir === 'asc' ? (
+            <ArrowUp className="size-3.5" />
+          ) : (
+            <ArrowDown className="size-3.5" />
+          )
+        ) : (
+          <ArrowUpDown className="size-3.5 text-muted-foreground/50" />
+        )}
+      </span>
+    </TableHead>
+  );
+}
+
 function ResultsContent({ quizId }: { quizId: string }) {
   const searchParams = useSearchParams();
   const deepLinkAttemptId = searchParams.get('attemptId');
@@ -210,6 +306,19 @@ function ResultsContent({ quizId }: { quizId: string }) {
   const [manualAttemptId, setManualAttemptId] = useState<string | null>(null);
   const [dismissedDeepLink, setDismissedDeepLink] = useState(false);
 
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [gradeFilter, setGradeFilter] = useState<string>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'excel' | 'pdf'>('excel');
+  const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(EXPORT_COLUMNS.map((column) => [column.key, true]))
+  );
+  const [isExporting, setIsExporting] = useState(false);
+
   const activeAttemptId = manualAttemptId ?? (dismissedDeepLink ? null : deepLinkAttemptId);
   const reviewingAttempt = attempts?.find((a) => a._id === activeAttemptId) ?? null;
 
@@ -219,6 +328,168 @@ function ResultsContent({ quizId }: { quizId: string }) {
   }
 
   const openEndedQuestions = (quiz?.questions ?? []).filter((q) => q.type === 'open_ended');
+
+  // Bitta o'quvchi bir necha marta urinishi mumkin — jadvalda har bir o'quvchi bitta
+  // qatorda ko'rinishi uchun urinishlarni student bo'yicha guruhlaymiz (eng so'nggisi
+  // qator uchun namoyish etiladi, qolganlari attempt detail sahifasidagi
+  // "Urinishlar" tugmalari orqali ko'riladi).
+  const studentGroups = useMemo(() => {
+    if (!attempts) return [];
+    const map = new Map<string, { student: User | null; attempts: Attempt[] }>();
+    for (const attempt of attempts) {
+      const studentId = attemptStudentId(attempt);
+      const entry = map.get(studentId);
+      if (entry) {
+        entry.attempts.push(attempt);
+        if (!entry.student) entry.student = attemptStudent(attempt);
+      } else {
+        map.set(studentId, { student: attemptStudent(attempt), attempts: [attempt] });
+      }
+    }
+    return Array.from(map.entries())
+      .map(([studentId, { student, attempts: list }]) => {
+        const sorted = [...list].sort((a, b) => {
+          const at = a.startedAt ? new Date(a.startedAt).getTime() : 0;
+          const bt = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+          return bt - at;
+        });
+        return {
+          studentId,
+          student,
+          attempts: sorted,
+          latest: sorted[0],
+          pending: sorted.find((a) => a.status === 'submitted') ?? null,
+        };
+      })
+      .sort((a, b) => (a.student?.name ?? '').localeCompare(b.student?.name ?? '', 'uz'));
+  }, [attempts]);
+
+  const availableGrades = useMemo(() => {
+    const grades = new Set<number>();
+    for (const group of studentGroups) {
+      if (group.student?.grade?.number != null) grades.add(group.student.grade.number);
+    }
+    return Array.from(grades).sort((a, b) => a - b);
+  }, [studentGroups]);
+
+  const gradeSelectItems = useMemo(
+    () => ({
+      all: 'Barcha sinflar',
+      ...Object.fromEntries(availableGrades.map((grade) => [String(grade), `${grade}-sinf`])),
+    }),
+    [availableGrades]
+  );
+
+  const filteredGroups = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return studentGroups.filter((group) => {
+      if (query && !(group.student?.name ?? '').toLowerCase().includes(query)) return false;
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'pending' && group.latest.status !== 'submitted') return false;
+        if (
+          statusFilter === 'passed' &&
+          (group.latest.status === 'submitted' || !group.latest.passed)
+        )
+          return false;
+        if (
+          statusFilter === 'failed' &&
+          (group.latest.status === 'submitted' || group.latest.passed)
+        )
+          return false;
+      }
+      if (gradeFilter !== 'all' && String(group.student?.grade?.number ?? '') !== gradeFilter)
+        return false;
+      return true;
+    });
+  }, [studentGroups, search, statusFilter, gradeFilter]);
+
+  const hasActiveFilters = search.trim() !== '' || statusFilter !== 'all' || gradeFilter !== 'all';
+
+  function clearFilters() {
+    setSearch('');
+    setStatusFilter('all');
+    setGradeFilter('all');
+  }
+
+  const sortedGroups = useMemo(() => {
+    const sorted = [...filteredGroups];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'name':
+          cmp = (a.student?.name ?? '').localeCompare(b.student?.name ?? '', 'uz');
+          break;
+        case 'grade':
+          cmp = (a.student?.grade?.number ?? -1) - (b.student?.grade?.number ?? -1);
+          break;
+        case 'score':
+          cmp = (a.latest.scorePercent ?? -1) - (b.latest.scorePercent ?? -1);
+          break;
+        case 'status':
+          cmp = statusRank(a.latest) - statusRank(b.latest);
+          break;
+        case 'startedAt':
+          cmp = toTime(a.latest.startedAt) - toTime(b.latest.startedAt);
+          break;
+        case 'submittedAt':
+          cmp = toTime(a.latest.submittedAt) - toTime(b.latest.submittedAt);
+          break;
+        case 'duration':
+          cmp = (a.latest.durationSeconds ?? -1) - (b.latest.durationSeconds ?? -1);
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return sorted;
+  }, [filteredGroups, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  const exportRows: ExportRow[] = studentGroups.map((group) => ({
+    name: group.student?.name ?? '—',
+    grade: group.student?.grade?.number
+      ? `${group.student.grade.number}-${group.student.grade.letter ?? ''}`
+      : '—',
+    attempts: group.attempts.length,
+    score: group.latest.status === 'submitted' ? '—' : `${group.latest.scorePercent ?? 0}%`,
+    status:
+      group.latest.status === 'submitted'
+        ? 'Tekshirilmoqda'
+        : group.latest.passed
+          ? "O'tdi"
+          : "O'tmadi",
+    submittedAt: group.latest.submittedAt ? formatDateTime(group.latest.submittedAt) : '—',
+    startedAt: group.latest.startedAt ? formatTashkentDateTime(group.latest.startedAt) : '—',
+    duration: formatDuration(group.latest.durationSeconds) ?? '—',
+  }));
+
+  const activeExportColumns = EXPORT_COLUMNS.filter((column) => selectedColumns[column.key]);
+
+  async function handleExport() {
+    if (activeExportColumns.length === 0) return;
+    setIsExporting(true);
+    try {
+      const filename = `${quiz?.title ?? 'test'} - natijalar`;
+      if (exportFormat === 'excel') {
+        await exportRowsToExcel(exportRows, activeExportColumns, filename);
+      } else {
+        await exportRowsToPdf(exportRows, activeExportColumns, filename, quiz?.title);
+      }
+      toast.success('Fayl yuklab olindi');
+      setExportOpen(false);
+    } catch {
+      toast.error('Yuklab olishda xatolik yuz berdi');
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -240,15 +511,41 @@ function ResultsContent({ quizId }: { quizId: string }) {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" render={<Link href={`/teacher/quizzes/${quizId}`} />}>
-          <ArrowLeft className="size-4" /> Testga qaytish
-        </Button>
-      </div>
-
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Natijalar</h1>
-        <p className="mt-1 text-muted-foreground">{quiz?.title}</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link href={`/teacher/quizzes/${quizId}`} />}
+            className="-ml-2 w-fit"
+          >
+            <ArrowLeft className="size-4" /> Testga qaytish
+          </Button>
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">Natijalar</h1>
+            <p className="text-muted-foreground">{quiz?.title}</p>
+          </div>
+          {!!attempts?.length && (
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="size-4" /> {studentGroups.length} o&apos;quvchi
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <ClipboardCheck className="size-4" /> {attempts.length} urinish
+              </span>
+            </div>
+          )}
+        </div>
+        {!!attempts?.length && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setExportOpen(true)}
+            className="w-fit  animate-glow"
+          >
+            <Download className="size-4" /> Yuklab olish
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -258,100 +555,348 @@ function ResultsContent({ quizId }: { quizId: string }) {
       ) : !attempts || attempts.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title="Hali hech kim testdan o'tmagan" />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>O&apos;quvchi</TableHead>
-              <TableHead>Ball</TableHead>
-              <TableHead>Holat</TableHead>
-              <TableHead>Sana</TableHead>
-              <TableHead>Boshlagan vaqti</TableHead>
-              <TableHead>Davomiyligi</TableHead>
-              <TableHead className="text-right">Amal</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {attempts?.map((attempt) => {
-              const student = typeof attempt.student === 'object' ? attempt.student : null;
-              const isOverTime =
-                attempt.durationSeconds != null &&
-                quiz?.timeLimit != null &&
-                attempt.durationSeconds > quiz.timeLimit * 60;
-              return (
-                <TableRow
-                  key={attempt._id}
+        <>
+          <div className="mb-5 flex flex-col gap-3 rounded-md border border-border/70 bg-card p-3 shadow-xs sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="O'quvchi ismi bo'yicha qidirish..."
+                className="h-10 rounded-md pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="hidden size-4 shrink-0 text-muted-foreground sm:block" />
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter((v as StatusFilter) ?? 'all')}
+                items={{
+                  all: 'Barcha holatlar',
+                  passed: "O'tdi",
+                  failed: "O'tmadi",
+                  pending: 'Tekshirilmoqda',
+                }}
+              >
+                <SelectTrigger className="h-10 w-full rounded-md sm:w-40">
+                  <SelectValue placeholder="Holati" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barcha holatlar</SelectItem>
+                  <SelectItem value="passed">O&apos;tdi</SelectItem>
+                  <SelectItem value="failed">O&apos;tmadi</SelectItem>
+                  <SelectItem value="pending">Tekshirilmoqda</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={gradeFilter}
+                onValueChange={(v) => setGradeFilter(v ?? 'all')}
+                items={gradeSelectItems}
+              >
+                <SelectTrigger className="h-10 w-full rounded-md sm:w-32">
+                  <SelectValue placeholder="Sinf" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barcha sinflar</SelectItem>
+                  {availableGrades.map((grade) => (
+                    <SelectItem key={grade} value={String(grade)}>
+                      {grade}-sinf
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Filtrlarni tozalash"
+                  onClick={clearFilters}
+                >
+                  <X className="size-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {hasActiveFilters && (
+            <p className="mb-3 text-sm text-muted-foreground">
+              {sortedGroups.length} ta natija topildi
+            </p>
+          )}
+
+          {sortedGroups.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="Hech narsa topilmadi"
+              description="Boshqa kalit so'z yoki filtr bilan qayta urinib ko'ring"
+              action={
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  Filtrlarni tozalash
+                </Button>
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-md border border-border/70 bg-card shadow-xs">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <SortableHead
+                      sortKeyValue="name"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onToggle={toggleSort}
+                      className="pl-4"
+                    >
+                      O&apos;quvchi
+                    </SortableHead>
+                    <SortableHead
+                      sortKeyValue="grade"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onToggle={toggleSort}
+                    >
+                      Sinf
+                    </SortableHead>
+                    <SortableHead
+                      sortKeyValue="score"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onToggle={toggleSort}
+                    >
+                      Ball
+                    </SortableHead>
+                    <SortableHead
+                      sortKeyValue="status"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onToggle={toggleSort}
+                    >
+                      Holat
+                    </SortableHead>
+                    <SortableHead
+                      sortKeyValue="startedAt"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onToggle={toggleSort}
+                    >
+                      Boshlagan vaqti
+                    </SortableHead>
+                    <SortableHead
+                      sortKeyValue="submittedAt"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onToggle={toggleSort}
+                    >
+                      Yakunlangan vaqti
+                    </SortableHead>
+                    <SortableHead
+                      sortKeyValue="duration"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onToggle={toggleSort}
+                    >
+                      Davomiyligi
+                    </SortableHead>
+                    <TableHead className="pr-4 text-center">Amal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedGroups.map((group) => {
+                    const { latest } = group;
+                    const isOverTime =
+                      latest.durationSeconds != null &&
+                      quiz?.timeLimit != null &&
+                      latest.durationSeconds > quiz.timeLimit * 60;
+                    const isDeepLinked = group.attempts.some((a) => a._id === deepLinkAttemptId);
+                    return (
+                      <TableRow
+                        key={group.studentId}
+                        className={cn(
+                          isDeepLinked && 'bg-primary/5',
+                          isOverTime && 'bg-destructive/5'
+                        )}
+                      >
+                        <TableCell className="py-3 pl-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar size="lg">
+                              <AvatarFallback>{initials(group.student?.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-foreground">
+                                {group.student?.name ?? '—'}
+                              </p>
+                              {group.attempts.length > 1 && (
+                                <p className="text-xs text-muted-foreground">
+                                  {group.attempts.length} marta urindi
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 text-muted-foreground">
+                          {group.student?.grade?.number
+                            ? `${group.student.grade.number}-${group.student.grade.letter ?? ''}`
+                            : '—'}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          {latest.status === 'submitted' ? '—' : `${latest.scorePercent ?? 0}%`}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          {latest.status === 'submitted' ? (
+                            <Badge variant="secondary">Tekshirilmoqda</Badge>
+                          ) : (
+                            <Badge
+                              className={cn(
+                                'rounded-full',
+                                latest.passed
+                                  ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-400'
+                                  : 'bg-muted text-muted-foreground'
+                              )}
+                            >
+                              {latest.passed ? (
+                                <>
+                                  <CheckCircle2 /> O&apos;tdi
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle /> O&apos;tmadi
+                                </>
+                              )}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3 text-muted-foreground">
+                          {latest.startedAt ? formatTashkentDateTime(latest.startedAt) : '—'}
+                        </TableCell>
+                        <TableCell className="py-3 text-muted-foreground">
+                          {latest.submittedAt ? formatDateTime(latest.submittedAt) : '—'}
+                        </TableCell>
+                        <TableCell className="py-3 text-muted-foreground">
+                          <span
+                            className={cn(
+                              'flex items-center gap-1',
+                              isOverTime && 'font-medium text-destructive'
+                            )}
+                            title={
+                              isOverTime
+                                ? 'Belgilangan vaqtdan (timeLimit) oshib ketgan'
+                                : undefined
+                            }
+                          >
+                            {isOverTime && <AlertTriangle className="size-3.5 shrink-0" />}
+                            {formatDuration(latest.durationSeconds) ?? '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3 pr-4 text-center">
+                          <div className="flex justify-center gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              render={
+                                <Link href={`/teacher/quizzes/${quizId}/results/${latest._id}`} />
+                              }
+                            >
+                              <Eye className="size-4" /> Ko&apos;rish
+                            </Button>
+                            {openEndedQuestions.length > 0 && group.pending && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setManualAttemptId(group.pending!._id)}
+                              >
+                                Baholash
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="sm:max-w-lg sm:p-7">
+          <DialogHeader>
+            <DialogTitle>Natijalarni yuklab olish</DialogTitle>
+            <DialogDescription>
+              Qaysi ustunlarni va qaysi formatda yuklab olishni tanlang.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Ustunlar</p>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                {EXPORT_COLUMNS.map((column) => (
+                  <div key={column.key} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`export-col-${column.key}`}
+                      checked={selectedColumns[column.key] ?? false}
+                      onCheckedChange={(checked) =>
+                        setSelectedColumns((prev) => ({ ...prev, [column.key]: checked === true }))
+                      }
+                    />
+                    <Label
+                      htmlFor={`export-col-${column.key}`}
+                      className="text-sm font-normal text-muted-foreground"
+                    >
+                      {column.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Format</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('excel')}
                   className={cn(
-                    attempt._id === deepLinkAttemptId && 'bg-primary/5',
-                    isOverTime && 'bg-destructive/5'
+                    'flex flex-col items-center gap-1.5 rounded-md border p-3 text-sm font-medium transition-colors',
+                    exportFormat === 'excel'
+                      ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/30'
+                      : 'border-border text-muted-foreground hover:border-primary/40'
                   )}
                 >
-                  <TableCell>{student?.name ?? '—'}</TableCell>
-                  <TableCell>
-                    {attempt.status === 'submitted' ? '—' : `${attempt.scorePercent ?? 0}%`}
-                  </TableCell>
-                  <TableCell>
-                    {attempt.status === 'submitted' ? (
-                      <Badge variant="secondary">Tekshirilmoqda</Badge>
-                    ) : (
-                      <Badge variant={attempt.passed ? 'default' : 'secondary'}>
-                        {attempt.passed ? (
-                          <>
-                            <CheckCircle2 /> O&apos;tdi
-                          </>
-                        ) : (
-                          <>
-                            <XCircle /> O&apos;tmadi
-                          </>
-                        )}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {attempt.submittedAt ? formatDateTime(attempt.submittedAt) : '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {attempt.startedAt ? formatTashkentDateTime(attempt.startedAt) : '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <span
-                      className={cn(
-                        'flex items-center gap-1',
-                        isOverTime && 'font-medium text-destructive'
-                      )}
-                      title={
-                        isOverTime ? 'Belgilangan vaqtdan (timeLimit) oshib ketgan' : undefined
-                      }
-                    >
-                      {isOverTime && <AlertTriangle className="size-3.5 shrink-0" />}
-                      {formatDuration(attempt.durationSeconds) ?? '—'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        render={<Link href={`/teacher/quizzes/${quizId}/results/${attempt._id}`} />}
-                      >
-                        <Eye className="size-4" /> Ko&apos;rish
-                      </Button>
-                      {openEndedQuestions.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setManualAttemptId(attempt._id)}
-                        >
-                          Baholash
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      )}
+                  <FileSpreadsheet className="size-5" /> Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExportFormat('pdf')}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-md border p-3 text-sm font-medium transition-colors',
+                    exportFormat === 'pdf'
+                      ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/30'
+                      : 'border-border text-muted-foreground hover:border-primary/40'
+                  )}
+                >
+                  <FileText className="size-5" /> PDF
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            className="w-full p-2 h-auto"
+            onClick={handleExport}
+            disabled={activeExportColumns.length === 0 || isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            Yuklab olish
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       {reviewingAttempt && (
         <ReviewDialog

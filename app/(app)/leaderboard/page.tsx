@@ -107,7 +107,9 @@ function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
         </span>
       </div>
       <div className="mt-2 w-full">
-        <p className="line-clamp-1 text-sm sm:text-base font-extrabold text-foreground">{entry.name}</p>
+        <p className="line-clamp-1 text-sm sm:text-base font-extrabold text-foreground">
+          {entry.name}
+        </p>
         {entry.grade?.number && (
           <p className="text-xs font-medium text-muted-foreground mt-0.5">
             {entry.grade.number}-{entry.grade.letter} sinf
@@ -125,16 +127,19 @@ function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
 function MetricChip({
   icon: Icon,
   value,
+  label,
   className,
 }: {
   icon: LucideIcon;
   value: string | number;
+  label: string;
   className?: string;
 }) {
   return (
     <span
+      title={label}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground',
+        'inline-flex items-center gap-1 rounded-lg bg-background px-2 py-1 text-xs font-semibold text-muted-foreground shadow-xs ring-1 ring-border/60',
         className
       )}
     >
@@ -157,24 +162,26 @@ function TeacherRow({ teacher, isMe }: { teacher: TeacherRanking; isMe: boolean 
       )}
     >
       <div className="flex items-center gap-3">
-        {rankStyle && RankIcon ? (
-          <span
-            className={cn(
-              'flex size-9 shrink-0 items-center justify-center rounded-full shadow-sm',
-              rankStyle.badge
-            )}
-          >
-            <RankIcon className="size-4.5" />
-          </span>
-        ) : (
-          <span className="flex size-9 shrink-0 items-center justify-center font-mono text-sm font-extrabold text-muted-foreground">
-            #{teacher.rank}
-          </span>
-        )}
-        <Avatar className="size-11 border border-border">
-          <AvatarImage src={resolveAssetUrl(teacher.avatar)} alt={teacher.name} />
-          <AvatarFallback className="font-bold">{initials(teacher.name)}</AvatarFallback>
-        </Avatar>
+        <div className="relative shrink-0">
+          <Avatar className="size-12 border border-border">
+            <AvatarImage src={resolveAssetUrl(teacher.avatar)} alt={teacher.name} />
+            <AvatarFallback className="font-bold">{initials(teacher.name)}</AvatarFallback>
+          </Avatar>
+          {rankStyle && RankIcon ? (
+            <span
+              className={cn(
+                'absolute -bottom-1 -right-1 flex size-5.5 items-center justify-center rounded-full shadow-sm ring-2 ring-background',
+                rankStyle.badge
+              )}
+            >
+              <RankIcon className="size-3" />
+            </span>
+          ) : (
+            <span className="absolute -bottom-1 -right-1 flex size-5.5 items-center justify-center rounded-full bg-muted font-mono text-[10px] font-extrabold text-muted-foreground ring-2 ring-background">
+              {teacher.rank}
+            </span>
+          )}
+        </div>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 truncate text-sm font-bold text-foreground">
             <span className="truncate">{teacher.name}</span>
@@ -184,23 +191,26 @@ function TeacherRow({ teacher, isMe }: { teacher: TeacherRanking; isMe: boolean 
               </span>
             )}
           </p>
+          <p className="text-xs text-muted-foreground">#{teacher.rank}-o&apos;rin</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
-        <MetricChip icon={GraduationCap} value={teacher.coursesCount} />
-        <MetricChip icon={ClipboardList} value={teacher.quizzesCount} />
-        <MetricChip icon={NotebookText} value={teacher.lessonsCount} />
-        <MetricChip icon={Library} value={teacher.booksCount} />
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-muted/40 p-1.5 sm:ml-auto">
+        <MetricChip icon={GraduationCap} value={teacher.coursesCount} label="Kurslar" />
+        <MetricChip icon={ClipboardList} value={teacher.quizzesCount} label="Testlar" />
+        <MetricChip icon={NotebookText} value={teacher.lessonsCount} label="Darslar" />
+        <MetricChip icon={Library} value={teacher.booksCount} label="Kitoblar" />
         <MetricChip
           icon={Star}
           value={teacher.avgRating.toFixed(1)}
-          className="bg-gold/15 text-gold-foreground"
+          label="O'rtacha reyting"
+          className="bg-gold/15 text-gold-foreground ring-gold/30"
         />
         <MetricChip
           icon={Users}
           value={teacher.studentsCount}
-          className="bg-primary/10 text-primary"
+          label="O'quvchilar"
+          className="bg-primary/10 text-primary ring-primary/20"
         />
       </div>
     </div>
@@ -248,21 +258,28 @@ export default function LeaderboardPage() {
             <LogIn className="size-7" />
           </div>
           <div className="space-y-1">
-            <p className="text-base font-bold text-foreground">Reytingni ko&apos;rish uchun tizimga kiring</p>
-            <p className="text-xs text-muted-foreground">O&apos;z o&apos;rningizni bilish va raqobatda qatnashish uchun kiring</p>
+            <p className="text-base font-bold text-foreground">
+              Reytingni ko&apos;rish uchun tizimga kiring
+            </p>
+            <p className="text-xs text-muted-foreground">
+              O&apos;z o&apos;rningizni bilish va raqobatda qatnashish uchun kiring
+            </p>
           </div>
-          <Button render={<Link href="/login?redirect=/leaderboard" />} className="rounded-xl px-6 font-bold shadow-md shadow-primary/20">
+          <Button
+            render={<Link href="/login?redirect=/leaderboard" />}
+            className="rounded-xl px-6 font-bold shadow-md shadow-primary/20"
+          >
             Tizimga kirish
           </Button>
         </div>
       ) : (
-        <Tabs defaultValue="students" className="mx-auto max-w-2xl">
-          <TabsList className="mx-auto">
-            <TabsTrigger value="students">
-              <GraduationCap className="size-4" /> O&apos;quvchilar
+        <Tabs defaultValue="students" className="mx-auto max-w-2xl ">
+          <TabsList className="mx-auto h-auto! flex gap-4 p-1">
+            <TabsTrigger value="students" className={'p-2 cursor-pointer text-[15px]'}>
+              <GraduationCap className="size-5" /> O&apos;quvchilar
             </TabsTrigger>
-            <TabsTrigger value="teachers">
-              <Presentation className="size-4" /> O&apos;qituvchilar
+            <TabsTrigger value="teachers" className={'p-2 cursor-pointer text-[15px]'}>
+              <Presentation className="size-5" /> O&apos;qituvchilar
             </TabsTrigger>
           </TabsList>
 
@@ -302,12 +319,14 @@ export default function LeaderboardPage() {
                             : 'border-border/80 bg-card hover:border-primary/30'
                         )}
                       >
-                        <div className="flex size-8 shrink-0 items-center justify-center font-mono font-extrabold text-sm text-muted-foreground">
-                          #{rank}
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/60 font-mono text-sm font-extrabold text-muted-foreground">
+                          {rank}
                         </div>
                         <Avatar className="size-10 border border-border">
                           <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
-                          <AvatarFallback className="font-bold">{initials(entry.name)}</AvatarFallback>
+                          <AvatarFallback className="font-bold">
+                            {initials(entry.name)}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="flex items-center gap-2 text-sm font-bold text-foreground truncate">

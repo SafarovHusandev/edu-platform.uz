@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -83,16 +84,39 @@ export default function StudentRewardsPage() {
               >
                 <div className="group relative aspect-video w-full overflow-hidden bg-muted">
                   {image ? (
-                    <Image
-                      src={image}
-                      alt={reward.title}
-                      fill
-                      unoptimized
-                      className={cn(
-                        'object-cover transition-transform duration-300',
-                        isLocked ? '' : 'group-hover:scale-105'
-                      )}
-                    />
+                    <Dialog>
+                      <DialogTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={`${reward.title} rasmini kattalashtirish`}
+                            className="absolute inset-0 block cursor-zoom-in"
+                          />
+                        }
+                      >
+                        <Image
+                          src={image}
+                          alt={reward.title}
+                          fill
+                          unoptimized
+                          className={cn(
+                            'object-cover transition-transform duration-300',
+                            isLocked ? '' : 'group-hover:scale-105'
+                          )}
+                        />
+                      </DialogTrigger>
+                      <DialogContent className="max-w-lg p-0 sm:max-w-lg" showCloseButton>
+                        <DialogTitle className="sr-only">{reward.title}</DialogTitle>
+                        <Image
+                          src={image}
+                          alt={reward.title}
+                          width={800}
+                          height={450}
+                          unoptimized
+                          className="max-h-[80vh] w-full rounded-md object-contain"
+                        />
+                      </DialogContent>
+                    </Dialog>
                   ) : (
                     <div className="flex size-full items-center justify-center bg-linear-to-br from-gold/20 to-primary/10">
                       <Gift className="size-9 text-gold" />

@@ -21,7 +21,13 @@ export function useLeaderboard(page = 1, limit = 10) {
 }
 
 export function useUsers(
-  filters: { page?: number; limit?: number; search?: string; isVerified?: boolean } = {}
+  filters: {
+    page?: number
+    limit?: number
+    search?: string
+    isVerified?: boolean
+    role?: Role
+  } = {}
 ) {
   return useQuery({
     queryKey: ["admin-users", filters],

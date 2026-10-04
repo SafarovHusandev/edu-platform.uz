@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api-client';
+import { refreshCurrentUser } from '@/hooks/use-auth';
 import type { Attempt, AttemptAnswer, Paginated, Question, Quiz } from '@/types';
 
 function errorMessage(error: unknown, fallback: string) {
@@ -227,8 +228,9 @@ export function useSubmitAttempt() {
       });
       return res.attempt;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['my-attempts'] });
+      await refreshCurrentUser();
       toast.success('Test yakunlandi');
     },
     onError: (error) => toast.error(errorMessage(error, 'Testni yuborishda xatolik')),

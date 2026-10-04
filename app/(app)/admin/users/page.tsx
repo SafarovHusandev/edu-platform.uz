@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Loader2,
+  MoreVertical,
   Pencil,
   Search,
   ShieldBan,
@@ -18,6 +19,14 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -161,11 +170,13 @@ function AdminUsersPageContent() {
   const [verifiedTab, setVerifiedTab] = useState<VerifiedTab>(
     isVerifiedTab(initialTab) ? initialTab : 'unverified'
   );
+  const [roleFilter, setRoleFilter] = useState<'all' | Role>('all');
   const { data, isLoading, isError, refetch } = useUsers({
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
     isVerified: verifiedTab === 'all' ? undefined : verifiedTab === 'verified',
+    role: roleFilter === 'all' ? undefined : roleFilter,
   });
   const toggleBlock = useToggleUserBlock();
   const verifyUser = useVerifyUser();
@@ -177,6 +188,7 @@ function AdminUsersPageContent() {
 
   const [editing, setEditing] = useState<User | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
   const createForm = useForm<UserCreateFormValues>({
     resolver: zodResolver(userCreateSchema),
@@ -293,17 +305,39 @@ function AdminUsersPageContent() {
         </TabsList>
       </Tabs>
 
-      <div className="relative mb-5 max-w-sm">
-        <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Ism yoki telefon bo'yicha qidirish..."
+            className="h-11 rounded-md pl-10 text-base"
+          />
+        </div>
+        <Select
+          value={roleFilter}
+          onValueChange={(v) => {
+            setRoleFilter((v as 'all' | Role) ?? 'all');
             setPage(1);
           }}
-          placeholder="Ism yoki telefon bo'yicha qidirish..."
-          className="h-11 rounded-md pl-10 text-base"
-        />
+          items={{ all: 'Barcha rollar', ...ROLE_LABELS }}
+        >
+          <SelectTrigger className="h-11 w-full rounded-md text-base sm:w-52">
+            <SelectValue placeholder="Rol" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha rollar</SelectItem>
+            {ROLES.map((r) => (
+              <SelectItem key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -326,6 +360,9 @@ function AdminUsersPageContent() {
                   </TableHead>
                   <TableHead className="h-12 bg-muted/40 px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Rol
+                  </TableHead>
+                  <TableHead className="h-12 bg-muted/40 px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Sinf
                   </TableHead>
                   <TableHead className="h-12 bg-muted/40 px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Holat
@@ -366,6 +403,11 @@ function AdminUsersPageContent() {
                           {ROLE_LABELS[item.role]}
                         </Badge>
                       </TableCell>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {item.role === 'student' && item.grade?.number
+                          ? `${item.grade.number}-${item.grade.letter ?? ''}`
+                          : '—'}
+                      </TableCell>
                       <TableCell className="px-4 py-3">
                         <div className="flex flex-wrap gap-1.5">
                           {!item.isVerified && (
@@ -405,7 +447,7 @@ function AdminUsersPageContent() {
                         {item.lastLogin ? formatRelativeTime(item.lastLogin) : 'Hech qachon'}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5">
                           {!item.isVerified && (
                             <Button
                               variant="outline"
@@ -417,31 +459,33 @@ function AdminUsersPageContent() {
                               <UserCheck className="size-4" /> Tasdiqlash
                             </Button>
                           )}
-                          {isSuperadmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              className="rounded-lg"
-                              aria-label="Tahrirlash"
-                              onClick={() => openEdit(item)}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          )}
+
                           <AlertDialog>
-                            <AlertDialogTrigger
-                              render={<Button variant="outline" size="sm" className="rounded-lg" />}
-                            >
-                              {item.isBlocked ? (
-                                <>
-                                  <ShieldCheck className="size-4" /> Blokdan chiqarish
-                                </>
-                              ) : (
-                                <>
-                                  <ShieldBan className="size-4" /> Bloklash
-                                </>
-                              )}
-                            </AlertDialogTrigger>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <AlertDialogTrigger
+                                    render={
+                                      <Button
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        className="rounded-lg"
+                                        aria-label={item.isBlocked ? 'Blokdan chiqarish' : 'Bloklash'}
+                                      />
+                                    }
+                                  />
+                                }
+                              >
+                                {item.isBlocked ? (
+                                  <ShieldCheck className="size-4 text-success" />
+                                ) : (
+                                  <ShieldBan className="size-4 text-destructive" />
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {item.isBlocked ? 'Blokdan chiqarish' : 'Bloklash'}
+                              </TooltipContent>
+                            </Tooltip>
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>
@@ -467,37 +511,38 @@ function AdminUsersPageContent() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
-                          {isSuperadmin && !isSelf && (
-                            <AlertDialog>
-                              <AlertDialogTrigger
+
+                          {isSuperadmin && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
                                 render={
                                   <Button
                                     variant="ghost"
                                     size="icon-sm"
                                     className="rounded-lg"
-                                    aria-label="O'chirish"
+                                    aria-label="Boshqa amallar"
                                   />
                                 }
                               >
-                                <Trash2 className="size-4 text-destructive" />
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    {item.name}ni butunlay o&apos;chirmoqchimisiz?
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Bu amalni orqaga qaytarib bo&apos;lmaydi.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteUser.mutate(item._id)}>
-                                    O&apos;chirish
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                <MoreVertical className="size-4" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEdit(item)}>
+                                  <Pencil className="size-4" /> Tahrirlash
+                                </DropdownMenuItem>
+                                {!isSelf && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      variant="destructive"
+                                      onClick={() => setDeleteTarget(item)}
+                                    >
+                                      <Trash2 className="size-4" /> O&apos;chirish
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                         </div>
                       </TableCell>
@@ -519,6 +564,30 @@ function AdminUsersPageContent() {
           </div>
         </>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget?.name}ni butunlay o&apos;chirmoqchimisiz?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu amalni orqaga qaytarib bo&apos;lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) deleteUser.mutate(deleteTarget._id);
+                setDeleteTarget(null);
+              }}
+            >
+              O&apos;chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>

@@ -6,16 +6,13 @@ import Image from 'next/image';
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
-  ChevronRight,
-  ClipboardList,
   Clock,
   Hourglass,
   Loader2,
   PartyPopper,
-  Repeat,
   Star,
-  Target,
   Trophy,
   XCircle,
 } from 'lucide-react';
@@ -23,11 +20,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { useQuiz, useStartAttempt, useSubmitAttempt, useMyAttempts } from '@/hooks/use-quizzes';
 import { useAuthStore } from '@/store/auth-store';
 import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import { formatDateTime, formatDuration, formatTashkentDateTime } from '@/lib/format';
+import { formatDuration, formatTashkentDateTime } from '@/lib/format';
 import {
   QUIZ_MAX_REWARD,
   PREMIUM_DIAMOND_MULTIPLIER,
@@ -38,6 +43,12 @@ import type { Attempt, AttemptAnswer } from '@/types';
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+const LIVE_QUESTION_TYPE_LABELS: Record<string, string> = {
+  multiple_choice: 'Bir javobli',
+  true_false: "To'g'ri/Noto'g'ri",
+  open_ended: 'Ochiq savol',
+};
 
 export default function TakeQuizPage({ params }: PageProps) {
   const { id } = use(params);
@@ -53,6 +64,7 @@ export default function TakeQuizPage({ params }: PageProps) {
 
   const [activeAttempt, setActiveAttempt] = useState<Attempt | null>(null);
   const [answers, setAnswers] = useState<Record<string, number | string>>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [result, setResult] = useState<Attempt | null>(null);
   const [pendingReview, setPendingReview] = useState<Attempt | null>(null);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
@@ -118,6 +130,7 @@ export default function TakeQuizPage({ params }: PageProps) {
       onSuccess: (attempt) => {
         setActiveAttempt(attempt);
         setAnswers({});
+        setCurrentIndex(0);
         setResult(null);
         setPendingReview(null);
       },
@@ -234,212 +247,395 @@ export default function TakeQuizPage({ params }: PageProps) {
     const mm =
       remainingSec !== null ? String(Math.floor(remainingSec / 60)).padStart(2, '0') : null;
     const ss = remainingSec !== null ? String(remainingSec % 60).padStart(2, '0') : null;
+
+    function isAnswered(questionId: string) {
+      const value = answers[questionId];
+      return value !== undefined && value !== '';
+    }
+
+    const answeredCount = questions.filter((q) => isAnswered(q._id)).length;
+    const unansweredCount = questions.length - answeredCount;
+    const currentQuestion = questions[Math.min(currentIndex, questions.length - 1)];
+    const isLastQuestion = currentIndex >= questions.length - 1;
+    const typeLabel = currentQuestion
+      ? LIVE_QUESTION_TYPE_LABELS[currentQuestion.type]
+      : undefined;
+
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-heading text-xl font-semibold">{quiz.title}</h1>
-          {remainingSec !== null && (
-            <span
-              className={cn(
-                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium tabular-nums',
-                remainingSec <= 60
-                  ? 'border-destructive text-destructive'
-                  : 'border-border text-muted-foreground'
-              )}
+      <div className="-m-4 flex min-h-[calc(100vh-64px)] flex-col sm:-m-6 lg:-m-8">
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-background px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <h1 className="truncate font-heading text-lg font-bold">{quiz.title}</h1>
+            {effectiveAttempt.attemptNumber != null && (
+              <span className="shrink-0 text-sm text-muted-foreground">
+                {effectiveAttempt.attemptNumber}-urinish
+              </span>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {remainingSec !== null && (
+              <span
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold tabular-nums',
+                  remainingSec <= 60
+                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                    : 'border-gold/40 bg-gold/10 text-gold-foreground'
+                )}
+              >
+                <Clock className="size-4" />
+                {mm}:{ss}
+              </span>
+            )}
+            <Button
+              onClick={handleSubmit}
+              disabled={submitAttempt.isPending}
+              className="rounded-full bg-foreground text-background hover:bg-foreground/90"
             >
-              <Clock className="size-4" />
-              {mm}:{ss}
-            </span>
-          )}
+              {submitAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
+              Yakunlash
+            </Button>
+          </div>
         </div>
-        {questions.map((question, idx) => (
-          <Card key={question._id}>
-            <CardContent className="flex flex-col gap-3 pt-2">
-              <p className="text-sm font-medium">
-                {idx + 1}. {question.text}
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  ({question.points} ball)
-                </span>
-              </p>
-              {question.type === 'open_ended' ? (
-                <Textarea
-                  value={
-                    typeof answers[question._id] === 'string'
-                      ? (answers[question._id] as string)
-                      : ''
-                  }
-                  onChange={(e) =>
-                    setAnswers((prev) => ({ ...prev, [question._id]: e.target.value }))
-                  }
-                  placeholder="Javobingizni yozing..."
-                />
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {(question.options?.length
-                    ? question.options
-                    : [
-                        { label: 'A', text: "To'g'ri" },
-                        { label: 'B', text: "Noto'g'ri" },
-                      ]
-                  ).map((option, optIdx) => (
-                    <button
-                      key={option.label}
-                      type="button"
-                      onClick={() => setAnswers((prev) => ({ ...prev, [question._id]: optIdx }))}
-                      className={cn(
-                        'flex items-center gap-2 rounded-lg border border-input px-3 py-2.5 text-left text-sm transition-colors',
-                        answers[question._id] === optIdx
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-current text-[10px]">
-                        {option.label}
-                      </span>
-                      {option.text}
-                    </button>
-                  ))}
+
+        <div className="grid flex-1 lg:grid-cols-[1fr_320px]">
+          {currentQuestion && (
+            <div className="flex flex-col justify-between gap-10 bg-muted/40 p-6 sm:p-8">
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <p className="text-sm text-muted-foreground">
+                    Savol {currentIndex + 1} / {questions.length}
+                  </p>
+                  <Badge variant="secondary" className="rounded-full">
+                    {typeLabel} · {currentQuestion.points} ball
+                  </Badge>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-        <Button
-          size="lg"
-          className="w-full"
-          onClick={handleSubmit}
-          disabled={submitAttempt.isPending}
-        >
-          {submitAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
-          Yakunlash
-        </Button>
+                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                  {currentQuestion.text}
+                </h2>
+                {currentQuestion.type === 'open_ended' ? (
+                  <Textarea
+                    value={
+                      typeof answers[currentQuestion._id] === 'string'
+                        ? (answers[currentQuestion._id] as string)
+                        : ''
+                    }
+                    onChange={(e) =>
+                      setAnswers((prev) => ({ ...prev, [currentQuestion._id]: e.target.value }))
+                    }
+                    placeholder="Javobingizni yozing..."
+                    rows={6}
+                    className="bg-card"
+                  />
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(currentQuestion.options?.length
+                      ? currentQuestion.options
+                      : [
+                          { label: 'A', text: "To'g'ri" },
+                          { label: 'B', text: "Noto'g'ri" },
+                        ]
+                    ).map((option, optIdx) => {
+                      const selected = answers[currentQuestion._id] === optIdx;
+                      return (
+                        <button
+                          key={option.label}
+                          type="button"
+                          onClick={() =>
+                            setAnswers((prev) => ({ ...prev, [currentQuestion._id]: optIdx }))
+                          }
+                          className={cn(
+                            'flex items-center gap-3 rounded-xl border-2 bg-card px-4 py-4 text-left text-base font-medium transition-colors',
+                            selected
+                              ? 'border-success bg-success/10'
+                              : 'border-border hover:border-foreground/30'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+                              selected
+                                ? 'bg-success text-success-foreground'
+                                : 'bg-muted text-muted-foreground'
+                            )}
+                          >
+                            {option.label}
+                          </span>
+                          {option.text}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  className="rounded-full bg-card"
+                  onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+                  disabled={currentIndex === 0}
+                >
+                  <ArrowLeft className="size-4" /> Oldingi
+                </Button>
+                {isLastQuestion ? (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={submitAttempt.isPending}
+                    className="rounded-full bg-foreground text-background hover:bg-foreground/90"
+                  >
+                    {submitAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
+                    Yakunlash
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
+                    className="rounded-full bg-foreground text-background hover:bg-foreground/90"
+                  >
+                    Keyingi <ArrowRight className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-border/70 bg-card p-6 lg:border-l lg:border-t-0">
+            <p className="text-sm font-semibold text-foreground">Savollar</p>
+            <div className="mt-4 grid grid-cols-5 gap-2">
+              {questions.map((question, idx) => {
+                const answered = isAnswered(question._id);
+                const isCurrent = idx === currentIndex;
+                return (
+                  <button
+                    key={question._id}
+                    type="button"
+                    onClick={() => setCurrentIndex(idx)}
+                    aria-label={`${idx + 1}-savol`}
+                    aria-current={isCurrent}
+                    className={cn(
+                      'flex h-10 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
+                      isCurrent
+                        ? 'border-2 border-foreground text-foreground'
+                        : answered
+                          ? 'bg-success text-success-foreground'
+                          : 'border border-border bg-muted/40 text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 space-y-1.5 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+              <p className="flex items-center gap-2">
+                <span className="size-2.5 rounded-sm bg-success" /> Javob berilgan ·{' '}
+                {answeredCount}
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="size-2.5 rounded-sm border border-border" /> Javobsiz ·{' '}
+                {unansweredCount}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <Button variant="ghost" size="sm" render={<Link href="/student/quizzes" />} className="w-fit">
-        <ArrowLeft className="size-4" /> Testlarga qaytish
-      </Button>
+  const maxReward = Math.round(
+    QUIZ_MAX_REWARD * (isPremium ? PREMIUM_DIAMOND_MULTIPLIER : 1)
+  );
+  const fullTimeLimit = myTargetGrade?.timeLimit ?? quiz.timeLimit;
 
-      <Card>
-        <CardContent className="flex flex-col items-center gap-3 pt-4 text-center">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <ClipboardList className="size-6" />
-          </span>
-          <h1 className="font-heading text-2xl font-semibold">{quiz.title}</h1>
-          {quiz.description && <p className="text-muted-foreground">{quiz.description}</p>}
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Target className="size-4" /> O&apos;tish balli: {quiz.passingScore}%
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Repeat className="size-4" /> {attemptsLeft} / {displayedMaxAttempts} urinish qoldi
-            </span>
+  return (
+    <div className="mx-auto max-w-5xl">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/student/quizzes" />}>Testlar</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{quiz.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="mt-4 grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-6">
+          <div>
+            <h1 className="font-heading text-3xl font-bold tracking-tight">{quiz.title}</h1>
+            {quiz.description && (
+              <p className="mt-2 text-muted-foreground">{quiz.description}</p>
+            )}
           </div>
 
-          {startError && (
-            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-left text-sm text-destructive">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <p>{startError}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-border/70 bg-card p-4">
+              <p className="text-xs text-muted-foreground">Savollar</p>
+              <p className="mt-1 text-xl font-bold text-foreground">
+                {questions.length || quiz.questionsCount || 0}
+              </p>
             </div>
-          )}
-
-          {(quiz.availableFrom || quiz.availableUntil) && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-xs text-gold-foreground">
-              <Clock className="size-3.5 shrink-0" />
-              <span>
-                {quiz.availableFrom && `Boshlanishi: ${formatTashkentDateTime(quiz.availableFrom)}`}
-                {quiz.availableFrom && quiz.availableUntil && ' — '}
-                {quiz.availableUntil && `Tugashi: ${formatTashkentDateTime(quiz.availableUntil)}`}
-              </span>
+            <div className="rounded-xl border border-border/70 bg-card p-4">
+              <p className="text-xs text-muted-foreground">Vaqt</p>
+              <p className="mt-1 text-xl font-bold text-foreground">
+                {quiz.timeLimit ? `${quiz.timeLimit} daq` : 'Cheksiz'}
+              </p>
             </div>
-          )}
-
-          {attemptsData?.attemptsUsed === 0 && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Image src="/diamond.png" alt="" width={32} height={32} className="size-3.5" />
-              {isPremium ? (
-                <>
-                  <Star className="size-3.5 shrink-0 text-gold" /> Premium: maksimal{' '}
-                  {QUIZ_MAX_REWARD * PREMIUM_DIAMOND_MULTIPLIER} diamond olishingiz mumkin
-                  (natijangizga qarab)
-                </>
-              ) : (
-                <>
-                  Bu test uchun maksimal {QUIZ_MAX_REWARD} diamond olishingiz mumkin (natijangizga
-                  qarab)
-                </>
-              )}
-            </p>
-          )}
-
-          {attemptsLeft > 0 ? (
-            <Button
-              size="lg"
-              className="mt-4"
-              onClick={handleStart}
-              disabled={startAttempt.isPending}
-            >
-              {startAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
-              Testni boshlash
-            </Button>
-          ) : (
-            <div className="mt-4 flex flex-col items-center gap-1.5">
-              <Badge variant="destructive">Urinishlar tugadi</Badge>
-              {isCappedByStandardTarif && (
-                <p className="max-w-xs text-xs text-muted-foreground">
-                  Ko&apos;proq urinish uchun o&apos;qituvchi premium tarifga o&apos;tishi kerak
-                </p>
-              )}
+            <div className="rounded-xl border border-border/70 bg-card p-4">
+              <p className="text-xs text-muted-foreground">O&apos;tish bali</p>
+              <p className="mt-1 text-xl font-bold text-foreground">{quiz.passingScore}%</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="rounded-xl border border-border/70 bg-card p-4">
+              <p className="text-xs text-muted-foreground">Mukofot</p>
+              <p className="mt-1 flex items-center gap-1 text-xl font-bold text-foreground">
+                +{maxReward}
+                <Image src="/diamond.png" alt="" width={32} height={32} className="size-4" />
+              </p>
+            </div>
+          </div>
 
-      {pastAttempts.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Oldingi urinishlar</h2>
-          <div className="space-y-2">
-            {pastAttempts.map((attempt) => (
-              <Link
-                key={attempt._id}
-                href={`/student/quizzes/${id}/attempts/${attempt._id}`}
-                className="flex flex-col gap-1 rounded-lg border border-border px-4 py-2.5 text-sm transition-colors hover:border-primary/40"
-              >
-                <div className="flex items-center justify-between">
-                  {attempt.status === 'submitted' ? (
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                      <Hourglass className="size-4" /> Tekshirilmoqda
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      {attempt.passed ? (
-                        <CheckCircle2 className="size-4 text-success" />
+          {pastAttempts.length > 0 && (
+            <Card className="rounded-xl py-0">
+              <CardContent className="p-0">
+                <h2 className="border-b border-border/70 px-4 py-3 text-sm font-semibold text-foreground">
+                  Oldingi urinishlar
+                </h2>
+                <div>
+                  {pastAttempts.map((attempt) => (
+                    <Link
+                      key={attempt._id}
+                      href={`/student/quizzes/${id}/attempts/${attempt._id}`}
+                      className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 px-4 py-3 text-sm transition-colors last:border-0 hover:bg-muted/40"
+                    >
+                      <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
+                        <span className="font-semibold text-foreground">
+                          #{attempt.attemptNumber}
+                        </span>
+                        {attempt.startedAt && (
+                          <span>{formatTashkentDateTime(attempt.startedAt)}</span>
+                        )}
+                        {attempt.durationSeconds != null && (
+                          <span>{formatDuration(attempt.durationSeconds)}</span>
+                        )}
+                      </div>
+                      {attempt.status === 'submitted' ? (
+                        <Badge variant="secondary" className="gap-1.5">
+                          <Hourglass className="size-3.5" /> Tekshirilmoqda
+                        </Badge>
                       ) : (
-                        <XCircle className="size-4 text-muted-foreground" />
+                        <Badge
+                          className={cn(
+                            'gap-1.5 rounded-full',
+                            attempt.passed
+                              ? 'bg-success/10 text-success'
+                              : 'bg-muted text-muted-foreground'
+                          )}
+                        >
+                          {attempt.passed ? (
+                            <CheckCircle2 className="size-3.5" />
+                          ) : (
+                            <XCircle className="size-3.5" />
+                          )}
+                          {attempt.scorePercent ?? 0}%
+                        </Badge>
                       )}
-                      {attempt.scorePercent ?? 0}%
-                    </span>
-                  )}
-                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {attempt.submittedAt ? formatDateTime(attempt.submittedAt) : ''}
-                    <ChevronRight className="size-4" />
-                  </span>
+                    </Link>
+                  ))}
                 </div>
-                {attempt.startedAt && (
-                  <p className="text-xs text-muted-foreground">
-                    {formatTashkentDateTime(attempt.startedAt)}da boshladingiz
-                    {attempt.durationSeconds != null &&
-                      ` · ${formatDuration(attempt.durationSeconds)}da tugatdingiz`}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <Card className="lg:sticky lg:top-6">
+          <CardContent className="space-y-4 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Urinishlar
+            </p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-4xl font-bold text-foreground">{attemptsLeft}</span>
+              <span className="text-sm text-muted-foreground">
+                / {displayedMaxAttempts} qoldi
+              </span>
+            </p>
+
+            {startError && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-left text-sm text-destructive">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <p>{startError}</p>
+              </div>
+            )}
+
+            {(quiz.availableFrom || quiz.availableUntil) && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-xs text-gold-foreground">
+                <Clock className="size-3.5 shrink-0" />
+                <span>
+                  {quiz.availableFrom &&
+                    `Boshlanishi: ${formatTashkentDateTime(quiz.availableFrom)}`}
+                  {quiz.availableFrom && quiz.availableUntil && ' — '}
+                  {quiz.availableUntil && `Tugashi: ${formatTashkentDateTime(quiz.availableUntil)}`}
+                </span>
+              </div>
+            )}
+
+            {attemptsData?.attemptsUsed === 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <Image
+                  src="/diamond.png"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="mt-0.5 size-3.5 shrink-0"
+                />
+                {isPremium ? (
+                  <span className="flex items-start gap-1">
+                    <Star className="mt-0.5 size-3.5 shrink-0 text-gold" /> Premium: maksimal{' '}
+                    {maxReward} diamond olishingiz mumkin (natijangizga qarab)
+                  </span>
+                ) : (
+                  <>Bu test uchun maksimal {maxReward} diamond olishingiz mumkin (natijangizga qarab)</>
+                )}
+              </p>
+            )}
+
+            {isCappedByStandardTarif && (
+              <div className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-2.5 text-xs text-gold-foreground">
+                <span className="font-semibold">Premium</span> bilan {configuredAttempts} ta
+                urinish{fullTimeLimit ? ` va ${fullTimeLimit} daqiqa vaqt` : ''}
+              </div>
+            )}
+
+            {attemptsLeft > 0 ? (
+              <>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  onClick={handleStart}
+                  disabled={startAttempt.isPending}
+                >
+                  {startAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
+                  Testni boshlash
+                </Button>
+                {quiz.timeLimit != null && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Boshlagach taymer to&apos;xtamaydi
                   </p>
                 )}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-1.5">
+                <Badge variant="destructive">Urinishlar tugadi</Badge>
+                {isCappedByStandardTarif && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Ko&apos;proq urinish uchun o&apos;qituvchi premium tarifga o&apos;tishi kerak
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

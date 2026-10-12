@@ -111,6 +111,7 @@ export function useRedeemReward() {
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['my-redemptions'] });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
       await refreshCurrentUser();
       toast.success("Mukofotga almashtirish uchun so'rov yuborildi");
     },

@@ -219,11 +219,17 @@ function TeacherRow({ teacher, isMe }: { teacher: TeacherRanking; isMe: boolean 
 
 export default function LeaderboardPage() {
   const user = useAuthStore((s) => s.user);
+  // O'qituvchilar reytingi faqat o'qituvchi/admin va anonim tashrifchilarga
+  // ko'rinadi — o'quvchilar uchun yashirilgan (faqat o'z reytingini ko'rishi kerak).
+  const canSeeTeacherRanking = user?.role !== 'student';
+
   const [studentPage] = useState(1);
   const { data, isLoading, error } = useLeaderboard(studentPage, 20);
 
   const [teacherPage, setTeacherPage] = useState(1);
-  const { data: teachersData, isLoading: isTeachersLoading } = useTopTeachers(teacherPage, 10);
+  const { data: teachersData, isLoading: isTeachersLoading } = useTopTeachers(teacherPage, 10, {
+    enabled: canSeeTeacherRanking,
+  });
   // O'qituvchining o'z o'rnini topish uchun — alohida, kattaroq limitli so'rov
   // (backendda alohida "mening o'rnim" endpointi yo'q, shuning uchun ro'yxat
   // ichidan qidiramiz). Faqat teacher rolidagi foydalanuvchi uchun yuboriladi.
@@ -235,6 +241,123 @@ export default function LeaderboardPage() {
   const hasPodium = items.length >= 3;
   const podium = hasPodium ? items.slice(0, 3) : [];
   const rest = hasPodium ? items.slice(3) : items;
+
+  const studentsContent = isLoading ? (
+    <div className="space-y-3">
+      <div className="mb-6 grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-48 animate-pulse rounded-3xl bg-muted" />
+        ))}
+      </div>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />
+      ))}
+    </div>
+  ) : (
+    <div className="space-y-6">
+      {hasPodium && (
+        <div className="mb-10 grid grid-cols-3 items-end gap-3 sm:gap-4">
+          {podium.map((entry, idx) => (
+            <PodiumCard key={entry._id} entry={entry} rank={idx + 1} />
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-2.5">
+        {rest.map((entry, idx) => {
+          const rank = idx + (hasPodium ? 4 : 1);
+          const isMe = !!user && entry._id === user._id;
+          return (
+            <div
+              key={entry._id}
+              className={cn(
+                'flex items-center gap-4 rounded-2xl border p-4 shadow-xs transition-all duration-200 card-hover-glow',
+                isMe
+                  ? 'border-primary/50 bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/20'
+                  : 'border-border/80 bg-card hover:border-primary/30'
+              )}
+            >
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/60 font-mono text-sm font-extrabold text-muted-foreground">
+                {rank}
+              </div>
+              <Avatar className="size-10 border border-border">
+                <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
+                <AvatarFallback className="font-bold">{initials(entry.name)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="flex items-center gap-2 text-sm font-bold text-foreground truncate">
+                  <span>{entry.name}</span>
+                  {isMe && (
+                    <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-extrabold text-primary">
+                      Siz
+                    </span>
+                  )}
+                </p>
+                {entry.grade?.number && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {entry.grade.number}-{entry.grade.letter} sinf
+                  </p>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-sm font-extrabold text-amber-600 dark:text-amber-400 shrink-0">
+                <Image src="/diamond.png" alt="" width={32} height={32} className="size-4.5" />
+                {formatNumber(entry.diamonds ?? 0)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const teachersContent = (
+    <>
+      {user?.role === 'teacher' && myTeacherEntry && (
+        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
+            <ChevronsUp className="size-5" />
+          </span>
+          <div>
+            <p className="text-sm font-bold text-foreground">
+              Siz hozir #{myTeacherEntry.rank} o&apos;rinda turibsiz
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Faollik balingiz: {myTeacherEntry.activityScore}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isTeachersLoading ? (
+        <div className="space-y-2.5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />
+          ))}
+        </div>
+      ) : !teachersData || teachersData.items.length === 0 ? (
+        <EmptyState icon={Presentation} title="Hali o'qituvchilar reytingi mavjud emas" />
+      ) : (
+        <>
+          <div className="space-y-2.5">
+            {teachersData.items.map((teacher) => (
+              <TeacherRow
+                key={teacher._id}
+                teacher={teacher}
+                isMe={!!user && teacher._id === user._id}
+              />
+            ))}
+          </div>
+          <PaginationBar
+            page={teacherPage}
+            totalPages={teachersData.totalPages}
+            total={teachersData.total}
+            itemLabel="o'qituvchi"
+            onPageChange={setTeacherPage}
+          />
+        </>
+      )}
+    </>
+  );
 
   return (
     <Container className="py-12 max-w-4xl">
@@ -272,7 +395,7 @@ export default function LeaderboardPage() {
             Tizimga kirish
           </Button>
         </div>
-      ) : (
+      ) : canSeeTeacherRanking ? (
         <Tabs defaultValue="students" className="mx-auto max-w-2xl ">
           <TabsList className="mx-auto h-auto! flex gap-4 p-1">
             <TabsTrigger value="students" className={'p-2 cursor-pointer text-[15px]'}>
@@ -284,130 +407,15 @@ export default function LeaderboardPage() {
           </TabsList>
 
           <TabsContent value="students" className="mt-6">
-            {isLoading ? (
-              <div className="space-y-3">
-                <div className="mb-6 grid grid-cols-3 gap-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-48 animate-pulse rounded-3xl bg-muted" />
-                  ))}
-                </div>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {hasPodium && (
-                  <div className="mb-10 grid grid-cols-3 items-end gap-3 sm:gap-4">
-                    {podium.map((entry, idx) => (
-                      <PodiumCard key={entry._id} entry={entry} rank={idx + 1} />
-                    ))}
-                  </div>
-                )}
-
-                <div className="space-y-2.5">
-                  {rest.map((entry, idx) => {
-                    const rank = idx + (hasPodium ? 4 : 1);
-                    const isMe = !!user && entry._id === user._id;
-                    return (
-                      <div
-                        key={entry._id}
-                        className={cn(
-                          'flex items-center gap-4 rounded-2xl border p-4 shadow-xs transition-all duration-200 card-hover-glow',
-                          isMe
-                            ? 'border-primary/50 bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/20'
-                            : 'border-border/80 bg-card hover:border-primary/30'
-                        )}
-                      >
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/60 font-mono text-sm font-extrabold text-muted-foreground">
-                          {rank}
-                        </div>
-                        <Avatar className="size-10 border border-border">
-                          <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
-                          <AvatarFallback className="font-bold">
-                            {initials(entry.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="flex items-center gap-2 text-sm font-bold text-foreground truncate">
-                            <span>{entry.name}</span>
-                            {isMe && (
-                              <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-extrabold text-primary">
-                                Siz
-                              </span>
-                            )}
-                          </p>
-                          {entry.grade?.number && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {entry.grade.number}-{entry.grade.letter} sinf
-                            </p>
-                          )}
-                        </div>
-                        <span className="inline-flex items-center gap-1.5 text-sm font-extrabold text-amber-600 dark:text-amber-400 shrink-0">
-                          <Image
-                            src="/diamond.png"
-                            alt=""
-                            width={32}
-                            height={32}
-                            className="size-4.5"
-                          />
-                          {formatNumber(entry.diamonds ?? 0)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {studentsContent}
           </TabsContent>
 
           <TabsContent value="teachers" className="mt-6">
-            {user?.role === 'teacher' && myTeacherEntry && (
-              <div className="mb-6 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-                  <ChevronsUp className="size-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-bold text-foreground">
-                    Siz hozir #{myTeacherEntry.rank} o&apos;rinda turibsiz
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Faollik balingiz: {myTeacherEntry.activityScore}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {isTeachersLoading ? (
-              <div className="space-y-2.5">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />
-                ))}
-              </div>
-            ) : !teachersData || teachersData.items.length === 0 ? (
-              <EmptyState icon={Presentation} title="Hali o'qituvchilar reytingi mavjud emas" />
-            ) : (
-              <>
-                <div className="space-y-2.5">
-                  {teachersData.items.map((teacher) => (
-                    <TeacherRow
-                      key={teacher._id}
-                      teacher={teacher}
-                      isMe={!!user && teacher._id === user._id}
-                    />
-                  ))}
-                </div>
-                <PaginationBar
-                  page={teacherPage}
-                  totalPages={teachersData.totalPages}
-                  total={teachersData.total}
-                  itemLabel="o'qituvchi"
-                  onPageChange={setTeacherPage}
-                />
-              </>
-            )}
+            {teachersContent}
           </TabsContent>
         </Tabs>
+      ) : (
+        <div className="mx-auto max-w-2xl">{studentsContent}</div>
       )}
     </Container>
   );

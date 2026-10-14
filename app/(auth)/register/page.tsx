@@ -1,21 +1,30 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { Loader2, GraduationCap, Presentation, Sparkles, UserCheck, ShieldCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { PhoneInput } from "@/components/ui/phone-input"
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Loader2,
+  GraduationCap,
+  Presentation,
+  Sparkles,
+  UserCheck,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -23,12 +32,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { cn } from "@/lib/utils"
-import { useRegister } from "@/hooks/use-auth"
+} from '@/components/ui/form';
+import { cn } from '@/lib/utils';
+import { useRegister } from '@/hooks/use-auth';
 
-const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1))
-const GRADE_LETTERS = ["A", "B", "C", "D", "E", "F"]
+const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
+const GRADE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 const schema = z
   .object({
@@ -37,41 +46,42 @@ const schema = z
       .string()
       .length(9, { error: "Telefon raqamni to'liq kiriting" })
       .regex(/^[0-9]{9}$/, { error: "Faqat raqamlardan iborat bo'lsin" }),
-    password: z.string().min(6, { error: "Kamida 6 ta belgi" }),
-    role: z.enum(["student", "teacher"]),
+    password: z.string().min(6, { error: 'Kamida 6 ta belgi' }),
+    role: z.enum(['student', 'teacher']),
     gradeNumber: z.string().optional(),
     gradeLetter: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.role === "student") {
+    if (data.role === 'student') {
       if (!data.gradeNumber) {
-        ctx.addIssue({ code: "custom", path: ["gradeNumber"], message: "Sinf raqamini tanlang" })
+        ctx.addIssue({ code: 'custom', path: ['gradeNumber'], message: 'Sinf raqamini tanlang' });
       }
       if (!data.gradeLetter) {
-        ctx.addIssue({ code: "custom", path: ["gradeLetter"], message: "Guruh harfini tanlang" })
+        ctx.addIssue({ code: 'custom', path: ['gradeLetter'], message: 'Guruh harfini tanlang' });
       }
     }
-  })
+  });
 
-type FormValues = z.infer<typeof schema>
+type FormValues = z.infer<typeof schema>;
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const register = useRegister()
+  const router = useRouter();
+  const register = useRegister();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: "",
-      phone: "",
-      password: "",
-      role: "student",
-      gradeNumber: "",
-      gradeLetter: "",
+      name: '',
+      phone: '',
+      password: '',
+      role: 'student',
+      gradeNumber: '',
+      gradeLetter: '',
     },
-  })
+  });
 
-  const role = form.watch("role")
+  const role = form.watch('role');
 
   function onSubmit(values: FormValues) {
     register.mutate(
@@ -81,12 +91,12 @@ export default function RegisterPage() {
         password: values.password,
         role: values.role,
         grade:
-          values.role === "student"
+          values.role === 'student'
             ? { number: Number(values.gradeNumber), letter: values.gradeLetter! }
             : undefined,
       },
-      { onSuccess: () => router.push("/register/pending") }
-    )
+      { onSuccess: () => router.push('/register/pending') }
+    );
   }
 
   return (
@@ -122,18 +132,22 @@ export default function RegisterPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
-                        onClick={() => field.onChange("student")}
+                        onClick={() => field.onChange('student')}
                         className={cn(
-                          "flex flex-col items-center gap-2 rounded-2xl border p-3.5 text-center transition-all duration-200 cursor-pointer",
-                          field.value === "student"
-                            ? "border-primary bg-primary/10 dark:bg-primary/20 text-primary shadow-md shadow-primary/10 ring-2 ring-primary/30"
-                            : "border-border/80 bg-card/60 dark:bg-card/40 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          'flex flex-col items-center gap-2 rounded-2xl border p-3.5 text-center transition-all duration-200 cursor-pointer',
+                          field.value === 'student'
+                            ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary shadow-md shadow-primary/10 ring-2 ring-primary/30'
+                            : 'border-border/80 bg-card/60 dark:bg-card/40 text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                       >
-                        <div className={cn(
-                          "flex size-10 items-center justify-center rounded-xl transition-colors",
-                          field.value === "student" ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                        )}>
+                        <div
+                          className={cn(
+                            'flex size-10 items-center justify-center rounded-xl transition-colors',
+                            field.value === 'student'
+                              ? 'bg-primary text-white'
+                              : 'bg-muted text-muted-foreground'
+                          )}
+                        >
                           <GraduationCap className="size-5" />
                         </div>
                         <div>
@@ -144,18 +158,22 @@ export default function RegisterPage() {
 
                       <button
                         type="button"
-                        onClick={() => field.onChange("teacher")}
+                        onClick={() => field.onChange('teacher')}
                         className={cn(
-                          "flex flex-col items-center gap-2 rounded-2xl border p-3.5 text-center transition-all duration-200 cursor-pointer",
-                          field.value === "teacher"
-                            ? "border-primary bg-primary/10 dark:bg-primary/20 text-primary shadow-md shadow-primary/10 ring-2 ring-primary/30"
-                            : "border-border/80 bg-card/60 dark:bg-card/40 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          'flex flex-col items-center gap-2 rounded-2xl border p-3.5 text-center transition-all duration-200 cursor-pointer',
+                          field.value === 'teacher'
+                            ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary shadow-md shadow-primary/10 ring-2 ring-primary/30'
+                            : 'border-border/80 bg-card/60 dark:bg-card/40 text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                       >
-                        <div className={cn(
-                          "flex size-10 items-center justify-center rounded-xl transition-colors",
-                          field.value === "teacher" ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                        )}>
+                        <div
+                          className={cn(
+                            'flex size-10 items-center justify-center rounded-xl transition-colors',
+                            field.value === 'teacher'
+                              ? 'bg-primary text-white'
+                              : 'bg-muted text-muted-foreground'
+                          )}
+                        >
                           <Presentation className="size-5" />
                         </div>
                         <div>
@@ -217,19 +235,29 @@ export default function RegisterPage() {
                     Parol
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      {...field}
-                      className="h-12 rounded-xl border-border/80 bg-background/70 text-base focus:ring-2 focus:ring-primary/30"
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder=""
+                        {...field}
+                        className="h-12 rounded-xl border-border/80 bg-background/70 pr-11 text-base focus:ring-2 focus:ring-primary/30"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? 'Parolni yashirish' : "Parolni ko'rsatish"}
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
 
-            {role === "student" && (
+            {role === 'student' && (
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <FormField
                   control={form.control}
@@ -305,7 +333,7 @@ export default function RegisterPage() {
 
         <div className="mt-6 pt-4 border-t border-border/60 text-center">
           <p className="text-sm text-muted-foreground">
-            Hisobingiz bormi?{" "}
+            Hisobingiz bormi?{' '}
             <Link
               href="/login"
               className="font-bold text-primary transition-colors hover:underline"
@@ -316,6 +344,5 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

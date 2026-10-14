@@ -63,14 +63,28 @@ function unwrap(json: unknown) {
       return hasPagination ? toPaginated(data, obj) : data;
     }
 
-    // This API nests list results as { <name>: [...], meta: {...} } under data.
-    if (data && typeof data === 'object' && 'meta' in (data as Record<string, unknown>)) {
+    if (data && typeof data === 'object') {
       const dataObj = data as Record<string, unknown>;
-      const arrayKey = Object.keys(dataObj).find(
-        (key) => key !== 'meta' && Array.isArray(dataObj[key])
-      );
-      if (arrayKey) {
-        return toPaginated(dataObj[arrayKey] as unknown[], dataObj.meta as Record<string, unknown>);
+
+      // This API nests list results as { <name>: [...], meta: {...} } under data.
+      if ('meta' in dataObj) {
+        const arrayKey = Object.keys(dataObj).find(
+          (key) => key !== 'meta' && Array.isArray(dataObj[key])
+        );
+        if (arrayKey) {
+          return toPaginated(
+            dataObj[arrayKey] as unknown[],
+            dataObj.meta as Record<string, unknown>
+          );
+        }
+      }
+
+      // Some endpoints (e.g. /users) nest list results as
+      // { <name>: [...], total, page, limit, totalPages } directly under data,
+      // with no separate `meta` wrapper — same pagination fields, flat.
+      const arrayKey = Object.keys(dataObj).find((key) => Array.isArray(dataObj[key]));
+      if (arrayKey && PAGINATION_KEYS.some((key) => key in dataObj)) {
+        return toPaginated(dataObj[arrayKey] as unknown[], dataObj);
       }
     }
 

@@ -30,9 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </header>
 
       {/* Main Content */}
-      <main className="flex flex-1 items-center justify-center px-4 py-8 sm:py-12 z-10">
-        {children}
-      </main>
+      <main className="flex flex-1 items-center justify-center p-4   sm:py-6 z-10">{children}</main>
 
       {/* Footer minimal info */}
       <footer className="w-full border-t border-border/40 bg-background/40 py-4 text-center text-xs text-muted-foreground backdrop-blur-xs">
@@ -46,4 +44,3 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     </div>
   );
 }
-

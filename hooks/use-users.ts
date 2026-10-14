@@ -27,6 +27,7 @@ export function useUsers(
     search?: string
     isVerified?: boolean
     role?: Role
+    tarif?: Tarif
   } = {}
 ) {
   return useQuery({
@@ -131,6 +132,62 @@ export function useUpdateUser() {
       toast.success("Foydalanuvchi yangilandi")
     },
     onError: (error) => toast.error(errorMessage(error, "Foydalanuvchini yangilashda xatolik")),
+  })
+}
+
+// Faqat superadmin uchun: foydalanuvchining eski parolini so'ramasdan yangi
+// parol o'rnatadi (parolni unutgan foydalanuvchilar uchun). Backend bu
+// foydalanuvchining boshqa qurilmalardagi sessiyalarini avtomatik tugatadi va
+// unga xabar yuboradi — frontendda alohida hech narsa qilish shart emas.
+export function useResetUserPassword() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, newPassword }: { id: string; newPassword: string }) => {
+      const res = await api.patch<{ user: User }>(`/users/${id}/reset-password`, { newPassword })
+      return res.user
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
+      toast.success("Parol muvaffaqiyatli tiklandi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Parolni tiklashda xatolik")),
+  })
+}
+
+// Faqat superadmin uchun: boshqa foydalanuvchining avatarini yuklaydi/almashtiradi.
+export function useAdminUploadAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: string; file: File }) => {
+      const formData = new FormData()
+      formData.append("avatar", file)
+      const res = await api.post<{ user: User }>(`/users/${id}/avatar`, formData)
+      return res.user
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
+      toast.success("Avatar yangilandi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Avatar yuklashda xatolik")),
+  })
+}
+
+// Faqat superadmin uchun: foydalanuvchining avatarini o'chiradi.
+export function useAdminDeleteAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete<{ user: User }>(`/users/${id}/avatar`)
+      return res.user
+    },
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-user", id] })
+      toast.success("Avatar o'chirildi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Avatarni o'chirishda xatolik")),
   })
 }
 

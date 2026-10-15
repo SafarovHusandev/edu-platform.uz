@@ -82,7 +82,7 @@ export default function StudentRewardsPage() {
                 key={reward._id}
                 className="gap-0 overflow-hidden rounded-md py-0 shadow-sm ring-1 ring-border/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
-                <div className="group relative aspect-video w-full overflow-hidden bg-muted">
+                <div className="group relative h-56 w-full overflow-hidden bg-muted">
                   {image ? (
                     <Dialog>
                       <DialogTrigger
@@ -100,7 +100,7 @@ export default function StudentRewardsPage() {
                           fill
                           unoptimized
                           className={cn(
-                            'object-cover transition-transform duration-300',
+                            'object-contain transition-transform duration-300',
                             isLocked ? '' : 'group-hover:scale-105'
                           )}
                         />

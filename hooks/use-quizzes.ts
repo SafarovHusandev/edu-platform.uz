@@ -176,6 +176,48 @@ export function useAddQuestion(quizId: string) {
   });
 }
 
+export interface BulkAddQuestionsResult {
+  created: Question[];
+  failed: { index: number; message: string }[];
+}
+
+// Har bir savol alohida, ketma-ket POST qilinadi (backend'da bulk endpoint yo'q)
+// va xato bo'lgan savol butun partiyani to'xtatmaydi — natijada yaroqli
+// savollar baribir qo'shiladi, xatolari esa alohida qaytariladi.
+export function useBulkAddQuestions(quizId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payloads: QuestionPayload[]): Promise<BulkAddQuestionsResult> => {
+      const created: Question[] = [];
+      const failed: { index: number; message: string }[] = [];
+      for (let i = 0; i < payloads.length; i++) {
+        try {
+          const res = await api.post<{ question: Question }>(
+            `/quizzes/${quizId}/questions`,
+            payloads[i]
+          );
+          created.push(res.question);
+        } catch (error) {
+          failed.push({ index: i, message: errorMessage(error, "Noma'lum xatolik") });
+        }
+      }
+      return { created, failed };
+    },
+    onSuccess: ({ created, failed }) => {
+      queryClient.invalidateQueries({ queryKey: ['quiz-answers', quizId] });
+      queryClient.invalidateQueries({ queryKey: ['quiz', quizId] });
+      if (created.length > 0) {
+        toast.success(
+          `${created.length} ta savol qo'shildi` +
+            (failed.length > 0 ? `, ${failed.length} tasi xato bilan o'tkazib yuborildi` : '')
+        );
+      } else if (failed.length > 0) {
+        toast.error("Birorta ham savol qo'shilmadi");
+      }
+    },
+  });
+}
+
 export function useUpdateQuestion(quizId: string) {
   const queryClient = useQueryClient();
   return useMutation({

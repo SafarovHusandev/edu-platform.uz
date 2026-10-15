@@ -309,7 +309,11 @@ export default function TakeQuizPage({ params }: PageProps) {
                     {typeLabel} · {currentQuestion.points} ball
                   </Badge>
                 </div>
-                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                <h2
+                  className="select-none text-3xl font-bold tracking-tight sm:text-4xl"
+                  onCopy={(e) => e.preventDefault()}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
                   {currentQuestion.text}
                 </h2>
                 {currentQuestion.type === 'open_ended' ? (
@@ -327,7 +331,11 @@ export default function TakeQuizPage({ params }: PageProps) {
                     className="bg-card"
                   />
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div
+                    className="grid select-none gap-3 sm:grid-cols-2"
+                    onCopy={(e) => e.preventDefault()}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
                     {(currentQuestion.options?.length
                       ? currentQuestion.options
                       : [

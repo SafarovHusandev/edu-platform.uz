@@ -23,6 +23,7 @@ import {
   Sparkles,
   Target,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ import {
   QuestionFormDialog,
   type QuestionFormValues,
 } from '@/components/quizzes/question-form-dialog';
+import { ImportQuestionsDialog } from '@/components/quizzes/import-questions-dialog';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -138,6 +140,7 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
   );
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   // Nusxalash uchun: forma shu savol asosida oldindan to'ldiriladi, lekin
   // saqlanganda YANGI savol sifatida (addQuestion) yuboriladi, editingQuestion
@@ -725,17 +728,27 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
           <h2 className="flex items-center gap-2 text-xl font-semibold sm:text-2xl">
             <ListChecks className="size-5" /> Savollar
           </h2>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingQuestion(null);
-              setDuplicateSource(null);
-              setDialogOpen(true);
-            }}
-            className="text-sm sm:text-base"
-          >
-            <Plus className="size-4" /> Savol qo&apos;shish
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+              className="text-sm sm:text-base"
+            >
+              <Upload className="size-4" /> Word fayldan yuklash
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingQuestion(null);
+                setDuplicateSource(null);
+                setDialogOpen(true);
+              }}
+              className="text-sm sm:text-base"
+            >
+              <Plus className="size-4" /> Savol qo&apos;shish
+            </Button>
+          </div>
         </div>
 
         <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
@@ -900,6 +913,8 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
         isPending={addQuestion.isPending || updateQuestion.isPending}
         resetSignal={questionResetSignal}
       />
+
+      <ImportQuestionsDialog quizId={id} open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

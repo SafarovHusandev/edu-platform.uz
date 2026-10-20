@@ -297,9 +297,9 @@ export default function TakeQuizPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="grid flex-1 lg:grid-cols-[1fr_320px]">
+        <div className="grid flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
           {currentQuestion && (
-            <div className="flex flex-col justify-between gap-10 bg-muted/40 p-6 sm:p-8">
+            <div className="flex min-w-0 flex-col justify-between gap-10 bg-muted/40 p-6 sm:p-8">
               <div className="space-y-6">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <p className="text-sm text-muted-foreground">
@@ -310,7 +310,7 @@ export default function TakeQuizPage({ params }: PageProps) {
                   </Badge>
                 </div>
                 <h2
-                  className="select-none text-3xl font-bold tracking-tight sm:text-4xl"
+                  className="select-none whitespace-pre-wrap wrap-break-word text-3xl font-bold tracking-tight sm:text-4xl"
                   onCopy={(e) => e.preventDefault()}
                   onContextMenu={(e) => e.preventDefault()}
                 >
@@ -368,7 +368,7 @@ export default function TakeQuizPage({ params }: PageProps) {
                           >
                             {option.label}
                           </span>
-                          {option.text}
+                          <span className="min-w-0 wrap-break-word">{option.text}</span>
                         </button>
                       );
                     })}

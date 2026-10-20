@@ -52,6 +52,7 @@ export default function StudentQuizzesPage() {
                 )
               : undefined;
             const attempts = myTargetGrade?.effectiveMaxAttempts ?? quiz.maxAttempts;
+            const questionCount = quiz.questionsCount ?? quiz.questions?.length;
             return (
             <Link key={quiz._id} href={`/student/quizzes/${quiz._id}`} className="block">
               <Card className="overflow-hidden border-border/70 shadow-sm transition-all duration-200 p-0 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
@@ -73,9 +74,9 @@ export default function StudentQuizzesPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
-                      <Badge variant="outline">
-                        {quiz.questionsCount ?? quiz.questions?.length ?? 0} savol
-                      </Badge>
+                      {questionCount != null && (
+                        <Badge variant="outline">{questionCount} savol</Badge>
+                      )}
                       <span className="flex items-center gap-1">
                         <Target className="size-3.5" /> O&apos;tish balli: {quiz.passingScore}%
                       </span>

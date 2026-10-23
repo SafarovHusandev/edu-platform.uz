@@ -19,6 +19,7 @@ import {
   Loader2,
   Search,
   SlidersHorizontal,
+  TimerOff,
   Users,
   X,
   XCircle,
@@ -87,7 +88,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
 ];
 
 type SortKey = 'name' | 'grade' | 'score' | 'status' | 'startedAt' | 'submittedAt' | 'duration';
-type StatusFilter = 'all' | 'passed' | 'failed' | 'pending';
+type StatusFilter = 'all' | 'passed' | 'failed' | 'pending' | 'expired';
 
 function attemptStudent(attempt: Attempt): User | null {
   return typeof attempt.student === 'object' ? attempt.student : null;
@@ -98,8 +99,20 @@ function attemptStudentId(attempt: Attempt): string {
 }
 
 function statusRank(attempt: Attempt) {
+  if (attempt.status === 'expired') return -1;
   if (attempt.status === 'submitted') return 0;
   return attempt.passed ? 2 : 1;
+}
+
+// Ball hali yo'q (tekshirilmoqda) yoki umuman yo'q (vaqt tugagan) holatlar
+function hasNoScore(attempt: Attempt) {
+  return attempt.status === 'submitted' || attempt.status === 'expired';
+}
+
+function statusLabel(attempt: Attempt) {
+  if (attempt.status === 'expired') return 'Vaqt tugadi';
+  if (attempt.status === 'submitted') return 'Tekshirilmoqda';
+  return attempt.passed ? "O'tdi" : "O'tmadi";
 }
 
 function toTime(value?: string | null) {
@@ -386,15 +399,10 @@ function ResultsContent({ quizId }: { quizId: string }) {
       if (query && !(group.student?.name ?? '').toLowerCase().includes(query)) return false;
       if (statusFilter !== 'all') {
         if (statusFilter === 'pending' && group.latest.status !== 'submitted') return false;
-        if (
-          statusFilter === 'passed' &&
-          (group.latest.status === 'submitted' || !group.latest.passed)
-        )
+        if (statusFilter === 'expired' && group.latest.status !== 'expired') return false;
+        if (statusFilter === 'passed' && (hasNoScore(group.latest) || !group.latest.passed))
           return false;
-        if (
-          statusFilter === 'failed' &&
-          (group.latest.status === 'submitted' || group.latest.passed)
-        )
+        if (statusFilter === 'failed' && (hasNoScore(group.latest) || group.latest.passed))
           return false;
       }
       if (gradeFilter !== 'all' && String(group.student?.grade?.number ?? '') !== gradeFilter)
@@ -458,13 +466,8 @@ function ResultsContent({ quizId }: { quizId: string }) {
       ? `${group.student.grade.number}-${group.student.grade.letter ?? ''}`
       : '—',
     attempts: group.attempts.length,
-    score: group.latest.status === 'submitted' ? '—' : `${group.latest.scorePercent ?? 0}%`,
-    status:
-      group.latest.status === 'submitted'
-        ? 'Tekshirilmoqda'
-        : group.latest.passed
-          ? "O'tdi"
-          : "O'tmadi",
+    score: hasNoScore(group.latest) ? '—' : `${group.latest.scorePercent ?? 0}%`,
+    status: statusLabel(group.latest),
     submittedAt: group.latest.submittedAt ? formatDateTime(group.latest.submittedAt) : '—',
     startedAt: group.latest.startedAt ? formatTashkentDateTime(group.latest.startedAt) : '—',
     duration: formatDuration(group.latest.durationSeconds) ?? '—',
@@ -576,6 +579,7 @@ function ResultsContent({ quizId }: { quizId: string }) {
                   passed: "O'tdi",
                   failed: "O'tmadi",
                   pending: 'Tekshirilmoqda',
+                  expired: 'Vaqt tugadi',
                 }}
               >
                 <SelectTrigger className="h-10 w-full rounded-md sm:w-40">
@@ -586,6 +590,7 @@ function ResultsContent({ quizId }: { quizId: string }) {
                   <SelectItem value="passed">O&apos;tdi</SelectItem>
                   <SelectItem value="failed">O&apos;tmadi</SelectItem>
                   <SelectItem value="pending">Tekshirilmoqda</SelectItem>
+                  <SelectItem value="expired">Vaqt tugadi</SelectItem>
                 </SelectContent>
               </Select>
               <Select
@@ -739,10 +744,14 @@ function ResultsContent({ quizId }: { quizId: string }) {
                             : '—'}
                         </TableCell>
                         <TableCell className="py-3">
-                          {latest.status === 'submitted' ? '—' : `${latest.scorePercent ?? 0}%`}
+                          {hasNoScore(latest) ? '—' : `${latest.scorePercent ?? 0}%`}
                         </TableCell>
                         <TableCell className="py-3">
-                          {latest.status === 'submitted' ? (
+                          {latest.status === 'expired' ? (
+                            <Badge className="rounded-full bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+                              <TimerOff /> Vaqt tugadi
+                            </Badge>
+                          ) : latest.status === 'submitted' ? (
                             <Badge variant="secondary">Tekshirilmoqda</Badge>
                           ) : (
                             <Badge

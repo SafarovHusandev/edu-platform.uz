@@ -13,6 +13,7 @@ import {
   Loader2,
   PartyPopper,
   Star,
+  TimerOff,
   Trophy,
   XCircle,
 } from 'lucide-react';
@@ -28,7 +29,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { useQuiz, useStartAttempt, useSubmitAttempt, useMyAttempts } from '@/hooks/use-quizzes';
+import {
+  isAttemptExpiredError,
+  useQuiz,
+  useStartAttempt,
+  useSubmitAttempt,
+  useMyAttempts,
+} from '@/hooks/use-quizzes';
 import { useAuthStore } from '@/store/auth-store';
 import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -53,7 +60,11 @@ const LIVE_QUESTION_TYPE_LABELS: Record<string, string> = {
 export default function TakeQuizPage({ params }: PageProps) {
   const { id } = use(params);
   const { data: quiz, isLoading } = useQuiz(id);
-  const { data: attemptsData, isLoading: attemptsLoading } = useMyAttempts(id);
+  const {
+    data: attemptsData,
+    isLoading: attemptsLoading,
+    isFetching: attemptsFetching,
+  } = useMyAttempts(id);
   const startAttempt = useStartAttempt();
   const submitAttempt = useSubmitAttempt();
   const user = useAuthStore((s) => s.user);
@@ -67,6 +78,7 @@ export default function TakeQuizPage({ params }: PageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [result, setResult] = useState<Attempt | null>(null);
   const [pendingReview, setPendingReview] = useState<Attempt | null>(null);
+  const [expiredMessage, setExpiredMessage] = useState<string | null>(null);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
 
@@ -76,9 +88,20 @@ export default function TakeQuizPage({ params }: PageProps) {
   // Serverda tugallanmagan (in_progress) urinish bo'lsa — davom ettirish uchun
   // render vaqtida hisoblanadi (sahifa qayta yuklanganda ham to'g'ri ishlaydi)
   const inProgressFromServer = attempts?.find((a) => a.status === 'in_progress') ?? null;
-  const effectiveAttempt = result || pendingReview ? null : (activeAttempt ?? inProgressFromServer);
+  const effectiveAttempt =
+    result || pendingReview || expiredMessage ? null : (activeAttempt ?? inProgressFromServer);
 
-  const timeLimit = quiz?.timeLimit;
+  const myTargetGrade = user?.grade?.number
+    ? quiz?.targetGrades.find(
+        (tg) =>
+          tg.number === user.grade!.number && (!tg.letter || tg.letter === user.grade!.letter)
+      )
+    : undefined;
+
+  // Backend submit paytida aynan shu limit bo'yicha tekshiradi (sinf + tarif
+  // hisobga olingan) — taymer undan uzun bo'lsa, urinish "expired" bo'lib qoladi
+  const timeLimit =
+    myTargetGrade?.effectiveTimeLimit ?? myTargetGrade?.timeLimit ?? quiz?.timeLimit;
 
   // Таймер: startedAt + timeLimit asosida, vaqt tugaganda avtomatik submit
   useEffect(() => {
@@ -108,16 +131,14 @@ export default function TakeQuizPage({ params }: PageProps) {
 
   const questions = quiz.questions ?? [];
   const pastAttempts = attempts?.filter((a) => a.status !== 'in_progress') ?? [];
+  const lastAttempt = pastAttempts.reduce<Attempt | undefined>(
+    (latest, a) => ((a.attemptNumber ?? 0) > (latest?.attemptNumber ?? 0) ? a : latest),
+    undefined
+  );
 
   // my-attempts javobidagi maxAttempts allaqachon shu student uchun to'g'ri
   // hisoblangan (sinfi + tarif chegarasi) — shuni ko'rsatamiz. "Standart tarif"
   // izohini aniqlash uchun esa o'z sinfiga mos targetGrades yozuvi kerak.
-  const myTargetGrade = user?.grade?.number
-    ? quiz.targetGrades.find(
-        (tg) =>
-          tg.number === user.grade!.number && (!tg.letter || tg.letter === user.grade!.letter)
-      )
-    : undefined;
   const displayedMaxAttempts = attemptsData?.maxAttempts ?? quiz.maxAttempts;
   const configuredAttempts = myTargetGrade?.maxAttempts ?? quiz.maxAttempts;
   const isCappedByStandardTarif =
@@ -133,6 +154,7 @@ export default function TakeQuizPage({ params }: PageProps) {
         setCurrentIndex(0);
         setResult(null);
         setPendingReview(null);
+        setExpiredMessage(null);
       },
       onError: (error) => {
         if (error instanceof ApiError && error.message.includes("sinfingiz uchun mo'ljallanmagan")) {
@@ -165,6 +187,12 @@ export default function TakeQuizPage({ params }: PageProps) {
             setResult(attempt);
           } else {
             setPendingReview(attempt);
+          }
+        },
+        onError: (error) => {
+          if (isAttemptExpiredError(error)) {
+            setActiveAttempt(null);
+            setExpiredMessage(error.message);
           }
         },
       }
@@ -221,6 +249,46 @@ export default function TakeQuizPage({ params }: PageProps) {
     );
   }
 
+  if (expiredMessage) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 pt-4 text-center">
+            <span className="flex size-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <TimerOff className="size-8" />
+            </span>
+            <h1 className="font-heading text-2xl font-semibold">Vaqtingiz tugadi</h1>
+            <p className="text-muted-foreground">
+              Ajratilgan vaqt ichida yakunlanmagani sababli bu urinish bekor qilindi va urinishlar
+              soniga qo&apos;shildi.
+            </p>
+            <p className="text-xs text-muted-foreground">{expiredMessage}</p>
+            {!attemptsFetching && (
+              <p className="text-sm text-muted-foreground">
+                {attemptsLeft > 0 ? (
+                  <>
+                    Qolgan urinishlar:{' '}
+                    <span className="font-semibold text-foreground">{attemptsLeft}</span>
+                  </>
+                ) : (
+                  <span className="font-medium text-destructive">Urinishlar tugadi</span>
+                )}
+              </p>
+            )}
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" render={<Link href="/student/quizzes" />}>
+                Testlarga qaytish
+              </Button>
+              {!attemptsFetching && attemptsLeft > 0 && (
+                <Button onClick={() => setExpiredMessage(null)}>Qayta urinish</Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (pendingReview) {
     return (
       <div className="mx-auto max-w-xl">
@@ -257,9 +325,7 @@ export default function TakeQuizPage({ params }: PageProps) {
     const unansweredCount = questions.length - answeredCount;
     const currentQuestion = questions[Math.min(currentIndex, questions.length - 1)];
     const isLastQuestion = currentIndex >= questions.length - 1;
-    const typeLabel = currentQuestion
-      ? LIVE_QUESTION_TYPE_LABELS[currentQuestion.type]
-      : undefined;
+    const typeLabel = currentQuestion ? LIVE_QUESTION_TYPE_LABELS[currentQuestion.type] : undefined;
 
     return (
       <div className="-m-4 flex min-h-[calc(100vh-64px)] flex-col sm:-m-6 lg:-m-8">
@@ -435,8 +501,7 @@ export default function TakeQuizPage({ params }: PageProps) {
             </div>
             <div className="mt-4 space-y-1.5 border-t border-border/70 pt-3 text-xs text-muted-foreground">
               <p className="flex items-center gap-2">
-                <span className="size-2.5 rounded-sm bg-success" /> Javob berilgan ·{' '}
-                {answeredCount}
+                <span className="size-2.5 rounded-sm bg-success" /> Javob berilgan · {answeredCount}
               </p>
               <p className="flex items-center gap-2">
                 <span className="size-2.5 rounded-sm border border-border" /> Javobsiz ·{' '}
@@ -449,9 +514,7 @@ export default function TakeQuizPage({ params }: PageProps) {
     );
   }
 
-  const maxReward = Math.round(
-    QUIZ_MAX_REWARD * (isPremium ? PREMIUM_DIAMOND_MULTIPLIER : 1)
-  );
+  const maxReward = Math.round(QUIZ_MAX_REWARD * (isPremium ? PREMIUM_DIAMOND_MULTIPLIER : 1));
   const fullTimeLimit = myTargetGrade?.timeLimit ?? quiz.timeLimit;
 
   return (
@@ -472,9 +535,7 @@ export default function TakeQuizPage({ params }: PageProps) {
         <div className="space-y-6">
           <div>
             <h1 className="font-heading text-3xl font-bold tracking-tight">{quiz.title}</h1>
-            {quiz.description && (
-              <p className="mt-2 text-muted-foreground">{quiz.description}</p>
-            )}
+            {quiz.description && <p className="mt-2 text-muted-foreground">{quiz.description}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -487,7 +548,7 @@ export default function TakeQuizPage({ params }: PageProps) {
             <div className="rounded-xl border border-border/70 bg-card p-4">
               <p className="text-xs text-muted-foreground">Vaqt</p>
               <p className="mt-1 text-xl font-bold text-foreground">
-                {quiz.timeLimit ? `${quiz.timeLimit} daq` : 'Cheksiz'}
+                {timeLimit ? `${timeLimit} daq` : 'Cheksiz'}
               </p>
             </div>
             <div className="rounded-xl border border-border/70 bg-card p-4">
@@ -527,7 +588,11 @@ export default function TakeQuizPage({ params }: PageProps) {
                           <span>{formatDuration(attempt.durationSeconds)}</span>
                         )}
                       </div>
-                      {attempt.status === 'submitted' ? (
+                      {attempt.status === 'expired' ? (
+                        <Badge className="gap-1.5 rounded-full bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+                          <TimerOff className="size-3.5" /> Vaqt tugadi
+                        </Badge>
+                      ) : attempt.status === 'submitted' ? (
                         <Badge variant="secondary" className="gap-1.5">
                           <Hourglass className="size-3.5" /> Tekshirilmoqda
                         </Badge>
@@ -563,9 +628,7 @@ export default function TakeQuizPage({ params }: PageProps) {
             </p>
             <p className="flex items-baseline gap-1.5">
               <span className="text-4xl font-bold text-foreground">{attemptsLeft}</span>
-              <span className="text-sm text-muted-foreground">
-                / {displayedMaxAttempts} qoldi
-              </span>
+              <span className="text-sm text-muted-foreground">/ {displayedMaxAttempts} qoldi</span>
             </p>
 
             {startError && (
@@ -602,15 +665,18 @@ export default function TakeQuizPage({ params }: PageProps) {
                     {maxReward} diamond olishingiz mumkin (natijangizga qarab)
                   </span>
                 ) : (
-                  <>Bu test uchun maksimal {maxReward} diamond olishingiz mumkin (natijangizga qarab)</>
+                  <>
+                    Bu test uchun maksimal {maxReward} diamond olishingiz mumkin (natijangizga
+                    qarab)
+                  </>
                 )}
               </p>
             )}
 
             {isCappedByStandardTarif && (
               <div className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-2.5 text-xs text-gold-foreground">
-                <span className="font-semibold">Premium</span> bilan {configuredAttempts} ta
-                urinish{fullTimeLimit ? ` va ${fullTimeLimit} daqiqa vaqt` : ''}
+                <span className="font-semibold">Premium</span> bilan {configuredAttempts} ta urinish
+                {fullTimeLimit ? ` va ${fullTimeLimit} daqiqa vaqt` : ''}
               </div>
             )}
 
@@ -625,7 +691,7 @@ export default function TakeQuizPage({ params }: PageProps) {
                   {startAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
                   Testni boshlash
                 </Button>
-                {quiz.timeLimit != null && (
+                {timeLimit != null && (
                   <p className="text-center text-xs text-muted-foreground">
                     Boshlagach taymer to&apos;xtamaydi
                   </p>
@@ -634,6 +700,12 @@ export default function TakeQuizPage({ params }: PageProps) {
             ) : (
               <div className="flex flex-col items-center gap-1.5">
                 <Badge variant="destructive">Urinishlar tugadi</Badge>
+                {lastAttempt?.status === 'expired' && (
+                  <p className="flex items-center gap-1 text-center text-xs text-muted-foreground">
+                    <TimerOff className="size-3.5 shrink-0" /> Oxirgi urinish vaqt tugashi sababli
+                    bekor qilindi
+                  </p>
+                )}
                 {isCappedByStandardTarif && (
                   <p className="text-center text-xs text-muted-foreground">
                     Ko&apos;proq urinish uchun o&apos;qituvchi premium tarifga o&apos;tishi kerak

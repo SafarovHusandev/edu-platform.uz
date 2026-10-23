@@ -194,7 +194,7 @@ export interface EvaluatedAnswer {
   feedback?: string | null
 }
 
-export type AttemptStatus = "in_progress" | "submitted" | "reviewed"
+export type AttemptStatus = "in_progress" | "submitted" | "reviewed" | "expired"
 
 export interface Attempt {
   _id: string

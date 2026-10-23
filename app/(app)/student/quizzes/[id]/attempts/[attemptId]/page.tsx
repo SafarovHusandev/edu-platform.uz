@@ -9,6 +9,7 @@ import {
   Hourglass,
   PartyPopper,
   Sparkles,
+  TimerOff,
   Trophy,
   XCircle,
 } from 'lucide-react';
@@ -70,7 +71,22 @@ export default function QuizAttemptResultPage({ params }: PageProps) {
 
       <Card className="shadow-sm ring-1 ring-border/60">
         <CardContent className="flex flex-col items-center gap-4 pt-5 text-center sm:pt-6">
-          {attempt.status === 'submitted' ? (
+          {attempt.status === 'expired' ? (
+            <>
+              <span className="flex size-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-sm ring-1 ring-destructive/20">
+                <TimerOff className="size-7" />
+              </span>
+              <div className="space-y-2">
+                <h1 className="font-heading text-2xl font-semibold sm:text-3xl">{quiz.title}</h1>
+                <p className="text-base text-muted-foreground sm:text-lg">
+                  Ajratilgan vaqt ichida yakunlanmagani sababli bu urinish bekor qilindi.
+                </p>
+              </div>
+              <Badge variant="destructive" className="px-3 py-1.5 text-sm">
+                <TimerOff className="size-3.5" /> Vaqt tugadi
+              </Badge>
+            </>
+          ) : attempt.status === 'submitted' ? (
             <>
               <span className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10">
                 <Hourglass className="size-7" />
@@ -134,116 +150,119 @@ export default function QuizAttemptResultPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        {questions.map((question, idx) => {
-          const answer = answerByQuestion.get(question._id);
-          const isPendingReview = question.type === 'open_ended' && attempt.status === 'submitted';
-          return (
-            <Card key={question._id} className="shadow-sm ring-1 ring-border/60">
-              <CardContent className="flex items-start gap-3 pt-3 sm:gap-4 sm:pt-4">
-                <span
-                  className={cn(
-                    'flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:size-10',
-                    isPendingReview
-                      ? 'bg-muted text-muted-foreground'
-                      : answer?.isCorrect
-                        ? 'bg-success/15 text-success'
-                        : 'bg-destructive/10 text-destructive'
-                  )}
-                >
-                  {isPendingReview ? (
-                    <Hourglass className="size-4" />
-                  ) : answer?.isCorrect ? (
-                    <CheckCircle2 className="size-4" />
-                  ) : (
-                    <XCircle className="size-4" />
-                  )}
-                </span>
-                <div className="flex-1">
-                  <p className="text-base font-medium leading-relaxed sm:text-lg">
-                    {idx + 1}. {question.text}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
-                    <Badge variant="outline">{TYPE_LABELS[question.type]}</Badge>
-                    {isPendingReview ? (
-                      <span className="flex items-center gap-1">
-                        <Hourglass className="size-3" /> Tekshirilmoqda
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Sparkles className="size-3" /> {answer?.pointsEarned ?? 0} /{' '}
-                        {question.points} ball
-                      </span>
+      {attempt.status !== 'expired' && (
+        <div className="space-y-3">
+          {questions.map((question, idx) => {
+            const answer = answerByQuestion.get(question._id);
+            const isPendingReview =
+              question.type === 'open_ended' && attempt.status === 'submitted';
+            return (
+              <Card key={question._id} className="shadow-sm ring-1 ring-border/60">
+                <CardContent className="flex items-start gap-3 pt-3 sm:gap-4 sm:pt-4">
+                  <span
+                    className={cn(
+                      'flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:size-10',
+                      isPendingReview
+                        ? 'bg-muted text-muted-foreground'
+                        : answer?.isCorrect
+                          ? 'bg-success/15 text-success'
+                          : 'bg-destructive/10 text-destructive'
                     )}
-                  </div>
-
-                  {question.type === 'multiple_choice' && question.options && (
-                    <ul className="mt-3 space-y-2 text-sm sm:text-base">
-                      {question.options.map((option, optIdx) => (
-                        <li
-                          key={option.label}
-                          className={cn(
-                            'rounded-md border px-3 py-2',
-                            optIdx === answer?.givenAnswer
-                              ? answer?.isCorrect
-                                ? 'border-success bg-success/10 font-medium text-success'
-                                : 'border-destructive bg-destructive/10 font-medium text-destructive'
-                              : 'border-transparent text-muted-foreground'
-                          )}
-                        >
-                          {option.label}. {option.text}
-                          {optIdx === answer?.givenAnswer && (
-                            <span className="ml-1.5 text-[11px] sm:text-xs">
-                              (sizning javobingiz)
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {question.type === 'true_false' && (
-                    <div className="mt-3 flex flex-wrap gap-2 text-sm sm:text-base">
-                      {[true, false].map((value) => (
-                        <span
-                          key={String(value)}
-                          className={cn(
-                            'rounded-md border px-3 py-2',
-                            answer?.givenAnswer === value
-                              ? answer?.isCorrect
-                                ? 'border-success bg-success/10 font-medium text-success'
-                                : 'border-destructive bg-destructive/10 font-medium text-destructive'
-                              : 'border-border text-muted-foreground'
-                          )}
-                        >
-                          {value ? "To'g'ri" : "Noto'g'ri"}
+                  >
+                    {isPendingReview ? (
+                      <Hourglass className="size-4" />
+                    ) : answer?.isCorrect ? (
+                      <CheckCircle2 className="size-4" />
+                    ) : (
+                      <XCircle className="size-4" />
+                    )}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-base font-medium leading-relaxed sm:text-lg">
+                      {idx + 1}. {question.text}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:text-sm">
+                      <Badge variant="outline">{TYPE_LABELS[question.type]}</Badge>
+                      {isPendingReview ? (
+                        <span className="flex items-center gap-1">
+                          <Hourglass className="size-3" /> Tekshirilmoqda
                         </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {question.type === 'open_ended' && (
-                    <div className="mt-3 space-y-2">
-                      <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground sm:text-base">
-                        <span className="font-medium text-foreground">Sizning javobingiz: </span>
-                        {typeof answer?.givenAnswer === 'string' && answer.givenAnswer
-                          ? answer.givenAnswer
-                          : '—'}
-                      </p>
-                      {answer?.feedback && (
-                        <p className="rounded-md bg-primary/5 p-3 text-sm text-muted-foreground sm:text-base">
-                          <span className="font-medium text-foreground">Ustoz izohi: </span>
-                          {answer.feedback}
-                        </p>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="size-3" /> {answer?.pointsEarned ?? 0} /{' '}
+                          {question.points} ball
+                        </span>
                       )}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+
+                    {question.type === 'multiple_choice' && question.options && (
+                      <ul className="mt-3 space-y-2 text-sm sm:text-base">
+                        {question.options.map((option, optIdx) => (
+                          <li
+                            key={option.label}
+                            className={cn(
+                              'rounded-md border px-3 py-2',
+                              optIdx === answer?.givenAnswer
+                                ? answer?.isCorrect
+                                  ? 'border-success bg-success/10 font-medium text-success'
+                                  : 'border-destructive bg-destructive/10 font-medium text-destructive'
+                                : 'border-transparent text-muted-foreground'
+                            )}
+                          >
+                            {option.label}. {option.text}
+                            {optIdx === answer?.givenAnswer && (
+                              <span className="ml-1.5 text-[11px] sm:text-xs">
+                                (sizning javobingiz)
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {question.type === 'true_false' && (
+                      <div className="mt-3 flex flex-wrap gap-2 text-sm sm:text-base">
+                        {[true, false].map((value) => (
+                          <span
+                            key={String(value)}
+                            className={cn(
+                              'rounded-md border px-3 py-2',
+                              answer?.givenAnswer === value
+                                ? answer?.isCorrect
+                                  ? 'border-success bg-success/10 font-medium text-success'
+                                  : 'border-destructive bg-destructive/10 font-medium text-destructive'
+                                : 'border-border text-muted-foreground'
+                            )}
+                          >
+                            {value ? "To'g'ri" : "Noto'g'ri"}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {question.type === 'open_ended' && (
+                      <div className="mt-3 space-y-2">
+                        <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground sm:text-base">
+                          <span className="font-medium text-foreground">Sizning javobingiz: </span>
+                          {typeof answer?.givenAnswer === 'string' && answer.givenAnswer
+                            ? answer.givenAnswer
+                            : '—'}
+                        </p>
+                        {answer?.feedback && (
+                          <p className="rounded-md bg-primary/5 p-3 text-sm text-muted-foreground sm:text-base">
+                            <span className="font-medium text-foreground">Ustoz izohi: </span>
+                            {answer.feedback}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

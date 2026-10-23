@@ -261,6 +261,15 @@ export function useStartAttempt() {
   });
 }
 
+// Backend vaqt limitini tekshiradi: muddati o'tgan urinish submit qilinsa 400
+// "Vaqt tugagan (X daqiqa) — bu urinish bekor qilindi" qaytadi va urinish
+// "expired" holatiga o'tadi.
+export function isAttemptExpiredError(error: unknown) {
+  return error instanceof ApiError && error.status === 400 && error.message.includes('Vaqt tugagan');
+}
+
+// Vaqt tugash xatosi chaqiruvchi komponentda alohida ekran sifatida
+// ko'rsatiladi — shu sabab bu yerda toast chiqarilmaydi.
 export function useSubmitAttempt() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -275,7 +284,13 @@ export function useSubmitAttempt() {
       await refreshCurrentUser();
       toast.success('Test yakunlandi');
     },
-    onError: (error) => toast.error(errorMessage(error, 'Testni yuborishda xatolik')),
+    onError: (error) => {
+      if (isAttemptExpiredError(error)) {
+        queryClient.invalidateQueries({ queryKey: ['my-attempts'] });
+        return;
+      }
+      toast.error(errorMessage(error, 'Testni yuborishda xatolik'));
+    },
   });
 }
 

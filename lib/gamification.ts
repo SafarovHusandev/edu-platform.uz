@@ -11,7 +11,7 @@ export const QUIZ_MAX_REWARD = 10
 export const PREMIUM_DIAMOND_MULTIPLIER = 1.5
 
 export function calculateQuizDiamonds(attempt: Attempt, isPremium = false) {
-  if (attempt.attemptNumber !== 1) return 0
+  if (attempt.attemptNumber !== 1 || attempt.status === 'expired') return 0
   const base = Math.round(((attempt.scorePercent ?? 0) / 100) * QUIZ_MAX_REWARD * 100) / 100
   return isPremium ? Math.round(base * PREMIUM_DIAMOND_MULTIPLIER * 100) / 100 : base
 }

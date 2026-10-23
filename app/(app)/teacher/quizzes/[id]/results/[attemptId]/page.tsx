@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Hourglass,
   Sparkles,
+  TimerOff,
   Trophy,
   XCircle,
 } from 'lucide-react';
@@ -104,6 +105,7 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
   const questions = quiz.questions ?? [];
   const answerByQuestion = new Map(attempt.answers.map((a) => [a.question, a]));
   const isPending = attempt.status === 'submitted';
+  const isExpired = attempt.status === 'expired';
 
   const studentId = typeof attempt.student === 'object' ? attempt.student._id : attempt.student;
   const studentAttempts = (attempts ?? [])
@@ -151,7 +153,7 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
             'flex flex-col items-center gap-3 px-6 pt-8 pb-6 text-center',
             isPending
               ? 'bg-linear-to-b from-muted/60 to-transparent'
-              : attempt.passed
+              : attempt.passed && !isExpired
                 ? 'bg-linear-to-b from-emerald-500/10 to-transparent'
                 : 'bg-linear-to-b from-destructive/10 to-transparent'
           )}
@@ -169,12 +171,16 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
               'rounded-full',
               isPending
                 ? 'bg-muted text-muted-foreground'
-                : attempt.passed
+                : attempt.passed && !isExpired
                   ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-400'
                   : 'bg-destructive/10 text-destructive ring-1 ring-destructive/20'
             )}
           >
-            {isPending ? (
+            {isExpired ? (
+              <>
+                <TimerOff className="size-3.5" /> Vaqt tugadi
+              </>
+            ) : isPending ? (
               <>
                 <Hourglass className="size-3.5" /> Tekshirilmoqda
               </>
@@ -191,7 +197,12 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
         </div>
 
         <CardContent className="space-y-4 px-6 pb-6">
-          {isPending ? (
+          {isExpired ? (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-center text-sm text-destructive">
+              O&apos;quvchi testni ajratilgan vaqt ichida yakunlamadi — urinish bekor qilindi va
+              urinishlar soniga qo&apos;shildi.
+            </p>
+          ) : isPending ? (
             <div className="space-y-3 text-center">
               <p className="text-sm text-muted-foreground">
                 Ochiq savollar hali baholanmagan. Yakuniy natijani ko&apos;rish uchun avval
@@ -257,9 +268,11 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
                     key={a._id}
                     href={`/teacher/quizzes/${id}/results/${a._id}`}
                     title={
-                      a.status === 'submitted'
-                        ? `${a.attemptNumber ?? idx + 1}-urinish — tekshirilmoqda`
-                        : `${a.attemptNumber ?? idx + 1}-urinish — ${a.scorePercent ?? 0}%`
+                      a.status === 'expired'
+                        ? `${a.attemptNumber ?? idx + 1}-urinish — vaqt tugadi`
+                        : a.status === 'submitted'
+                          ? `${a.attemptNumber ?? idx + 1}-urinish — tekshirilmoqda`
+                          : `${a.attemptNumber ?? idx + 1}-urinish — ${a.scorePercent ?? 0}%`
                     }
                     className={cn(
                       'inline-flex size-8 shrink-0 items-center justify-center  text-md px-10 rounded-md font-semibold transition-all',
@@ -267,7 +280,7 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
                         ? 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/30 ring-offset-2 ring-offset-background'
                         : a.status === 'submitted'
                           ? 'bg-muted text-muted-foreground hover:bg-muted/70'
-                          : a.passed
+                          : a.passed && a.status !== 'expired'
                             ? 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400'
                             : 'bg-destructive/10 text-destructive hover:bg-destructive/20'
                     )}

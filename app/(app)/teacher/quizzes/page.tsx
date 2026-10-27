@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   CircleDashed,
   Crown,
+  Inbox,
   Search,
+  Share2,
   SlidersHorizontal,
   Star,
   Target,
@@ -42,7 +44,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
-import { useDeleteQuiz, useQuizzesMy } from '@/hooks/use-quizzes';
+import { useDeleteQuiz, useQuizShares, useQuizzesMy } from '@/hooks/use-quizzes';
+import { QuizSharesDialog, ShareQuizDialog } from '@/components/quizzes/quiz-share-dialogs';
 import { useDismissedBanner } from '@/hooks/use-dismissed-banner';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -67,6 +70,10 @@ export default function TeacherQuizzesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
+  const [sharingQuiz, setSharingQuiz] = useState<Quiz | null>(null);
+  const [sharesOpen, setSharesOpen] = useState(false);
+  const { data: pendingIncoming } = useQuizShares('incoming', 'pending');
+  const pendingCount = pendingIncoming?.length ?? 0;
 
   const anyCapped = data?.items.some(isQuizCapped) ?? false;
 
@@ -112,14 +119,47 @@ export default function TeacherQuizzesPage() {
         title="Testlar"
         description="Testlaringizni yarating va boshqaring"
         actions={
-          <Button
-            render={<Link href="/teacher/quizzes/new" />}
-            className="h-11 text-base font-medium"
-          >
-            <Plus className="size-4" /> Yangi test
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setSharesOpen(true)}
+              className="h-11 text-base font-medium"
+            >
+              <Inbox className="size-4" /> Ulashishlar
+              {pendingCount > 0 && (
+                <Badge className="ml-0.5 rounded-full px-1.5">{pendingCount}</Badge>
+              )}
+            </Button>
+            <Button
+              render={<Link href="/teacher/quizzes/new" />}
+              className="h-11 text-base font-medium"
+            >
+              <Plus className="size-4" /> Yangi test
+            </Button>
+          </div>
         }
       />
+
+      {pendingCount > 0 && (
+        <div className="mb-5 flex flex-col items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Share2 className="size-4.5" />
+            </span>
+            <div>
+              <p className="font-semibold text-foreground">
+                Sizga {pendingCount} ta test ulashildi
+              </p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Qabul qilsangiz, testning nusxasi sizning testlaringizga qo&apos;shiladi.
+              </p>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={() => setSharesOpen(true)}>
+            Ko&apos;rish
+          </Button>
+        </div>
+      )}
 
       {anyCapped && !nudgeDismissed && (
         <div className="mb-5 flex flex-col items-start gap-3 rounded-2xl border border-gold/30 bg-linear-to-r from-gold/15 to-transparent p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -347,6 +387,19 @@ export default function TeacherQuizzesPage() {
                         >
                           <BarChart3 className="size-4" /> Natijalar
                         </Button>
+
+                        {quiz.targetType === 'standalone' && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Ulashish"
+                            title="Ulashish"
+                            onClick={() => setSharingQuiz(quiz)}
+                          >
+                            <Share2 className="size-4" />
+                          </Button>
+                        )}
+
     
                         <AlertDialog>
                           <AlertDialogTrigger
@@ -378,6 +431,9 @@ export default function TeacherQuizzesPage() {
           )}
         </div>
       )}
+
+      <ShareQuizDialog quiz={sharingQuiz} onOpenChange={(open) => !open && setSharingQuiz(null)} />
+      <QuizSharesDialog open={sharesOpen} onOpenChange={setSharesOpen} />
     </div>
   );
 }

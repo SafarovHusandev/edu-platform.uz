@@ -16,6 +16,7 @@ import {
   Send,
   ShieldCheck,
   Unlink,
+  UserRound,
   Wallet,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -51,6 +52,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuthStore } from '@/store/auth-store';
 import {
@@ -79,8 +87,16 @@ const setPasswordSchema = z
     path: ['confirmPassword'],
   });
 
-const profileSchema = z.object({
-  name: z.string().min(2, { error: "Ism kamida 2 ta belgidan iborat bo'lsin" }),
+const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
+const GRADE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+const nameSchema = z.object({
+  name: z.string().trim().min(2, { error: "Ism kamida 2 ta belgidan iborat bo'lsin" }),
+});
+
+const gradeSchema = z.object({
+  gradeNumber: z.string().min(1, { error: 'Sinf raqamini tanlang' }),
+  gradeLetter: z.string().min(1, { error: 'Guruh harfini tanlang' }),
 });
 
 const passwordSchema = z
@@ -103,9 +119,19 @@ export default function ProfilePage() {
   const linkTelegram = useLinkTelegram();
   const unlinkTelegram = useUnlinkTelegram();
 
-  const profileForm = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
+  // Backend PATCH /users/me'da o'quvchi yuborgan "name"ni jimgina e'tiborsiz
+  // qoldiradi — shu sabab o'quvchi faqat sinfini, qolgan rollar esa ismini tahrirlaydi.
+  const nameForm = useForm<z.infer<typeof nameSchema>>({
+    resolver: zodResolver(nameSchema),
     values: { name: user?.name ?? '' },
+  });
+
+  const gradeForm = useForm<z.infer<typeof gradeSchema>>({
+    resolver: zodResolver(gradeSchema),
+    values: {
+      gradeNumber: user?.grade?.number != null ? String(user.grade.number) : '',
+      gradeLetter: user?.grade?.letter ?? '',
+    },
   });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -271,38 +297,131 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* <Card>
+      <Card className="rounded-2xl shadow-sm ring-1 ring-border/60">
         <CardHeader>
-          <CardTitle className="text-base">Shaxsiy ma&apos;lumotlar</CardTitle>
-          <CardDescription>Ismingizni yangilang</CardDescription>
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              <UserRound className="size-5" />
+            </span>
+            <div>
+              <CardTitle className="text-lg">Shaxsiy ma&apos;lumotlar</CardTitle>
+              <CardDescription className="text-sm">
+                {user.role === 'student'
+                  ? "Ismingizni faqat o'qituvchi yoki administrator o'zgartira oladi"
+                  : 'Ismingizni yangilang'}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <Form {...profileForm}>
-            <form
-              onSubmit={profileForm.handleSubmit((values) => updateProfile.mutate(values))}
-              className="flex flex-col gap-4 sm:flex-row sm:items-end"
-            >
-              <FormField
-                control={profileForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>To&apos;liq ism</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+          {user.role === 'student' ? (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">To&apos;liq ism</p>
+                <Input value={user.name} readOnly disabled />
+              </div>
+              <Form {...gradeForm}>
+                <form
+                  onSubmit={gradeForm.handleSubmit((values) =>
+                    updateProfile.mutate({
+                      grade: { number: Number(values.gradeNumber), letter: values.gradeLetter },
+                    })
+                  )}
+                  className="flex flex-col gap-4 sm:flex-row sm:items-start"
+                >
+                  <FormField
+                    control={gradeForm.control}
+                    name="gradeNumber"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel>Sinf raqami</FormLabel>
+                        <Select value={field.value} onValueChange={(v) => field.onChange(v ?? '')}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Sinfni tanlang" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {GRADE_NUMBERS.map((n) => (
+                              <SelectItem key={n} value={n}>
+                                {n}-sinf
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={gradeForm.control}
+                    name="gradeLetter"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormLabel>Guruh harfi</FormLabel>
+                        <Select value={field.value} onValueChange={(v) => field.onChange(v ?? '')}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Harf" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {GRADE_LETTERS.map((l) => (
+                              <SelectItem key={l} value={l}>
+                                &quot;{l}&quot; guruhi
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="sm:mt-6"
+                    disabled={updateProfile.isPending || !gradeForm.formState.isDirty}
+                  >
+                    {updateProfile.isPending && <Loader2 className="size-4 animate-spin" />}
+                    Saqlash
+                  </Button>
+                </form>
+              </Form>
+            </div>
+          ) : (
+            <Form {...nameForm}>
+              <form
+                onSubmit={nameForm.handleSubmit((values) =>
+                  updateProfile.mutate({ name: values.name })
                 )}
-              />
-              <Button type="submit" disabled={updateProfile.isPending}>
-                {updateProfile.isPending && <Loader2 className="size-4 animate-spin" />}
-                Saqlash
-              </Button>
-            </form>
-          </Form>
+                className="flex flex-col gap-4 sm:flex-row sm:items-start"
+              >
+                <FormField
+                  control={nameForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>To&apos;liq ism</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="sm:mt-6"
+                  disabled={updateProfile.isPending || !nameForm.formState.isDirty}
+                >
+                  {updateProfile.isPending && <Loader2 className="size-4 animate-spin" />}
+                  Saqlash
+                </Button>
+              </form>
+            </Form>
+          )}
         </CardContent>
-      </Card> */}
+      </Card>
 
       <Card className="rounded-2xl shadow-sm ring-1 ring-border/60">
         <CardHeader>

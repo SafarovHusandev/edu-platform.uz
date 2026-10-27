@@ -212,7 +212,22 @@ export interface Attempt {
   durationSeconds?: number | null
 }
 
-export type PaymentPurpose = "wallet" | "course" | "premium" | "donation"
+export type QuizShareStatus = "pending" | "accepted" | "rejected"
+
+// O'qituvchilar orasida test ulashish so'rovi. Qabul qilinganda qabul
+// qiluvchi uchun testning nusxasi (clonedQuiz) yaratiladi.
+export interface QuizShare {
+  _id: string
+  quiz: Pick<Quiz, "_id" | "title"> | string | null
+  fromTeacher: Pick<User, "_id" | "name" | "phone"> | string | null
+  toTeacher: Pick<User, "_id" | "name" | "phone"> | string | null
+  status: QuizShareStatus
+  clonedQuiz?: Pick<Quiz, "_id" | "title"> | string | null
+  createdAt?: string
+  respondedAt?: string | null
+}
+
+export type PaymentPurpose ="wallet" | "course" | "premium" | "donation"
 export type PaymentStatus = "draft" | "progress" | "billing" | "hold" | "success" | "error" | "revert"
 
 export interface Invoice {

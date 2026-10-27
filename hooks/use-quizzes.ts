@@ -4,7 +4,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api-client';
 import { refreshCurrentUser } from '@/hooks/use-auth';
-import type { Attempt, AttemptAnswer, Paginated, Question, Quiz } from '@/types';
+import type {
+  Attempt,
+  AttemptAnswer,
+  Paginated,
+  Question,
+  Quiz,
+  QuizShare,
+  QuizShareStatus,
+} from '@/types';
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) return error.message;
@@ -351,5 +359,90 @@ export function useReviewOpenEnded(quizId: string) {
       toast.success('Baholandi');
     },
     onError: (error) => toast.error(errorMessage(error, 'Baholashda xatolik')),
+  });
+}
+
+// Bitta urinishni savol-javob tafsiloti bilan olish (student o'zi yoki
+// teacher/admin/superadmin).
+export function useAttempt(attemptId: string | undefined) {
+  return useQuery({
+    queryKey: ['attempt', attemptId],
+    queryFn: async () => {
+      const res = await api.get<{ attempt: Attempt } | Attempt>(`/quizzes/attempts/${attemptId}`);
+      return 'attempt' in res ? res.attempt : res;
+    },
+    enabled: !!attemptId,
+  });
+}
+
+// Faqat superadmin: texnik xato bo'lgan urinishni o'chiradi. Student qayta urina
+// oladi, berilgan diamond esa backend tomonidan avtomatik qaytarib olinadi.
+export function useDeleteAttempt(quizId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attemptId: string) => api.delete(`/quizzes/attempts/${attemptId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quiz-results', quizId] });
+      toast.success("Urinish o'chirildi");
+    },
+    onError: (error) => toast.error(errorMessage(error, "Urinishni o'chirishda xatolik")),
+  });
+}
+
+// --- Testlarni o'qituvchilar orasida ulashish (nusxa orqali) ---
+
+export function useQuizShares(direction: 'incoming' | 'outgoing', status?: QuizShareStatus) {
+  return useQuery({
+    queryKey: ['quiz-shares', direction, status ?? 'all'],
+    queryFn: async () => {
+      // incoming'da fromTeacher, outgoing'da toTeacher populatsiya qilingan
+      const res = await api.get<{ shares: QuizShare[] }>(
+        `/quizzes/shares/${direction}`,
+        status ? { status } : undefined
+      );
+      return res.shares;
+    },
+  });
+}
+
+export function useShareQuiz() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quizId, toTeacherPhone }: { quizId: string; toTeacherPhone: string }) =>
+      // Javobdagi share populatsiya qilinmagan — ko'rsatish uchun ro'yxat qayta so'raladi
+      api.post(`/quizzes/${quizId}/share`, { toTeacherPhone }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quiz-shares', 'outgoing'] });
+      toast.success('Test ulashildi — qabul qiluvchi tasdiqlashi kutilmoqda');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Testni ulashishda xatolik')),
+  });
+}
+
+export function useAcceptQuizShare() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (shareId: string) => {
+      const res = await api.patch<{ clonedQuiz: Quiz }>(`/quizzes/shares/${shareId}/accept`);
+      return res.clonedQuiz;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quiz-shares'] });
+      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
+      toast.success('Test qabul qilindi — endi sinfingizni tanlang');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Qabul qilishda xatolik')),
+  });
+}
+
+export function useRejectQuizShare() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (shareId: string) => api.patch(`/quizzes/shares/${shareId}/reject`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quiz-shares'] });
+      toast.success('Ulashish rad etildi');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Rad etishda xatolik')),
   });
 }

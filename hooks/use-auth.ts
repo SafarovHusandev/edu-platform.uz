@@ -92,6 +92,17 @@ export function useTelegramLogin() {
   });
 }
 
+// Telegram Mini App ichida avtomatik kirish. 404 (botga hali yozilmagan) va
+// 401 (initData eskirgan) holatlari chaqiruvchi komponentda alohida ekran
+// sifatida ko'rsatiladi — shu sabab bu yerda toast chiqarilmaydi.
+export function useTelegramWebAppLogin() {
+  return useMutation({
+    mutationFn: (initData: string) =>
+      api.post<AuthResponse>('/auth/telegram-webapp', { initData }, { skipAuth: true }),
+    onSuccess: (data) => persistSession(data),
+  });
+}
+
 export function useLogout() {
   const router = useRouter();
   const queryClient = useQueryClient();

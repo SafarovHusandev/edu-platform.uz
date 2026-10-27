@@ -20,6 +20,7 @@ import {
   Search,
   SlidersHorizontal,
   TimerOff,
+  Trash2,
   Users,
   X,
   XCircle,
@@ -55,6 +56,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -65,7 +76,13 @@ import {
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonTable } from '@/components/ui/skeleton';
-import { useQuizWithAnswers, useQuizResults, useReviewOpenEnded } from '@/hooks/use-quizzes';
+import {
+  useDeleteAttempt,
+  useQuizWithAnswers,
+  useQuizResults,
+  useReviewOpenEnded,
+} from '@/hooks/use-quizzes';
+import { useAuthStore } from '@/store/auth-store';
 import { formatDateTime, formatDuration, formatTashkentDateTime, initials } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {
@@ -269,6 +286,38 @@ function ReviewDialog({
   );
 }
 
+interface DeleteAttemptDialogProps {
+  attempt: Attempt | null;
+  isPending: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}
+
+// Faqat superadmin: texnik xato bo'lgan urinishni o'chirish
+function DeleteAttemptDialog({ attempt, isPending, onOpenChange, onConfirm }: DeleteAttemptDialogProps) {
+  return (
+    <AlertDialog open={!!attempt} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Urinishni o&apos;chirasizmi?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Bu urinish o&apos;chiriladi, student qayta urinishi mumkin bo&apos;ladi. Agar bu urinish
+            uchun diamond berilgan bo&apos;lsa, u avtomatik qaytarib olinadi. Bu amalni bekor qilib
+            bo&apos;lmaydi.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm} disabled={isPending}>
+            {isPending && <Loader2 className="size-4 animate-spin" />}
+            O&apos;chirish
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 interface SortableHeadProps {
   sortKeyValue: SortKey;
   activeKey: SortKey;
@@ -315,6 +364,9 @@ function ResultsContent({ quizId }: { quizId: string }) {
   const { data: quiz } = useQuizWithAnswers(quizId);
   const { data: attempts, isLoading, isError, refetch } = useQuizResults(quizId);
   const reviewOpenEnded = useReviewOpenEnded(quizId);
+  const deleteAttempt = useDeleteAttempt(quizId);
+  const isSuperadmin = useAuthStore((s) => s.user?.role === 'superadmin');
+  const [deletingAttempt, setDeletingAttempt] = useState<Attempt | null>(null);
 
   const [manualAttemptId, setManualAttemptId] = useState<string | null>(null);
   const [dismissedDeepLink, setDismissedDeepLink] = useState(false);
@@ -816,6 +868,16 @@ function ResultsContent({ quizId }: { quizId: string }) {
                                 Baholash
                               </Button>
                             )}
+                            {isSuperadmin && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => setDeletingAttempt(latest)}
+                                title={`${latest.attemptNumber ?? ''}-urinishni o'chirish`}
+                              >
+                                <Trash2 className="size-4" /> O&apos;chirish
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -906,6 +968,16 @@ function ResultsContent({ quizId }: { quizId: string }) {
           </Button>
         </DialogContent>
       </Dialog>
+
+      <DeleteAttemptDialog
+        attempt={deletingAttempt}
+        isPending={deleteAttempt.isPending}
+        onOpenChange={(open) => !open && setDeletingAttempt(null)}
+        onConfirm={() =>
+          deletingAttempt &&
+          deleteAttempt.mutate(deletingAttempt._id, { onSuccess: () => setDeletingAttempt(null) })
+        }
+      />
 
       {reviewingAttempt && (
         <ReviewDialog

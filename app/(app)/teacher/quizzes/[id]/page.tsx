@@ -20,6 +20,7 @@ import {
   Pencil,
   Plus,
   Repeat,
+  Share2,
   Sparkles,
   Target,
   Trash2,
@@ -97,6 +98,7 @@ import type { Question } from '@/types';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ shared?: string }>;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -117,8 +119,11 @@ const TARGET_LABELS: Record<string, string> = {
   lesson: "Darsga bog'liq",
 };
 
-export default function TeacherQuizDetailPage({ params }: PageProps) {
+export default function TeacherQuizDetailPage({ params, searchParams }: PageProps) {
   const { id } = use(params);
+  // Ulashilgan testni qabul qilgandan so'ng shu sahifaga ?shared=1 bilan
+  // yo'naltiriladi — nusxa nofaol va eski sinflar bilan keladi.
+  const isSharedCopy = use(searchParams).shared === '1';
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isPremium = user?.tarif === 'premium';
@@ -260,7 +265,12 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
         availableFrom: limitAvailability ? tashkentLocalToIso(settingsForm.availableFrom) : null,
         availableUntil: limitAvailability ? tashkentLocalToIso(settingsForm.availableUntil) : null,
       },
-      { onSuccess: () => setSettingsOpen(false) }
+      {
+        onSuccess: () => {
+          setSettingsOpen(false);
+          if (isSharedCopy) router.replace(`/teacher/quizzes/${id}`);
+        },
+      }
     );
   }
 
@@ -324,6 +334,26 @@ export default function TeacherQuizDetailPage({ params }: PageProps) {
           <BarChart3 className="size-4" /> Natijalar
         </Button>
       </div>
+
+      {isSharedCopy && (
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Share2 className="size-4.5" />
+            </span>
+            <div>
+              <p className="font-semibold text-foreground">Bu sizga ulashilgan testning nusxasi</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Test hozircha nofaol va avvalgi o&apos;qituvchining sinflariga biriktirilgan. Avval
+                o&apos;z sinfingizni tanlang, so&apos;ng testni e&apos;lon qiling.
+              </p>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={openSettings}>
+            <Pencil className="size-4" /> Sinflarni tanlash
+          </Button>
+        </div>
+      )}
 
       <Card className="overflow-hidden py-0">
         <div className="bg-linear-to-br from-primary to-primary/70 p-6 text-primary-foreground sm:p-8">

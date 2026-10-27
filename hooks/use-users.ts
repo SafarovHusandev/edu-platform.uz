@@ -206,7 +206,8 @@ export function useDeleteUser() {
 
 export function useUpdateProfile() {
   return useMutation({
-    mutationFn: async (payload: { name?: string }) => {
+    // O'quvchi uchun backend "name"ni e'tiborsiz qoldiradi — faqat "grade" qo'llanadi
+    mutationFn: async (payload: { name?: string; grade?: Grade }) => {
       const res = await api.patch<{ user: User }>("/users/me", payload)
       return res.user
     },
@@ -281,5 +282,24 @@ export function useUploadAvatar() {
       toast.success("Rasm yangilandi")
     },
     onError: (error) => toast.error(errorMessage(error, "Rasm yuklashda xatolik")),
+  })
+}
+
+export type TeacherOption = Pick<User, "_id" | "name" | "phone" | "avatar">
+
+// Test ulashishda qabul qiluvchini tanlash uchun. Backend ism yoki telefon
+// bo'yicha filtrlaydi, so'ragan o'qituvchining o'zini chiqarmaydi, ko'pi bilan 20 ta.
+export function useTeachersSearch(search: string, enabled = true) {
+  return useQuery({
+    queryKey: ["teachers-search", search],
+    queryFn: async () => {
+      const res = await api.get<{ teachers: TeacherOption[] }>(
+        "/users/teachers",
+        search ? { search } : undefined
+      )
+      return res.teachers
+    },
+    enabled,
+    placeholderData: (prev) => prev,
   })
 }

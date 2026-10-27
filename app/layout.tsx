@@ -7,6 +7,8 @@ import { AuthProvider } from '@/providers/auth-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import NextTopLoader from 'nextjs-toploader';
+import Script from 'next/script';
+import { TelegramWebAppGate } from '@/components/auth/telegram-webapp-gate';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -40,6 +42,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {/* Telegram Mini App ichida ochilganda initData va WebApp API'si uchun */}
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -51,6 +55,7 @@ export default function RootLayout({
               <TooltipProvider delay={200}>
                 <NextTopLoader showSpinner={false} />
                 {children}
+                <TelegramWebAppGate />
                 <Toaster position="top-center" richColors closeButton />
               </TooltipProvider>
             </AuthProvider>

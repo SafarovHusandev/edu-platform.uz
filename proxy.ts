@@ -17,6 +17,9 @@ const ROLE_PREFIXES: Record<string, string[]> = {
   "/student/rewards/redemptions": ["student"],
   "/student/rewards": ["student", "teacher"],
   "/student": ["student"],
+  // Admin/superadmin /admin/quizzes'dan test sahifasi va natijalarga o'tadi
+  // (superadmin buzilgan urinishlarni shu yerdan o'chiradi).
+  "/teacher/quizzes": ["teacher", "admin", "superadmin"],
   "/teacher": ["teacher"],
   "/admin": ["admin", "superadmin"],
 }

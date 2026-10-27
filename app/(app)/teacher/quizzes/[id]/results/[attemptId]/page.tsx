@@ -1,14 +1,17 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   Hourglass,
+  Loader2,
   Sparkles,
   TimerOff,
+  Trash2,
   Trophy,
   XCircle,
 } from 'lucide-react';
@@ -16,6 +19,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,7 +39,8 @@ import {
 } from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { useQuizWithAnswers, useQuizResults } from '@/hooks/use-quizzes';
+import { useDeleteAttempt, useQuizWithAnswers, useQuizResults } from '@/hooks/use-quizzes';
+import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
 import { formatDateTime, formatDuration, formatTashkentDateTime, initials } from '@/lib/format';
 
@@ -54,6 +68,10 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
     isError: attemptsError,
     refetch: refetchAttempts,
   } = useQuizResults(id);
+  const router = useRouter();
+  const deleteAttempt = useDeleteAttempt(id);
+  const isSuperadmin = useAuthStore((s) => s.user?.role === 'superadmin');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (quizLoading || attemptsLoading) {
     return <div className="h-96 animate-pulse rounded-md bg-muted" />;
@@ -146,6 +164,51 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
       >
         <ArrowLeft className="size-4" /> Natijalarga qaytish
       </Button>
+
+      {isSuperadmin && (
+        <div className="flex flex-col items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Urinishda texnik xato bo&apos;lgan bo&apos;lsa, uni o&apos;chirishingiz mumkin — student
+            qayta urina oladi.
+          </p>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="shrink-0"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="size-4" /> Urinishni o&apos;chirish
+          </Button>
+        </div>
+      )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Urinishni o&apos;chirasizmi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu urinish o&apos;chiriladi, student qayta urinishi mumkin bo&apos;ladi. Agar bu
+              urinish uchun diamond berilgan bo&apos;lsa, u avtomatik qaytarib olinadi. Bu amalni
+              bekor qilib bo&apos;lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteAttempt.isPending}
+              onClick={() =>
+                deleteAttempt.mutate(attemptId, {
+                  onSuccess: () => router.replace(`/teacher/quizzes/${id}/results`),
+                })
+              }
+            >
+              {deleteAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
+              O&apos;chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card className="overflow-hidden rounded-2xl border-border/70 p-0 shadow-xs">
         <div

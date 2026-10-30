@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api-client';
 import { refreshCurrentUser } from '@/hooks/use-auth';
@@ -273,7 +273,9 @@ export function useStartAttempt() {
 // "Vaqt tugagan (X daqiqa) — bu urinish bekor qilindi" qaytadi va urinish
 // "expired" holatiga o'tadi.
 export function isAttemptExpiredError(error: unknown) {
-  return error instanceof ApiError && error.status === 400 && error.message.includes('Vaqt tugagan');
+  if (!(error instanceof ApiError) || error.status !== 400) return false;
+  // Eski backend versiyasi uchun matn bo'yicha zaxira tekshiruv
+  return error.code === 'ATTEMPT_EXPIRED' || error.message.includes('Vaqt tugagan');
 }
 
 // Vaqt tugash xatosi chaqiruvchi komponentda alohida ekran sifatida
@@ -323,6 +325,23 @@ export function useMyAttempts(quizId: string | undefined) {
   });
 }
 
+// Testlar ro'yxatida har bir test uchun urinishlar holatini ko'rsatish uchun.
+// useMyAttempts bilan bir xil kalit — test sahifasiga o'tilganda kesh tayyor.
+export function useMyAttemptsMany(quizIds: string[]) {
+  return useQueries({
+    queries: quizIds.map((quizId) => ({
+      queryKey: ['my-attempts', quizId],
+      queryFn: async (): Promise<MyAttemptsResult> => {
+        const res = await api.get<MyAttemptsResult | Attempt[]>(`/quizzes/${quizId}/my-attempts`);
+        if (Array.isArray(res)) {
+          return { attempts: res, attemptsUsed: res.length, attemptsRemaining: 0, maxAttempts: 0 };
+        }
+        return res;
+      },
+    })),
+  });
+}
+
 export function useQuizResults(quizId: string | undefined) {
   return useQuery({
     queryKey: ['quiz-results', quizId],
@@ -356,6 +375,7 @@ export function useReviewOpenEnded(quizId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quiz-results', quizId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-reviews'] });
       toast.success('Baholandi');
     },
     onError: (error) => toast.error(errorMessage(error, 'Baholashda xatolik')),
@@ -391,8 +411,13 @@ export function useDeleteAttempt(quizId: string) {
 
 // --- Testlarni o'qituvchilar orasida ulashish (nusxa orqali) ---
 
-export function useQuizShares(direction: 'incoming' | 'outgoing', status?: QuizShareStatus) {
+export function useQuizShares(
+  direction: 'incoming' | 'outgoing',
+  status?: QuizShareStatus,
+  options: { enabled?: boolean } = {}
+) {
   return useQuery({
+    enabled: options.enabled ?? true,
     queryKey: ['quiz-shares', direction, status ?? 'all'],
     queryFn: async () => {
       // incoming'da fromTeacher, outgoing'da toTeacher populatsiya qilingan
@@ -444,5 +469,32 @@ export function useRejectQuizShare() {
       toast.success('Ulashish rad etildi');
     },
     onError: (error) => toast.error(errorMessage(error, 'Rad etishda xatolik')),
+  });
+}
+
+// Baholash kutayotgan urinishlar (o'qituvchi: o'z testlari, admin: hammasi).
+// Eng eski topshirilgan birinchi; student va quiz populatsiya qilingan.
+export function usePendingReviews(
+  params: { quizId?: string; page?: number; limit?: number } = {},
+  options: { enabled?: boolean } = {}
+) {
+  return useQuery({
+    queryKey: ['pending-reviews', params],
+    queryFn: () =>
+      api.get<{ items: Attempt[]; total: number }>('/quizzes/pending-reviews', { ...params }),
+    enabled: options.enabled ?? true,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function usePendingReviewsCount(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['pending-reviews', 'count'],
+    queryFn: async () => {
+      const res = await api.get<{ count: number }>('/quizzes/pending-reviews/count');
+      return res.count;
+    },
+    enabled: options.enabled ?? true,
+    refetchInterval: 120_000,
   });
 }

@@ -2,25 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  ClipboardList,
-  Plus,
-  Trash2,
-  BarChart3,
-  CheckCircle2,
-  CircleDashed,
-  Crown,
-  Inbox,
-  Search,
-  Share2,
-  SlidersHorizontal,
-  Star,
-  Target,
-  X,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { ClipboardList, Crown, Plus, Search, Share2, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -43,15 +26,20 @@ import {
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { SkeletonList } from '@/components/ui/skeleton';
+import { StatusPill, type StatusPillTone } from '@/components/dashboard/dashboard-ui';
+import { ShareQuizDialog } from '@/components/quizzes/quiz-share-dialogs';
 import { useDeleteQuiz, useQuizShares, useQuizzesMy } from '@/hooks/use-quizzes';
-import { QuizSharesDialog, ShareQuizDialog } from '@/components/quizzes/quiz-share-dialogs';
 import { useDismissedBanner } from '@/hooks/use-dismissed-banner';
-import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Quiz } from '@/types';
+import type { Quiz, QuizTargetType } from '@/types';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
+
+const TYPE_LABELS: Record<QuizTargetType, string> = {
+  course: 'Kurs',
+  lesson: 'Dars',
+  standalone: 'Mustaqil',
+};
 
 function isQuizCapped(quiz: Quiz) {
   return quiz.targetGrades.some((tg) => {
@@ -60,9 +48,108 @@ function isQuizCapped(quiz: Quiz) {
   });
 }
 
+function quizStatus(quiz: Quiz): { label: string; tone: StatusPillTone } {
+  if (!quiz.isActive) return { label: 'Qoralama', tone: 'neutral' };
+  const starts = [quiz.availableFrom, ...quiz.targetGrades.map((tg) => tg.availableFrom)]
+    .filter((v): v is string => !!v)
+    .map((v) => new Date(v).getTime());
+  if (starts.length > 0 && Math.min(...starts) > Date.now())
+    return { label: 'Rejalashtirilgan', tone: 'warning' };
+  return { label: 'Faol', tone: 'success' };
+}
+
+function gradesLabel(quiz: Quiz) {
+  if (quiz.targetGrades.length === 0) return '—';
+  return quiz.targetGrades
+    .map((tg) => (tg.letter ? `${tg.number}-${tg.letter}` : `${tg.number}-sinf`))
+    .join(', ');
+}
+
+function TypeTag({ type }: { type: QuizTargetType }) {
+  return (
+    <span
+      className={cn(
+        'rounded-md px-2 py-0.5 text-xs font-semibold',
+        type === 'standalone'
+          ? 'bg-primary-soft text-primary'
+          : 'bg-muted text-secondary-foreground'
+      )}
+    >
+      {TYPE_LABELS[type]}
+    </span>
+  );
+}
+
+function QuizActions({
+  quiz,
+  compact,
+  onShare,
+  onDelete,
+}: {
+  quiz: Quiz;
+  compact?: boolean;
+  onShare: (quiz: Quiz) => void;
+  onDelete: (quiz: Quiz) => void;
+}) {
+  return (
+    <div className={cn('flex flex-wrap gap-1.5', !compact && 'justify-end')}>
+      <Button
+        variant="outline"
+        size="sm"
+        render={<Link href={`/teacher/quizzes/${quiz._id}/results`} />}
+      >
+        Natijalar
+      </Button>
+      <Button variant="outline" size="sm" render={<Link href={`/teacher/quizzes/${quiz._id}`} />}>
+        Tahrir
+      </Button>
+      {quiz.targetType === 'standalone' ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="bg-primary-soft text-primary"
+          onClick={() => onShare(quiz)}
+        >
+          <Share2 className="size-3.5" /> Ulashish
+        </Button>
+      ) : (
+        <span
+          title="Faqat mustaqil testlar ulashiladi"
+          className="inline-flex h-8 items-center rounded-[10px] bg-muted px-3 text-[13px] font-semibold text-muted-foreground"
+        >
+          Ulashilmaydi
+        </span>
+      )}
+      <AlertDialog>
+        <AlertDialogTrigger
+          render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}
+        >
+          <Trash2 className="size-4" />
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Testni o&apos;chirasizmi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{quiz.title}&quot; va uning barcha natijalari o&apos;chiriladi. Bu amalni bekor
+              qilib bo&apos;lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => onDelete(quiz)}>
+              O&apos;chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
 export default function TeacherQuizzesPage() {
   const { data, isLoading, isError, refetch } = useQuizzesMy({ page: 1, limit: 100 });
   const deleteQuiz = useDeleteQuiz();
+  const { data: pendingIncoming } = useQuizShares('incoming', 'pending');
   const { dismissed: nudgeDismissed, dismiss: dismissNudge } = useDismissedBanner(
     'edu_premium_attempts_nudge'
   );
@@ -71,10 +158,8 @@ export default function TeacherQuizzesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const [sharingQuiz, setSharingQuiz] = useState<Quiz | null>(null);
-  const [sharesOpen, setSharesOpen] = useState(false);
-  const { data: pendingIncoming } = useQuizShares('incoming', 'pending');
-  const pendingCount = pendingIncoming?.length ?? 0;
 
+  const pendingCount = pendingIncoming?.length ?? 0;
   const anyCapped = data?.items.some(isQuizCapped) ?? false;
 
   const availableGrades = useMemo(() => {
@@ -85,21 +170,16 @@ export default function TeacherQuizzesPage() {
     return Array.from(grades).sort((a, b) => a - b);
   }, [data?.items]);
 
-  const gradeSelectItems = useMemo(
-    () => ({
-      all: 'Barcha sinflar',
-      ...Object.fromEntries(availableGrades.map((grade) => [String(grade), `${grade}-sinf`])),
-    }),
-    [availableGrades]
-  );
-
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
     return (data?.items ?? []).filter((quiz) => {
       if (query && !quiz.title.toLowerCase().includes(query)) return false;
       if (statusFilter === 'active' && !quiz.isActive) return false;
       if (statusFilter === 'inactive' && quiz.isActive) return false;
-      if (gradeFilter !== 'all' && !quiz.targetGrades.some((tg) => String(tg.number) === gradeFilter))
+      if (
+        gradeFilter !== 'all' &&
+        !quiz.targetGrades.some((tg) => String(tg.number) === gradeFilter)
+      )
         return false;
       return true;
     });
@@ -113,134 +193,116 @@ export default function TeacherQuizzesPage() {
     setGradeFilter('all');
   }
 
+  const actionProps = {
+    onShare: setSharingQuiz,
+    onDelete: (quiz: Quiz) => deleteQuiz.mutate(quiz._id),
+  };
+
   return (
-    <div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
       <PageHeader
-        title="Testlar"
-        description="Testlaringizni yarating va boshqaring"
+        title="Testlarim"
+        className="mb-0"
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setSharesOpen(true)}
-              className="h-11 text-base font-medium"
-            >
-              <Inbox className="size-4" /> Ulashishlar
-              {pendingCount > 0 && (
-                <Badge className="ml-0.5 rounded-full px-1.5">{pendingCount}</Badge>
-              )}
-            </Button>
-            <Button
-              render={<Link href="/teacher/quizzes/new" />}
-              className="h-11 text-base font-medium"
-            >
-              <Plus className="size-4" /> Yangi test
-            </Button>
-          </div>
+          <Button size="lg" render={<Link href="/teacher/quizzes/new" />}>
+            <Plus className="size-4" /> Yangi test
+          </Button>
         }
       />
 
       {pendingCount > 0 && (
-        <div className="mb-5 flex flex-col items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Share2 className="size-4.5" />
+        <Link
+          href="/teacher/quiz-shares"
+          className="flex items-center gap-3 rounded-[18px] border border-primary/30 bg-primary-soft p-4 transition-colors hover:border-primary/50"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Share2 className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Sizga {pendingCount} ta test ulashildi</span>
+            <span className="block text-sm text-muted-foreground">
+              Qabul qilsangiz, nusxasi testlaringizga qo&apos;shiladi
             </span>
-            <div>
-              <p className="font-semibold text-foreground">
-                Sizga {pendingCount} ta test ulashildi
-              </p>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Qabul qilsangiz, testning nusxasi sizning testlaringizga qo&apos;shiladi.
-              </p>
-            </div>
-          </div>
-          <Button size="sm" className="shrink-0" onClick={() => setSharesOpen(true)}>
-            Ko&apos;rish
-          </Button>
-        </div>
+          </span>
+          <span className="text-sm font-semibold text-primary">Ko&apos;rish →</span>
+        </Link>
       )}
 
       {anyCapped && !nudgeDismissed && (
-        <div className="mb-5 flex flex-col items-start gap-3 rounded-2xl border border-gold/30 bg-linear-to-r from-gold/15 to-transparent p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col items-start gap-3 rounded-[18px] bg-gold-soft p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gold/20 text-gold-foreground">
-              <Target className="size-4.5" />
-            </span>
+            <Crown className="mt-0.5 size-5 shrink-0 text-gold" />
             <div>
-              <p className="text-md font-semibold text-gold-foreground">
+              <p className="font-semibold text-gold-foreground">
                 O&apos;quvchilaringiz ko&apos;proq urinishlar
               </p>
               <p className="mt-0.5 text-sm text-gold-foreground/80">
-                Siz ba&apos;zi testlaringizda bir nechta urinishni rejalashtirgansiz. Premium bilan
-                bu darhol faollashadi — hech narsani qayta sozlashning hojati yo&apos;q.
+                Ba&apos;zi testlarda rejalashtirgan urinishlaringiz standart tarifda cheklangan.
+                Premium bilan darhol to&apos;liq ishlaydi.
               </p>
             </div>
           </div>
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-fit">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="rounded-md text-gold-foreground/80 hover:text-gold-foreground"
-              onClick={dismissNudge}
-            >
+          <div className="flex shrink-0 gap-2">
+            <Button variant="ghost" size="sm" onClick={dismissNudge}>
               Keyinroq
             </Button>
-            <Button
-              size="sm"
-              className="flex-1 rounded-md sm:flex-none"
-              render={<Link href="/premium" />}
-            >
-              <Crown className="size-4" /> Premiumni ko&apos;rish
+            <Button size="sm" render={<Link href="/premium" />}>
+              <Crown className="size-4" /> Premium
             </Button>
           </div>
         </div>
       )}
 
       {isLoading ? (
-        <SkeletonList count={4} itemClassName="h-24" />
+        <div className="h-96 animate-pulse rounded-[20px] bg-muted" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="Hali test yaratmagansiz" />
+        <EmptyState
+          icon={ClipboardList}
+          title="Hali test yaratmagansiz"
+          action={
+            <Button render={<Link href="/teacher/quizzes/new" />}>
+              <Plus className="size-4" /> Birinchi testni yaratish
+            </Button>
+          }
+        />
       ) : (
-        <div className="space-y-5">
-          <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-3 shadow-xs sm:flex-row sm:items-center">
+        <>
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Test nomi bo'yicha qidirish..."
-                className="h-10 rounded-xl pl-10"
+                className="pl-10"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="hidden size-4 shrink-0 text-muted-foreground sm:block" />
+            <div className="flex gap-2">
               <Select
                 value={statusFilter}
                 onValueChange={(v) => setStatusFilter((v as StatusFilter) ?? 'all')}
-                items={{
-                  all: 'Barcha holatlar',
-                  active: 'Faol',
-                  inactive: 'Nofaol',
-                }}
+                items={{ all: 'Barcha holatlar', active: 'Faol', inactive: 'Qoralama' }}
               >
-                <SelectTrigger className="h-10 w-full rounded-xl sm:w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Holati" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Barcha holatlar</SelectItem>
                   <SelectItem value="active">Faol</SelectItem>
-                  <SelectItem value="inactive">Nofaol</SelectItem>
+                  <SelectItem value="inactive">Qoralama</SelectItem>
                 </SelectContent>
               </Select>
               <Select
                 value={gradeFilter}
                 onValueChange={(v) => setGradeFilter(v ?? 'all')}
-                items={gradeSelectItems}
+                items={{
+                  all: 'Barcha sinflar',
+                  ...Object.fromEntries(availableGrades.map((g) => [String(g), `${g}-sinf`])),
+                }}
               >
-                <SelectTrigger className="h-10 w-full rounded-xl sm:w-32">
+                <SelectTrigger className="w-full sm:w-36">
                   <SelectValue placeholder="Sinf" />
                 </SelectTrigger>
                 <SelectContent>
@@ -255,7 +317,7 @@ export default function TeacherQuizzesPage() {
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon"
                   aria-label="Filtrlarni tozalash"
                   onClick={clearFilters}
                 >
@@ -264,12 +326,6 @@ export default function TeacherQuizzesPage() {
               )}
             </div>
           </div>
-
-          {hasActiveFilters && (
-            <p className="text-sm text-muted-foreground">
-              {filteredItems.length} ta test topildi
-            </p>
-          )}
 
           {filteredItems.length === 0 ? (
             <EmptyState
@@ -283,157 +339,98 @@ export default function TeacherQuizzesPage() {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {filteredItems.map((quiz) => {
-                const capped = isQuizCapped(quiz);
-                return (
-                  <Card
-                    key={quiz._id}
-                    className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 p-0 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
-                  >
-                    <CardContent className="flex flex-1 flex-col gap-3 p-4">
+            <>
+              <div className="hidden overflow-x-auto rounded-[20px] border border-border bg-card md:block">
+                <table className="w-full min-w-[820px] border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 text-left text-[13px] text-muted-foreground">
+                      <th className="px-5 py-3.5 font-semibold">Test</th>
+                      <th className="px-3 py-3.5 font-semibold">Turi</th>
+                      <th className="px-3 py-3.5 font-semibold">Sinflar</th>
+                      <th className="px-3 py-3.5 font-semibold">Savollar</th>
+                      <th className="px-3 py-3.5 font-semibold">Holat</th>
+                      <th className="px-5 py-3.5 text-right font-semibold">Amallar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredItems.map((quiz) => {
+                      const status = quizStatus(quiz);
+                      return (
+                        <tr key={quiz._id} className="border-t border-muted">
+                          <td className="px-5 py-3.5">
+                            <Link
+                              href={`/teacher/quizzes/${quiz._id}`}
+                              className="font-semibold wrap-break-word hover:text-primary"
+                            >
+                              {quiz.title}
+                            </Link>
+                            {isQuizCapped(quiz) && (
+                              <Link
+                                href="/premium"
+                                className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-gold-foreground"
+                              >
+                                <Crown className="size-3" /> Urinishlar cheklangan
+                              </Link>
+                            )}
+                          </td>
+                          <td className="px-3 py-3.5">
+                            <TypeTag type={quiz.targetType} />
+                          </td>
+                          <td className="px-3 py-3.5">{gradesLabel(quiz)}</td>
+                          <td className="px-3 py-3.5 tabular-nums">
+                            {quiz.questionsCount ?? quiz.questions?.length ?? '—'}
+                          </td>
+                          <td className="px-3 py-3.5">
+                            <StatusPill tone={status.tone}>{status.label}</StatusPill>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <QuizActions quiz={quiz} {...actionProps} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex flex-col gap-3 md:hidden">
+                {filteredItems.map((quiz) => {
+                  const status = quizStatus(quiz);
+                  return (
+                    <div
+                      key={quiz._id}
+                      className="flex flex-col gap-2.5 rounded-[18px] border border-border bg-card p-4"
+                    >
                       <div className="flex items-start justify-between gap-2">
-                        <span
-                          className={cn(
-                            'flex size-11 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1',
-                            quiz.isActive
-                              ? 'bg-primary/10 text-primary ring-primary/10'
-                              : 'bg-muted text-muted-foreground ring-border/60'
-                          )}
-                        >
-                          <ClipboardList className="size-5" />
-                        </span>
-                        <Badge
-                          className={cn(
-                            'shrink-0 rounded-full',
-                            quiz.isActive
-                              ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-400'
-                              : 'bg-muted text-muted-foreground'
-                          )}
-                        >
-                          {quiz.isActive ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <CheckCircle2 className="size-3.5" /> Faol
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5">
-                              <CircleDashed className="size-3.5" /> Nofaol
-                            </span>
-                          )}
-                        </Badge>
-                      </div>
-    
-                      <div className="space-y-1.5">
                         <Link
                           href={`/teacher/quizzes/${quiz._id}`}
-                          className="line-clamp-2 font-heading text-lg font-semibold leading-snug text-foreground hover:text-primary hover:underline"
+                          className="min-w-0 font-bold wrap-break-word"
                         >
                           {quiz.title}
                         </Link>
-                        {capped && (
-                          <Link
-                            href="/premium"
-                            className="inline-flex w-fit items-center gap-1 rounded-full bg-gold/10 px-2.5 py-1 text-xs font-medium text-gold-foreground transition-colors hover:bg-gold/20"
-                          >
-                            <Star className="size-3.5" /> Ko&apos;proq urinish — Premium bilan
-                          </Link>
-                        )}
+                        <StatusPill tone={status.tone}>{status.label}</StatusPill>
                       </div>
-    
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          <ClipboardList className="size-3.5" />
-                          {quiz.questionsCount ?? quiz.questions?.length ?? 0} savol
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Target className="size-3.5" />
-                          O&apos;tish balli {quiz.passingScore}%
-                        </span>
-                        {quiz.createdAt && <span>{formatDate(quiz.createdAt)}</span>}
+                      <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
+                        <TypeTag type={quiz.targetType} />
+                        <span>{gradesLabel(quiz)}</span>
+                        <span>· {quiz.questionsCount ?? quiz.questions?.length ?? 0} savol</span>
                       </div>
-    
-                      {quiz.targetGrades.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {quiz.targetGrades.map((tg, i) => {
-                            const label = tg.letter ? `${tg.number}-${tg.letter}` : `${tg.number}-sinf`;
-                            const configured = tg.maxAttempts ?? quiz.maxAttempts;
-                            const tgCapped =
-                              tg.effectiveMaxAttempts != null && tg.effectiveMaxAttempts < configured;
-                            return (
-                              <span
-                                key={i}
-                                className={cn(
-                                  'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
-                                  tgCapped
-                                    ? 'bg-gold/10 text-gold-foreground'
-                                    : 'bg-muted text-muted-foreground'
-                                )}
-                              >
-                                {tgCapped && <Crown className="size-3" />}
-                                {label}: {tg.effectiveMaxAttempts ?? configured} marta /{' '}
-                                {tg.effectiveTimeLimit ?? tg.timeLimit ?? quiz.timeLimit ?? '—'} daq
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-    
-                      <div className="mt-auto flex items-center gap-2 border-t border-border/60 pt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          render={<Link href={`/teacher/quizzes/${quiz._id}/results`} />}
-                          className="flex-1 font-medium"
-                        >
-                          <BarChart3 className="size-4" /> Natijalar
-                        </Button>
-
-                        {quiz.targetType === 'standalone' && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Ulashish"
-                            title="Ulashish"
-                            onClick={() => setSharingQuiz(quiz)}
-                          >
-                            <Share2 className="size-4" />
-                          </Button>
-                        )}
-
-    
-                        <AlertDialog>
-                          <AlertDialogTrigger
-                            render={<Button variant="ghost" size="icon-sm" aria-label="O'chirish" />}
-                          >
-                            <Trash2 className="size-4" />
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Testni o&apos;chirasizmi?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Bu amalni bekor qilib bo&apos;lmaydi.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteQuiz.mutate(quiz._id)}>
-                                O&apos;chirish
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                      <QuizActions quiz={quiz} compact {...actionProps} />
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
-        </div>
+
+          <p className="text-[13px] text-muted-foreground">
+            Faqat mustaqil (kursga yoki darsga bog&apos;lanmagan) testlarni boshqa o&apos;qituvchiga
+            ulashish mumkin.
+          </p>
+        </>
       )}
 
       <ShareQuizDialog quiz={sharingQuiz} onOpenChange={(open) => !open && setSharingQuiz(null)} />
-      <QuizSharesDialog open={sharesOpen} onOpenChange={setSharesOpen} />
     </div>
   );
 }

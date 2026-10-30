@@ -1,12 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Camera, Crown, Gift, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,7 +39,6 @@ import {
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { SkeletonCardGrid } from '@/components/ui/skeleton';
 import { PaginationBar } from '@/components/ui/pagination-bar';
 import {
   useRewards,
@@ -53,6 +50,9 @@ import {
 import { resolveAssetUrl } from '@/lib/config';
 import { formatNumber } from '@/lib/format';
 import type { Reward } from '@/types';
+import { DiamondIcon } from '@/components/icons/diamond-icon';
+import { StatusPill } from '@/components/dashboard/dashboard-ui';
+import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
 
@@ -139,127 +139,146 @@ export default function AdminRewardsPage() {
   }
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-5xl">
       <PageHeader
-        title="Mukofotlar"
+        title="Mukofotlar katalogi"
         description="Olmoslarga almashtiriladigan sovg'alar"
         actions={
-          <Button onClick={openCreate} size="lg" className="h-10 rounded-md px-5 shadow-sm">
-            <Plus className="size-4" /> Yangi mukofot
+          <Button size="lg" onClick={openCreate}>
+            <Plus className="size-4" /> Mukofot qo&apos;shish
           </Button>
         }
       />
 
       {isLoading ? (
-        <SkeletonCardGrid count={6} itemClassName="h-64 rounded-md" />
+        <div className="h-80 animate-pulse rounded-[20px] bg-muted" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState icon={Gift} title="Hali mukofot qo'shilmagan" />
       ) : (
         <>
-          <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {data.items.map((reward) => {
-              const image = resolveAssetUrl(reward.image);
-              return (
-                <Card
-                  key={reward._id}
-                  className="gap-0 overflow-hidden rounded-md py-0 shadow-sm ring-1 ring-border/60 transition-shadow hover:shadow-md"
-                >
-                  <div className="relative aspect-video w-full overflow-hidden bg-muted">
-                    {image ? (
-                      <Image
-                        src={image}
-                        alt={reward.title}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center bg-linear-to-br from-gold/20 to-primary/10">
-                        <Gift className="size-9 text-gold" />
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      aria-label="Rasmni almashtirish"
-                      onClick={() => {
-                        setUploadTargetId(reward._id);
-                        fileInputRef.current?.click();
-                      }}
-                      className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      {uploadImage.isPending && uploadTargetId === reward._id ? (
-                        <Loader2 className="size-5 animate-spin" />
-                      ) : (
-                        <Camera className="size-5" />
-                      )}
-                    </button>
-                    {reward.premiumOnly && (
-                      <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-gold px-2.5 py-1 text-xs font-semibold text-gold-foreground shadow-sm">
-                        <Crown className="size-3.5" /> Faqat Premium
-                      </span>
-                    )}
-                  </div>
-                  <CardContent className="flex flex-col gap-3 p-4">
-                    <h3 className="line-clamp-1 text-base font-semibold">{reward.title}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1 text-sm font-semibold text-gold-foreground">
-                        <Image
-                          src="/diamond.png"
-                          alt=""
-                          width={32}
-                          height={32}
-                          className="size-4"
-                        />{' '}
-                        {formatNumber(reward.cost)}
-                      </span>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {reward.stock === null ? 'Cheksiz' : `${reward.stock} dona`}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 rounded-md"
-                        onClick={() => openEdit(reward)}
-                      >
-                        <Pencil className="size-4" /> Tahrirlash
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              className="rounded-md"
-                              aria-label="O'chirish"
-                            />
-                          }
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Mukofotni o&apos;chirasizmi?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Bu amalni bekor qilib bo&apos;lmaydi.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteReward.mutate(reward._id)}>
-                              O&apos;chirish
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="overflow-x-auto rounded-[20px] border border-border bg-card">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-left text-[13px] text-muted-foreground">
+                  <th className="px-5 py-3.5 font-semibold">Mukofot</th>
+                  <th className="px-3 py-3.5 font-semibold">Narx</th>
+                  <th className="px-3 py-3.5 font-semibold">Qoldiq</th>
+                  <th className="px-3 py-3.5 font-semibold">Kimlarga</th>
+                  <th className="px-5 py-3.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((reward) => {
+                  const image = resolveAssetUrl(reward.image);
+                  const uploading = uploadImage.isPending && uploadTargetId === reward._id;
+                  return (
+                    <tr key={reward._id} className="border-t border-muted">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            aria-label="Rasmni almashtirish"
+                            title="Rasmni almashtirish"
+                            onClick={() => {
+                              setUploadTargetId(reward._id);
+                              fileInputRef.current?.click();
+                            }}
+                            className="group relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted"
+                          >
+                            {image ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={image} alt="" className="size-full object-cover" />
+                            ) : (
+                              <Gift className="size-5 text-muted-foreground" />
+                            )}
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                              {uploading ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <Camera className="size-4" />
+                              )}
+                            </span>
+                          </button>
+                          <span className="min-w-0">
+                            <span className="block font-semibold">{reward.title}</span>
+                            {reward.description && (
+                              <span className="line-clamp-1 text-[13px] text-muted-foreground">
+                                {reward.description}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="flex items-center gap-1 font-heading font-semibold text-gold-foreground">
+                          <DiamondIcon className="size-4" /> {formatNumber(reward.cost)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        {reward.stock === null ? (
+                          <span className="text-muted-foreground">Cheksiz</span>
+                        ) : (
+                          <span
+                            className={cn(
+                              'font-semibold',
+                              reward.stock === 0 && 'text-destructive',
+                              reward.stock > 0 && reward.stock <= 3 && 'text-gold-foreground'
+                            )}
+                          >
+                            {reward.stock === 0 ? 'Tugagan' : reward.stock}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        {reward.premiumOnly ? (
+                          <StatusPill tone="warning">
+                            <Crown className="size-3.5" /> Premium
+                          </StatusPill>
+                        ) : (
+                          <StatusPill tone="neutral">Barcha</StatusPill>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          <Button variant="outline" size="sm" onClick={() => openEdit(reward)}>
+                            <Pencil className="size-3.5" /> Tahrir
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger
+                              render={
+                                <Button variant="ghost" size="icon-sm" aria-label="O'chirish" />
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Mukofotni o&apos;chirasizmi?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  &quot;{reward.title}&quot; katalogdan o&apos;chiriladi. Bu amalni
+                                  bekor qilib bo&apos;lmaydi.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                                <AlertDialogAction
+                                  variant="destructive"
+                                  onClick={() => deleteReward.mutate(reward._id)}
+                                >
+                                  O&apos;chirish
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           <div className="mt-4">
@@ -290,7 +309,7 @@ export default function AdminRewardsPage() {
         <DialogContent className="rounded-md sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5 text-lg">
-              <span className="flex size-9 items-center justify-center rounded-md bg-gold/15 text-gold-foreground">
+              <span className="flex size-9 items-center justify-center bg-gold/15 text-gold-foreground">
                 <Gift className="size-4.5" />
               </span>
               {editing ? 'Mukofotni tahrirlash' : 'Yangi mukofot'}
@@ -309,7 +328,7 @@ export default function AdminRewardsPage() {
                   <FormItem>
                     <FormLabel className="text-sm font-medium">Mukofot nomi</FormLabel>
                     <FormControl>
-                      <Input className="h-11 rounded-md text-base" {...field} />
+                      <Input className="h-11 text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -339,7 +358,7 @@ export default function AdminRewardsPage() {
                         <Input
                           type="number"
                           min={1}
-                          className="h-11 rounded-md text-base"
+                          className="h-11 text-base"
                           {...field}
                           value={field.value as number}
                         />
@@ -359,7 +378,7 @@ export default function AdminRewardsPage() {
                           type="number"
                           min={0}
                           disabled={unlimited}
-                          className="h-11 rounded-md text-base"
+                          className="h-11 text-base"
                           {...field}
                           value={field.value as number}
                         />
@@ -373,7 +392,7 @@ export default function AdminRewardsPage() {
                 control={form.control}
                 name="unlimited"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between gap-2 space-y-0 rounded-md bg-muted/50 px-3 py-2.5">
+                  <FormItem className="flex flex-row items-center justify-between gap-2 space-y-0 bg-muted/50 px-3 py-2.5">
                     <FormLabel className="text-sm font-medium">Cheksiz miqdor</FormLabel>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -385,7 +404,7 @@ export default function AdminRewardsPage() {
                 control={form.control}
                 name="premiumOnly"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between gap-2 space-y-0 rounded-md bg-gold/10 px-3 py-2.5">
+                  <FormItem className="flex flex-row items-center justify-between gap-2 space-y-0 bg-gold/10 px-3 py-2.5">
                     <FormLabel className="flex items-center gap-1.5 text-sm font-medium text-gold-foreground">
                       <Crown className="size-4" /> Faqat Premium foydalanuvchilar uchun
                     </FormLabel>
@@ -399,7 +418,7 @@ export default function AdminRewardsPage() {
                 <Button
                   type="submit"
                   size="lg"
-                  className="h-11 w-full rounded-md text-base sm:w-fit"
+                  className="h-11 w-full text-base sm:w-fit"
                   disabled={createReward.isPending || updateReward.isPending}
                 >
                   {(createReward.isPending || updateReward.isPending) && (

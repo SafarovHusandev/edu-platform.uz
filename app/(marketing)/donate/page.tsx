@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Heart, Loader2, ShieldCheck, Sparkles, Users, ArrowRight } from 'lucide-react';
+import { Heart, Loader2, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { Container } from '@/components/layout/container';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth-store';
 import { useCreatePayment } from '@/hooks/use-payment';
 import { formatNumber, toTiyin } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const QUICK_AMOUNTS = [10000, 25000, 50000, 100000];
 
@@ -72,37 +72,35 @@ export default function DonatePage() {
 
   return (
     <div className="pb-16">
-      {/* Hero Header */}
-      <div className="border-b border-border/80 bg-linear-to-b from-rose-500/10 via-primary/5 to-transparent py-14">
-        <Container className="flex flex-col items-center gap-4 text-center max-w-3xl">
-          <div className="inline-flex size-16 items-center justify-center rounded-3xl bg-rose-500/15 text-rose-500 shadow-lg shadow-rose-500/20 animate-bounce">
-            <Heart className="size-8 fill-current" />
-          </div>
-          <h1 className="text-balance font-heading text-3xl font-extrabold tracking-tight sm:text-4xl text-foreground">
+      <section className="bg-primary text-primary-foreground">
+        <Container className="flex max-w-300 flex-col gap-4 py-12 sm:py-16">
+          <span className="flex size-14 items-center justify-center rounded-2xl bg-white/15">
+            <Heart className="size-7 fill-current" />
+          </span>
+          <h1 className="max-w-2xl font-heading text-3xl font-bold text-balance sm:text-[44px] sm:leading-tight">
             Platformamizni qo&apos;llab-quvvatlang
           </h1>
-          <p className="max-w-xl text-sm sm:text-base text-muted-foreground leading-relaxed">
-            edu-platform.uz ko&apos;plab o&apos;quvchi va o&apos;qituvchilar uchun sifatli
-            ta&apos;limni imkon qadar arzon va ochiq qilishga intiladi. Sizning homiyligingiz buni
-            yanada rivojlantirishga yordam beradi.
+          <p className="max-w-xl text-lg leading-relaxed text-primary-foreground/80">
+            edu-platform.uz sifatli ta&apos;limni imkon qadar arzon va ochiq qilishga intiladi.
+            Homiyligingiz buni yanada rivojlantirishga yordam beradi.
           </p>
         </Container>
-      </div>
+      </section>
 
-      <Container className="grid gap-8 py-10 lg:grid-cols-[1fr_380px] max-w-5xl">
-        <div className="space-y-4">
-          <h2 className="text-xl font-extrabold text-foreground mb-2">Nima uchun bu muhim?</h2>
+      <Container className="grid max-w-300 gap-6 py-10 lg:grid-cols-[1fr_400px]">
+        <div className="flex flex-col gap-3">
+          <h2 className="font-heading text-xl font-bold">Nima uchun bu muhim?</h2>
           {REASONS.map((reason) => (
             <div
               key={reason.title}
-              className="flex gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-200 card-hover-glow"
+              className="flex gap-4 rounded-[18px] border border-border bg-card p-5"
             >
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 dark:bg-primary/20 text-primary">
-                <reason.icon className="size-6" />
-              </div>
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                <reason.icon className="size-5" />
+              </span>
               <div>
-                <h3 className="font-bold text-foreground">{reason.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                <h3 className="font-semibold">{reason.title}</h3>
+                <p className="mt-1 text-[15px] leading-relaxed text-secondary-foreground">
                   {reason.description}
                 </p>
               </div>
@@ -110,66 +108,68 @@ export default function DonatePage() {
           ))}
         </div>
 
-        {/* Donation Form Box */}
-        <div className="glass-card rounded-3xl p-6 sm:p-7 shadow-xl border border-border/80 h-fit space-y-6">
-          <div className="space-y-1 pb-2 border-b border-border/60">
-            <h3 className="text-lg font-extrabold text-foreground">Homiylik miqdori</h3>
-            <p className="text-xs text-muted-foreground">
-              To&apos;lov tizimi orqali xavfsiz amalga oshiriladi
+        <div className="flex h-fit flex-col gap-5 rounded-[20px] border border-border bg-card p-6 lg:sticky lg:top-24">
+          <div>
+            <h3 className="font-heading text-lg font-bold">Homiylik miqdori</h3>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              To&apos;lov Multicard orqali xavfsiz amalga oshiriladi
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2.5">
-              {QUICK_AMOUNTS.map((value) => (
-                <Button
+          <div className="grid grid-cols-2 gap-2.5">
+            {QUICK_AMOUNTS.map((value) => {
+              const selected = !customAmount && amount === value;
+              return (
+                <button
                   key={value}
                   type="button"
-                  variant={!customAmount && amount === value ? 'default' : 'outline'}
-                  className="h-12 rounded-xl text-sm font-bold cursor-pointer transition-all duration-200"
+                  aria-pressed={selected}
                   onClick={() => {
                     setAmount(value);
                     setCustomAmount('');
                   }}
+                  className={cn(
+                    'h-12 rounded-[14px] border-[1.5px] font-semibold transition-colors',
+                    selected
+                      ? 'border-primary bg-primary-soft text-primary'
+                      : 'border-border bg-card hover:bg-muted'
+                  )}
                 >
                   {formatNumber(value)} so&apos;m
-                </Button>
-              ))}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Boshqa miqdor
-              </label>
-              <Input
-                type="number"
-                min={1000}
-                step={1000}
-                placeholder="Ixtiyoriy miqdor (so'm)"
-                value={customAmount}
-                onChange={(e) => setCustomAmount(e.target.value)}
-                className="h-12 rounded-xl text-base border-border/80 bg-background/70"
-              />
-            </div>
-
-            <Button
-              className="h-12 w-full rounded-xl bg-linear-to-r from-rose-500 via-rose-600 to-pink-600 font-bold text-white shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 hover:opacity-95 transition-all duration-200 cursor-pointer"
-              onClick={handleDonate}
-              disabled={createPayment.isPending || !isValid}
-            >
-              {createPayment.isPending ? (
-                <Loader2 className="size-5 animate-spin mr-2" />
-              ) : (
-                <Heart className="size-5 mr-2 fill-current" />
-              )}
-              {formatNumber(finalAmount)} so&apos;m qo&apos;llab-quvvatlash
-            </Button>
-            {!isValid && (
-              <p className="text-xs font-medium text-destructive text-center">
-                Eng kam miqdor 1 000 so&apos;m
-              </p>
-            )}
+                </button>
+              );
+            })}
           </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="donate-amount" className="text-sm font-medium">
+              Boshqa miqdor
+            </label>
+            <Input
+              id="donate-amount"
+              type="number"
+              min={1000}
+              step={1000}
+              placeholder="Ixtiyoriy miqdor (so'm)"
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value)}
+            />
+            {!isValid && <p className="text-sm text-destructive">Eng kam miqdor 1 000 so&apos;m</p>}
+          </div>
+
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={handleDonate}
+            disabled={createPayment.isPending || !isValid}
+          >
+            {createPayment.isPending ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Heart className="size-4 fill-current" />
+            )}
+            {formatNumber(finalAmount)} so&apos;m yuborish
+          </Button>
         </div>
       </Container>
     </div>

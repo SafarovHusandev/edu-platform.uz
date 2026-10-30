@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, CheckCircle2, Clock, Inbox, Loader2, Search, Send, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { SkeletonList } from '@/components/ui/skeleton';
 import {
   useAcceptQuizShare,
   useQuizShares,
@@ -34,7 +33,7 @@ import {
 } from '@/hooks/use-quizzes';
 import { useTeachersSearch, type TeacherOption } from '@/hooks/use-users';
 import { resolveAssetUrl } from '@/lib/config';
-import { formatDateTime, initials } from '@/lib/format';
+import { initials } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Quiz, QuizShare, QuizShareStatus } from '@/types';
 
@@ -203,12 +202,15 @@ export function ShareQuizDialog({ quiz, onOpenChange }: ShareQuizDialogProps) {
   );
 }
 
-interface QuizSharesDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+function shareDateTime(value?: string) {
+  if (!value) return null;
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function QuizSharesDialog({ open, onOpenChange }: QuizSharesDialogProps) {
+// "Ulashilgan testlar" sahifasi (edu-platform-dizayn: QuizShares)
+export function QuizSharesPanel() {
   const router = useRouter();
   const [direction, setDirection] = useState<'incoming' | 'outgoing'>('incoming');
   const [status, setStatus] = useState<QuizShareStatus | 'all'>('all');
@@ -216,122 +218,167 @@ export function QuizSharesDialog({ open, onOpenChange }: QuizSharesDialogProps) 
     direction,
     status === 'all' ? undefined : status
   );
+  const { data: pendingIncoming } = useQuizShares('incoming', 'pending');
   const acceptShare = useAcceptQuizShare();
   const rejectShare = useRejectQuizShare();
+  const pendingCount = pendingIncoming?.length ?? 0;
 
   function handleAccept(shareId: string) {
     acceptShare.mutate(shareId, {
       // Nusxa nofaol va eski sinflar bilan keladi — o'qituvchi darhol o'z
       // sinfini tanlashi kerak, aks holda test boshqa sinf uchun qolib ketadi.
-      onSuccess: (clonedQuiz) => {
-        onOpenChange(false);
-        router.push(`/teacher/quizzes/${clonedQuiz._id}?shared=1`);
-      },
+      onSuccess: (clonedQuiz) => router.push(`/teacher/quizzes/${clonedQuiz._id}?shared=1`),
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Ulashilgan testlar</DialogTitle>
-          <DialogDescription>Boshqa o&apos;qituvchilar bilan almashilgan testlar</DialogDescription>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Tabs value={direction} onValueChange={(v) => setDirection(v as 'incoming' | 'outgoing')}>
-            <TabsList>
-              <TabsTrigger value="incoming">Kelgan</TabsTrigger>
-              <TabsTrigger value="outgoing">Yuborilgan</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Select
-            value={status}
-            onValueChange={(v) => setStatus((v as QuizShareStatus | 'all') ?? 'all')}
-            items={{
-              all: 'Barcha holatlar',
-              pending: 'Kutilmoqda',
-              accepted: 'Qabul qilingan',
-              rejected: 'Rad etilgan',
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue placeholder="Holati" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Barcha holatlar</SelectItem>
-              <SelectItem value="pending">Kutilmoqda</SelectItem>
-              <SelectItem value="accepted">Qabul qilingan</SelectItem>
-              <SelectItem value="rejected">Rad etilgan</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="tablist" className="flex gap-1 rounded-xl bg-muted p-1">
+          {(
+            [
+              {
+                value: 'incoming',
+                label: `Menga ulashilganlar${pendingCount > 0 ? ` · ${pendingCount}` : ''}`,
+              },
+              { value: 'outgoing', label: 'Men ulashganlar' },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={direction === tab.value}
+              onClick={() => setDirection(tab.value)}
+              className={cn(
+                'rounded-[9px] px-4 py-2.5 font-semibold transition-colors',
+                direction === tab.value
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+        <Select
+          value={status}
+          onValueChange={(v) => setStatus((v as QuizShareStatus | 'all') ?? 'all')}
+          items={{
+            all: 'Barcha holatlar',
+            pending: 'Kutilmoqda',
+            accepted: 'Qabul qilingan',
+            rejected: 'Rad etilgan',
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="Holati" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Barcha holatlar</SelectItem>
+            <SelectItem value="pending">Kutilmoqda</SelectItem>
+            <SelectItem value="accepted">Qabul qilingan</SelectItem>
+            <SelectItem value="rejected">Rad etilgan</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        {isLoading ? (
-          <SkeletonList count={3} itemClassName="h-20" />
-        ) : isError ? (
-          <ErrorState onRetry={() => refetch()} />
-        ) : !data || data.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title={
-              direction === 'incoming'
-                ? 'Sizga hali test ulashilmagan'
-                : 'Siz hali test ulashmagansiz'
-            }
-          />
-        ) : (
-          <ul className="space-y-2">
-            {data.map((share) => {
-              const meta = STATUS_META[share.status];
-              const StatusIcon = meta.icon;
-              const isBusy =
-                (acceptShare.isPending && acceptShare.variables === share._id) ||
-                (rejectShare.isPending && rejectShare.variables === share._id);
-              return (
-                <li
-                  key={share._id}
-                  className="space-y-2 rounded-xl border border-border/70 bg-card p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 font-medium wrap-break-word">{quizTitle(share)}</p>
-                    <Badge className={cn('shrink-0 gap-1 rounded-full', meta.className)}>
+      {isLoading ? (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-[76px] animate-pulse rounded-[18px] bg-muted" />
+          ))}
+        </div>
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !data || data.length === 0 ? (
+        <EmptyState
+          icon={Inbox}
+          title={
+            direction === 'incoming'
+              ? 'Sizga hali test ulashilmagan'
+              : 'Siz hali test ulashmagansiz'
+          }
+          description={
+            direction === 'outgoing'
+              ? 'Testlarim sahifasida mustaqil test yonidagi «Ulashish» tugmasini bosing'
+              : undefined
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {data.map((share) => {
+            const meta = STATUS_META[share.status];
+            const StatusIcon = meta.icon;
+            const accepting = acceptShare.isPending && acceptShare.variables === share._id;
+            const rejecting = rejectShare.isPending && rejectShare.variables === share._id;
+            const cloned =
+              share.clonedQuiz && typeof share.clonedQuiz === 'object' ? share.clonedQuiz : null;
+            return (
+              <article
+                key={share._id}
+                className="flex flex-wrap items-center gap-3.5 rounded-[18px] border border-border bg-card px-4 py-4 sm:px-[18px]"
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft font-heading font-bold text-primary">
+                  T
+                </span>
+                <div className="min-w-0 flex-[1_1_260px]">
+                  <div className="font-bold wrap-break-word">{quizTitle(share)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {direction === 'incoming' ? 'Kimdan: ' : 'Kimga: '}
+                    {teacherLabel(direction === 'incoming' ? share.fromTeacher : share.toTeacher)}
+                    {share.createdAt && ` · ${shareDateTime(share.createdAt)}`}
+                  </div>
+                </div>
+                {direction === 'incoming' && share.status === 'pending' ? (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-destructive/35 text-destructive hover:bg-destructive-soft hover:text-destructive"
+                      onClick={() => rejectShare.mutate(share._id)}
+                      disabled={accepting || rejecting}
+                    >
+                      {rejecting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <X className="size-4" />
+                      )}
+                      Rad etish
+                    </Button>
+                    <Button
+                      className="bg-success text-success-foreground hover:bg-success/90"
+                      onClick={() => handleAccept(share._id)}
+                      disabled={accepting || rejecting}
+                    >
+                      {accepting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Check className="size-4" />
+                      )}
+                      Qabul qilish
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {direction === 'incoming' && cloned && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        render={<Link href={`/teacher/quizzes/${cloned._id}`} />}
+                      >
+                        Testni ochish
+                      </Button>
+                    )}
+                    <Badge className={cn('gap-1 px-3 py-1.5 text-[13px]', meta.className)}>
                       <StatusIcon className="size-3.5" /> {meta.label}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {direction === 'incoming' ? 'Kimdan: ' : 'Kimga: '}
-                    <span className="text-foreground">
-                      {teacherLabel(direction === 'incoming' ? share.fromTeacher : share.toTeacher)}
-                    </span>
-                    {share.createdAt && <> · {formatDateTime(share.createdAt)}</>}
-                  </p>
-                  {direction === 'incoming' && share.status === 'pending' && (
-                    <div className="flex gap-2 pt-1">
-                      <Button size="sm" onClick={() => handleAccept(share._id)} disabled={isBusy}>
-                        {acceptShare.isPending && acceptShare.variables === share._id ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Check className="size-4" />
-                        )}
-                        Qabul qilish
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => rejectShare.mutate(share._id)}
-                        disabled={isBusy}
-                      >
-                        <X className="size-4" /> Rad etish
-                      </Button>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </DialogContent>
-    </Dialog>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,61 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import {
-  Check,
-  CircleAlert,
-  Crown,
-  Loader2,
-  Lock,
-  Repeat,
-  RotateCw,
-  ShieldCheck,
-  Sparkles,
-  Tag,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { Check, CircleAlert, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { PageHeader } from '@/components/ui/page-header';
 import { ErrorState } from '@/components/ui/error-state';
-import { useAuthStore } from '@/store/auth-store';
 import { useCreatePayment, usePremiumPlans } from '@/hooks/use-payment';
 import { usePromoPreview } from '@/hooks/use-promo-codes';
+import { refreshCurrentUser } from '@/hooks/use-auth';
+import { useAuthStore } from '@/store/auth-store';
 import { daysUntil, formatDate, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { PremiumPlanKey } from '@/types';
 
-// Reja nomini backenddan kelgan kun sonidan hosil qiladi — kalit nomi yoki
-// muddat o'zgarsa ham (masalan backend narx jadvalini yangilasa) label to'g'ri
-// chiqaveradi, hardcoded matnga bog'liq bo'lmaydi.
-function planLabel(days: number) {
-  if (days === 30) return '1 oylik';
-  if (days === 90) return '3 oylik';
-  if (days === 180) return '6 oylik';
-  if (days === 365) return '1 yillik';
-  if (days > 0 && days % 30 === 0) return `${days / 30} oylik`;
-  return `${days} kunlik`;
-}
-
 const PLAN_ORDER: PremiumPlanKey[] = ['30d', '90d', '180d', '365d'];
 const POPULAR_PLAN: PremiumPlanKey = '180d';
 
-const STUDENT_BENEFITS = [
-  { icon: 'diamond' as const, label: 'Har bir test/dars uchun olmos', value: '1.5× ko’proq' },
-  { icon: RotateCw, label: 'Kunlik barabon', value: 'kuniga 3 martagacha' },
-  { icon: Lock, label: "Premium sovg'alar", value: 'ochiladi' },
-];
+const BENEFITS: Record<string, string[]> = {
+  student: ['1.5x olmos', 'Premium mukofotlar', '3x barabon'],
+  teacher: ["Testlarda to'liq urinishlar soni", "Testlarda to'liq vaqt limiti"],
+};
 
-const TEACHER_BENEFITS = [
-  {
-    icon: Repeat,
-    label: 'Testlarda urinishlar soni',
-    value: 'siz belgilagan darajada (cheklanmaydi)',
-  },
-];
+type PayMethod = 'card' | 'balance';
 
 export default function PremiumPage() {
   const router = useRouter();
@@ -66,106 +34,101 @@ export default function PremiumPage() {
   const [selectedPlan, setSelectedPlan] = useState<PremiumPlanKey>(POPULAR_PLAN);
   const [promoCode, setPromoCode] = useState('');
   const [appliedCode, setAppliedCode] = useState<string | undefined>(undefined);
+  const [method, setMethod] = useState<PayMethod>('card');
 
   const promoPreview = usePromoPreview({
     code: appliedCode,
     purpose: 'premium',
     plan: selectedPlan,
   });
-  // Promo kod faqat "Tekshirish" bosilganda so'ralsin — input o'zgarishi bilan
-  // amaldagi natija eskirgan bo'lib qoladi, shu bilan qayta ko'rsatilmaydi.
+  // Promo kod faqat "Qo'llash" bosilganda so'raladi — input o'zgarsa natija eskiradi
   const codeMatchesApplied = !!appliedCode && appliedCode === promoCode.trim();
-
-  function handleCheckPromo() {
-    setAppliedCode(promoCode.trim() || undefined);
-  }
+  const promoApplied = codeMatchesApplied && !!promoPreview.data;
 
   const isPremium = user?.tarif === 'premium';
-  const selected = plans?.[selectedPlan];
-
   const daysLeft = user?.premiumExpiresAt ? daysUntil(user.premiumExpiresAt) : null;
+  const selected = plans?.[selectedPlan];
+  const total = (promoApplied ? promoPreview.data?.finalAmount : undefined) ?? selected?.price ?? 0;
+  const balance = user?.balance ?? 0;
+  const balanceEnough = balance >= total;
+  const benefits = BENEFITS[user?.role ?? ''] ?? [];
 
   function handleCheckout() {
+    const useBalance = method === 'balance';
     createPayment.mutate(
       {
         purpose: 'premium',
         plan: selectedPlan,
-        promoCode: promoCode.trim() || undefined,
-        returnUrl: typeof window !== 'undefined' ? `${window.location.origin}/premium` : '',
+        promoCode: promoApplied ? promoCode.trim() : undefined,
+        useBalance,
+        returnUrl: useBalance ? undefined : `${window.location.origin}/premium`,
       },
       {
-        onSuccess: (invoice) => {
+        onSuccess: async (invoice) => {
+          if (invoice.paidWithBalance) {
+            await refreshCurrentUser();
+            toast.success('Premium faollashtirildi!');
+            return;
+          }
           if (invoice.checkoutUrl) {
             window.location.href = invoice.checkoutUrl;
-          } else {
-            router.push(
-              user?.role === 'student'
-                ? `/student/payment/${invoice.invoiceId}`
-                : `/payment/${invoice.invoiceId}`
-            );
+            return;
           }
+          router.push(
+            user?.role === 'student'
+              ? `/student/payment/${invoice.invoiceId}`
+              : `/payment/${invoice.invoiceId}`
+          );
         },
       }
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader
-        title="Premium a'zolik"
-        description="Istalgan reja bilan sotib oling — muddat mavjud premiumingiz ustiga qo'shiladi"
-      />
-
-      {isPremium && (
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-gold/30 bg-linear-to-r from-gold/15 to-transparent p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gold/20 text-gold-foreground">
-              <Crown className="size-5" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-gold-foreground">
-                Premium faol
-                {user.premiumExpiresAt ? ` — ${formatDate(user.premiumExpiresAt)} gacha` : ''}
-              </p>
-              <p className="mt-0.5 text-xs text-gold-foreground/80">
-                {daysLeft !== null && daysLeft <= 5
-                  ? `Muddatingiz ${daysLeft <= 0 ? 'tugadi' : `${daysLeft} kundan keyin tugaydi`} — pastdan yangi reja tanlab uzaytiring`
-                  : 'Xohlasangiz, pastdan yana reja tanlab muddatni uzaytirishingiz mumkin'}
-              </p>
-            </div>
-          </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+      <section className="flex flex-wrap items-center gap-5 rounded-[22px] bg-primary px-6 py-6 text-primary-foreground sm:px-7">
+        <div className="min-w-0 flex-[1_1_320px]">
+          <span className="rounded-full bg-gold px-2.5 py-1 text-xs font-bold text-admin">
+            {isPremium ? 'PREMIUM FAOL' : 'PREMIUM'}
+          </span>
+          <h1 className="mt-2.5 mb-1 font-heading text-2xl font-semibold sm:text-[26px]">
+            {isPremium && user?.premiumExpiresAt
+              ? `${formatDate(user.premiumExpiresAt)} gacha`
+              : "Premium a'zolik"}
+          </h1>
+          <p className="text-primary-foreground/80">
+            {isPremium
+              ? daysLeft !== null && daysLeft <= 5
+                ? `Muddat ${daysLeft <= 0 ? 'tugadi' : `${daysLeft} kundan keyin tugaydi`} — yangi reja bilan uzaytiring.`
+                : "Yangi reja joriy muddat ustiga qo'shiladi — almashtirmaydi."
+              : "Ko'proq olmos, premium mukofotlar va ko'proq imkoniyatlar."}
+          </p>
         </div>
-      )}
-
-      {user?.role === 'student' ? (
-        <BenefitsCard title="O'quvchi uchun imkoniyatlar" benefits={STUDENT_BENEFITS} />
-      ) : user?.role === 'teacher' ? (
-        <BenefitsCard title="O'qituvchi uchun imkoniyatlar" benefits={TEACHER_BENEFITS} />
-      ) : (
-        <Card className="rounded-2xl">
-          <CardContent className="flex items-start gap-3 pt-5 text-sm text-muted-foreground">
-            <ShieldCheck className="size-4.5 shrink-0 text-gold-foreground" />
-            <p>
-              Premium imtiyozlari asosan o&apos;quvchi va o&apos;qituvchi rollari uchun
-              mo&apos;ljallangan (ko&apos;proq olmos, kunlik barabon, qo&apos;shimcha urinishlar).
-              Sizning rolingiz uchun alohida funksional cheklov yo&apos;q, lekin xohlasangiz sotib
-              olishingiz mumkin.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {benefits.length > 0 && (
+          <div className="flex flex-wrap gap-2.5">
+            {benefits.map((benefit) => (
+              <span key={benefit} className="rounded-xl bg-white/15 px-3.5 py-2.5 font-semibold">
+                {benefit}
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-2xl bg-muted" />
-          ))}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-32 animate-pulse rounded-[20px] bg-muted" />
+            ))}
+          </div>
+          <div className="h-96 animate-pulse rounded-[22px] bg-muted" />
         </div>
       ) : isError || !plans ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+          <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
             {PLAN_ORDER.map((key) => {
               const plan = plans[key];
               if (!plan) return null;
@@ -174,150 +137,151 @@ export default function PremiumPage() {
                 <button
                   key={key}
                   type="button"
+                  aria-pressed={isSelected}
                   onClick={() => setSelectedPlan(key)}
                   className={cn(
-                    'relative flex flex-col items-center gap-1 rounded-2xl border-2 bg-card px-3 py-4 text-center shadow-sm transition-all',
+                    'relative flex flex-col gap-2 rounded-[20px] border-2 p-4 text-left transition-colors sm:p-5',
                     isSelected
-                      ? 'border-primary ring-2 ring-primary/20'
-                      : 'border-border/70 hover:border-primary/40'
+                      ? 'border-primary bg-primary-soft'
+                      : 'border-border bg-card hover:border-primary/40'
                   )}
                 >
-                  {key === POPULAR_PLAN && (
-                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold whitespace-nowrap text-primary-foreground shadow-sm">
-                      Eng ommabop
+                  {(isSelected || key === POPULAR_PLAN) && (
+                    <span
+                      className={cn(
+                        'absolute -top-3 right-4 rounded-full px-2.5 py-1 text-[11px] font-bold',
+                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-gold text-admin'
+                      )}
+                    >
+                      {isSelected ? 'TANLANDI' : 'OMMABOP'}
                     </span>
                   )}
-                  <span className="mt-1 text-sm font-semibold">{planLabel(plan.days)}</span>
-                  <span className="text-lg font-bold">{formatPrice(plan.price)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    oyiga ~{formatPrice(plan.pricePerMonth)}
+                  <span className="font-heading text-xl font-bold sm:text-[22px]">
+                    {plan.days} kun
                   </span>
-                  {plan.discountPercent > 0 && (
-                    <Badge className="mt-1 rounded-full bg-success/15 text-success">
-                      {plan.discountPercent}% tejang
-                    </Badge>
-                  )}
+                  <span className="text-base font-bold sm:text-lg">{formatPrice(plan.price)}</span>
+                  <span className="text-[13px] text-muted-foreground">
+                    oyiga {formatPrice(plan.pricePerMonth)}
+                    {plan.discountPercent > 0 ? ` · −${plan.discountPercent}%` : ' · standart'}
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          <Card className="rounded-2xl">
-            <CardContent className="flex flex-col gap-4 pt-5">
-              <div className="flex items-center gap-2">
-                <Tag className="size-4 shrink-0 text-muted-foreground" />
+          <aside
+            aria-label="To'lov"
+            className="flex flex-col gap-3.5 rounded-[22px] border border-border bg-card p-5 sm:p-[22px]"
+          >
+            <h2 className="text-lg font-bold">To&apos;lov</h2>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="promo" className="text-sm font-semibold">
+                Promokod
+              </label>
+              <div className="flex gap-2">
                 <Input
+                  id="promo"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      handleCheckPromo();
+                      setAppliedCode(promoCode.trim() || undefined);
                     }
                   }}
-                  placeholder="Promo kod (ixtiyoriy)"
-                  className="h-10 rounded-md"
+                  placeholder="Ixtiyoriy"
+                  className={cn('h-11', promoApplied && 'border-success')}
                 />
                 <Button
                   type="button"
-                  variant="outline"
-                  className="h-10 shrink-0 rounded-md"
-                  onClick={handleCheckPromo}
+                  variant={promoApplied ? 'secondary' : 'outline'}
+                  className={cn('h-11 shrink-0', promoApplied && 'bg-success-soft text-success')}
+                  onClick={() => setAppliedCode(promoCode.trim() || undefined)}
                   disabled={!promoCode.trim() || promoPreview.isFetching}
                 >
                   {promoPreview.isFetching ? (
                     <Loader2 className="size-4 animate-spin" />
-                  ) : (
+                  ) : promoApplied ? (
                     <Check className="size-4" />
-                  )}
-                  Tekshirish
+                  ) : null}
+                  {promoApplied ? "Qo'llandi" : "Qo'llash"}
                 </Button>
               </div>
-
               {codeMatchesApplied && promoPreview.isError && (
-                <p className="flex items-center gap-1.5 text-xs text-destructive">
-                  <CircleAlert className="size-3.5" /> Promo kod topilmadi yoki amal qilmaydi
-                </p>
-              )}
-              {codeMatchesApplied && promoPreview.data && (
-                <p className="flex items-center gap-1.5 text-xs text-success">
-                  <Sparkles className="size-3.5" /> {promoPreview.data.discountPercent}% chegirma
-                  qo&apos;llandi
-                </p>
-              )}
-
-              <div className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3">
-                <span className="text-sm text-muted-foreground">
-                  {selected ? planLabel(selected.days) : ''} reja jami
+                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-destructive">
+                  <CircleAlert className="size-3.5" /> Promokod topilmadi yoki amal qilmaydi
                 </span>
-                <span className="text-xl font-bold">
-                  {formatPrice(
-                    (codeMatchesApplied ? promoPreview.data?.finalAmount : undefined) ??
-                      selected?.price ??
-                      0
+              )}
+              {promoApplied && (
+                <span className="text-[13px] font-semibold text-success">
+                  −{promoPreview.data!.discountPercent}% chegirma qo&apos;llandi
+                </span>
+              )}
+            </div>
+
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-sm font-semibold">To&apos;lov usuli</legend>
+              {(
+                [
+                  {
+                    value: 'card',
+                    title: 'Multicard',
+                    note: "Karta orqali — to'lov sahifasiga o'tasiz",
+                    disabled: false,
+                  },
+                  {
+                    value: 'balance',
+                    title: 'Hamyon balansidan',
+                    note: `Balans: ${formatPrice(balance)}${balanceEnough ? ' · darhol faollashadi' : ' · yetarli emas'}`,
+                    disabled: !balanceEnough,
+                  },
+                ] as const
+              ).map((option) => (
+                <label
+                  key={option.value}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-3 rounded-[14px] border-2 p-3.5 transition-colors',
+                    method === option.value ? 'border-primary' : 'border-border',
+                    option.disabled && 'cursor-not-allowed opacity-60'
                   )}
-                </span>
-              </div>
+                >
+                  <input
+                    type="radio"
+                    name="pay-method"
+                    value={option.value}
+                    checked={method === option.value}
+                    disabled={option.disabled}
+                    onChange={() => setMethod(option.value)}
+                    className="size-[18px] accent-primary"
+                  />
+                  <span>
+                    <span className="block font-bold">{option.title}</span>
+                    <span className="block text-[13px] text-muted-foreground">{option.note}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
 
-              <Button
-                size="lg"
-                className="h-12 w-full rounded-md text-base font-semibold"
-                onClick={handleCheckout}
-                disabled={createPayment.isPending || !selected}
-              >
-                {createPayment.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Crown className="size-4" />
-                )}
-                Premiumga o&apos;tish
-              </Button>
-            </CardContent>
-          </Card>
-        </>
+            <div className="flex items-baseline justify-between border-t border-border pt-2">
+              <span className="text-muted-foreground">Jami</span>
+              <span className="font-heading text-xl font-bold">{formatPrice(total)}</span>
+            </div>
+
+            <Button
+              size="lg"
+              className="h-[52px] w-full text-base font-bold"
+              onClick={handleCheckout}
+              disabled={
+                createPayment.isPending || !selected || (method === 'balance' && !balanceEnough)
+              }
+            >
+              {createPayment.isPending && <Loader2 className="size-4 animate-spin" />}
+              To&apos;lash
+            </Button>
+          </aside>
+        </div>
       )}
     </div>
-  );
-}
-
-function BenefitsCard({
-  title,
-  benefits,
-}: {
-  title: string;
-  benefits: {
-    icon: 'diamond' | React.ComponentType<{ className?: string }>;
-    label: string;
-    value: string;
-  }[];
-}) {
-  return (
-    <Card className="overflow-hidden rounded-2xl border-2 border-gold/40 bg-linear-to-b from-gold/10 to-transparent">
-      <CardContent className="pt-5">
-        <h2 className="flex items-center gap-1.5 font-heading text-sm font-semibold text-gold-foreground">
-          <Crown className="size-4" /> {title}
-        </h2>
-        <ul className="mt-3.5 space-y-3">
-          {benefits.map((benefit) => (
-            <li key={benefit.label} className="flex items-center gap-2.5 text-sm font-medium">
-              {benefit.icon === 'diamond' ? (
-                <Image
-                  src="/diamond.png"
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="size-4 shrink-0"
-                />
-              ) : (
-                <Check className="size-4 shrink-0 text-gold-foreground" />
-              )}
-              <span>
-                {benefit.label} <span className="text-gold-foreground">— {benefit.value}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
   );
 }

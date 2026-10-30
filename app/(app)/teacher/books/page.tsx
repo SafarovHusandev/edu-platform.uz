@@ -1,11 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { BookMarked, Plus, Trash2, Download } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +18,12 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { SkeletonList } from '@/components/ui/skeleton';
 import { useBooks, useDeleteBook, useRegisterBookDownload } from '@/hooks/use-books';
 import { useAuthStore } from '@/store/auth-store';
 import { resolveAssetUrl, bookDownloadUrl } from '@/lib/config';
 import { formatNumber } from '@/lib/format';
+import { cn } from '@/lib/utils';
+import { StatusPill, coverTone } from '@/components/dashboard/dashboard-ui';
 
 export default function TeacherBooksPage() {
   const user = useAuthStore((s) => s.user);
@@ -39,79 +37,106 @@ export default function TeacherBooksPage() {
   });
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Kitoblarim"
-        description="Yuklagan kitoblaringizni boshqaring"
+        description={myBooks && myBooks.length > 0 ? `${myBooks.length} ta kitob` : undefined}
         actions={
-          <Button render={<Link href="/teacher/books/new" />}>
-            <Plus className="size-4" /> Yangi kitob
+          <Button size="lg" render={<Link href="/teacher/books/new" />}>
+            <Plus className="size-4" /> Kitob qo&apos;shish
           </Button>
         }
       />
 
       {isLoading ? (
-        <SkeletonList count={4} itemClassName="h-20" />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-72 animate-pulse rounded-[18px] bg-muted" />
+          ))}
+        </div>
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !myBooks || myBooks.length === 0 ? (
-        <EmptyState icon={BookMarked} title="Hali kitob yuklamagansiz" />
+        <EmptyState
+          icon={BookMarked}
+          title="Hali kitob yuklamagansiz"
+          action={
+            <Button render={<Link href="/teacher/books/new" />}>
+              <Plus className="size-4" /> Birinchi kitobni qo&apos;shish
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {myBooks.map((book) => {
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] sm:gap-4">
+          {myBooks.map((book, index) => {
             const cover = resolveAssetUrl(book.coverImage);
             return (
-              <Card key={book._id}>
-                <CardContent className="flex items-center gap-4 pt-2">
-                  {cover ? (
-                    <Dialog>
-                      <DialogTrigger
-                        render={
-                          <button
-                            type="button"
-                            aria-label={`${book.title} muqovasini kattalashtirish`}
-                            className="flex size-11 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded-md bg-primary/10 text-primary transition-opacity hover:opacity-80"
-                          />
-                        }
-                      >
-                        <Image
-                          src={cover}
-                          alt={book.title}
-                          width={44}
-                          height={44}
-                          unoptimized
-                          className="size-full object-cover"
+              <article
+                key={book._id}
+                className="flex flex-col gap-2 rounded-[18px] border border-border bg-card p-3"
+              >
+                {cover ? (
+                  <Dialog>
+                    <DialogTrigger
+                      render={
+                        <button
+                          type="button"
+                          aria-label={`${book.title} muqovasini kattalashtirish`}
+                          className="block aspect-3/4 cursor-zoom-in overflow-hidden rounded-xl bg-muted"
                         />
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md p-0 sm:max-w-md" showCloseButton>
-                        <DialogTitle className="sr-only">{book.title}</DialogTitle>
-                        <Image
-                          src={cover}
-                          alt={book.title}
-                          width={512}
-                          height={512}
-                          unoptimized
-                          className="max-h-[80vh] w-full rounded-md object-contain"
-                        />
-                      </DialogContent>
-                    </Dialog>
-                  ) : (
-                    <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-primary/10 text-primary">
-                      <BookMarked className="size-5" />
-                    </span>
-                  )}
-                  <Link href={`/teacher/books/${book._id}`} className="flex-1">
-                    <p className="text-[16px] font-medium hover:underline">{book.title}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant={book.isPublished ? 'default' : 'secondary'}>
-                        {book.isPublished ? 'Nashr etilgan' : 'Qoralama'}
-                      </Badge>
-                      {book.grade != null && <Badge variant="outline">{book.grade}-sinf</Badge>}
-                      <span className="flex items-center gap-1">
-                        <Download className="size-3.5" /> {formatNumber(book.downloadsCount ?? 0)}
-                      </span>
-                    </div>
+                      }
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={cover} alt={book.title} className="size-full object-cover" />
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md p-0 sm:max-w-md" showCloseButton>
+                      <DialogTitle className="sr-only">{book.title}</DialogTitle>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={cover}
+                        alt={book.title}
+                        className="max-h-[80vh] w-full rounded-xl object-contain"
+                      />
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <Link
+                    href={`/teacher/books/${book._id}`}
+                    className={cn(
+                      'flex aspect-3/4 items-end rounded-xl p-3 font-heading text-lg font-bold leading-tight',
+                      coverTone(index)
+                    )}
+                  >
+                    {book.title}
                   </Link>
+                )}
+                <div className="flex items-start justify-between gap-1.5">
+                  <Link
+                    href={`/teacher/books/${book._id}`}
+                    className="line-clamp-2 text-sm font-bold hover:text-primary"
+                  >
+                    {book.title}
+                  </Link>
+                  <StatusPill
+                    tone={book.isPublished ? 'success' : 'neutral'}
+                    className="px-2 py-0.5 text-[11px]"
+                  >
+                    {book.isPublished ? 'Nashr' : 'Qoralama'}
+                  </StatusPill>
+                </div>
+                <span className="text-[13px] text-muted-foreground">
+                  {book.grade != null ? `${book.grade}-sinf` : 'Barcha sinflar'} · ↓{' '}
+                  {book.downloadsCount ? formatNumber(book.downloadsCount) : '—'}
+                </span>
+                <div className="mt-auto flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    render={<Link href={`/teacher/books/${book._id}`} />}
+                  >
+                    Tahrir
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -146,14 +171,17 @@ export default function TeacherBooksPage() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteBook.mutate(book._id)}>
+                        <AlertDialogAction
+                          variant="destructive"
+                          onClick={() => deleteBook.mutate(book._id)}
+                        >
                           O&apos;chirish
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                </CardContent>
-              </Card>
+                </div>
+              </article>
             );
           })}
         </div>

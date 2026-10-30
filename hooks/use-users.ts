@@ -13,10 +13,15 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+export type LeaderboardResult = Paginated<User> & {
+  // Login qilgan student uchun uning o'rni; boshqa rollarda null
+  me?: { rank: number; diamonds: number } | null
+}
+
 export function useLeaderboard(page = 1, limit = 10) {
   return useQuery({
     queryKey: ["leaderboard", page, limit],
-    queryFn: () => api.get<Paginated<User>>("/users/leaderboard", { page, limit }),
+    queryFn: () => api.get<LeaderboardResult>("/users/leaderboard", { page, limit }),
   })
 }
 
@@ -26,11 +31,14 @@ export function useUsers(
     limit?: number
     search?: string
     isVerified?: boolean
+    isBlocked?: boolean
     role?: Role
     tarif?: Tarif
-  } = {}
+  } = {},
+  options: { enabled?: boolean } = {}
 ) {
   return useQuery({
+    enabled: options.enabled ?? true,
     queryKey: ["admin-users", filters],
     queryFn: () => api.get<Paginated<User>>("/users", { ...filters }),
     placeholderData: (prev) => prev,
@@ -57,6 +65,7 @@ export function useToggleUserBlock() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
       toast.success(variables.isBlocked ? "Foydalanuvchi bloklandi" : "Bloki ochildi")
     },
@@ -75,6 +84,7 @@ export function useVerifyUser() {
     },
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       queryClient.invalidateQueries({ queryKey: ["admin-user", id] })
       toast.success("Foydalanuvchi tasdiqlandi")
     },
@@ -111,6 +121,7 @@ export function useCreateUser() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       toast.success("Foydalanuvchi yaratildi")
     },
     onError: (error) => toast.error(errorMessage(error, "Foydalanuvchi yaratishda xatolik")),
@@ -128,6 +139,7 @@ export function useUpdateUser() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
       toast.success("Foydalanuvchi yangilandi")
     },
@@ -148,6 +160,7 @@ export function useResetUserPassword() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
       toast.success("Parol muvaffaqiyatli tiklandi")
     },
@@ -167,6 +180,7 @@ export function useAdminUploadAvatar() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       queryClient.invalidateQueries({ queryKey: ["admin-user", variables.id] })
       toast.success("Avatar yangilandi")
     },
@@ -184,6 +198,7 @@ export function useAdminDeleteAvatar() {
     },
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       queryClient.invalidateQueries({ queryKey: ["admin-user", id] })
       toast.success("Avatar o'chirildi")
     },
@@ -198,6 +213,7 @@ export function useDeleteUser() {
     mutationFn: (id: string) => api.delete(`/users/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
       toast.success("Foydalanuvchi o'chirildi")
     },
     onError: (error) => toast.error(errorMessage(error, "Foydalanuvchini o'chirishda xatolik")),

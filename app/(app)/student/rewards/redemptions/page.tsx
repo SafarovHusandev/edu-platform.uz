@@ -1,201 +1,204 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
+import { useState } from 'react';
 import { Gift, PackageCheck } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { SkeletonList } from '@/components/ui/skeleton';
+import { FilterPills } from '@/components/ui/filter-pills';
+import { DiamondIcon } from '@/components/icons/diamond-icon';
+import { StatusPill, type StatusPillTone } from '@/components/dashboard/dashboard-ui';
 import { useMyRedemptions } from '@/hooks/use-rewards';
-import { formatDate, formatNumber } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import { resolveAssetUrl } from '@/lib/config';
 import { cn } from '@/lib/utils';
-import type { RedemptionStatus } from '@/types';
+import type { Redemption, RedemptionActor, RedemptionStatus } from '@/types';
 
-const STATUS_LABELS: Record<RedemptionStatus, string> = {
-  pending: 'Kutilmoqda',
-  approved: 'Tasdiqlangan',
-  delivered: 'Topshirilgan',
-  rejected: 'Rad etilgan',
+const STATUS_PILL: Record<RedemptionStatus, { label: string; tone: StatusPillTone }> = {
+  pending: { label: 'Kutilmoqda', tone: 'warning' },
+  approved: { label: 'Tasdiqlandi', tone: 'primary' },
+  delivered: { label: 'Topshirildi', tone: 'success' },
+  rejected: { label: 'Rad etildi', tone: 'danger' },
 };
 
-const STATUS_STYLES: Record<RedemptionStatus, string> = {
-  pending: 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-400',
-  approved: 'bg-sky-500/10 text-sky-700 ring-1 ring-sky-500/20 dark:text-sky-400',
-  delivered: 'bg-success/10 text-success ring-1 ring-success/20',
-  rejected: 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
-};
+type Filter = 'all' | 'open' | 'delivered' | 'rejected';
 
-type StepState = 'done' | 'pending' | 'rejected' | 'none';
+function shortDateTime(value: string) {
+  const date = new Date(value);
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  return `${dd}.${mm} ${hh}:${mi}`;
+}
 
-function getProgressSteps(status: RedemptionStatus): { label: string; state: StepState }[] {
-  if (status === 'rejected') {
+function actorName(actor: RedemptionActor | string | null | undefined) {
+  return actor && typeof actor === 'object' ? actor.name.split(' ')[0] : null;
+}
+
+interface Step {
+  label: string;
+  meta: string;
+  state: 'done' | 'rejected' | 'todo';
+}
+
+function steps(redemption: Redemption): Step[] {
+  const sent: Step = {
+    label: 'Yuborildi',
+    meta: shortDateTime(redemption.createdAt),
+    state: 'done',
+  };
+  const stamp = (at?: string | null, by?: RedemptionActor | string | null) =>
+    [at ? shortDateTime(at).split(' ')[0] : null, actorName(by)].filter(Boolean).join(' · ') || '—';
+
+  if (redemption.status === 'rejected') {
     return [
-      { label: 'Kutilmoqda', state: 'done' },
-      { label: 'Rad etildi', state: 'rejected' },
-      { label: '—', state: 'none' },
+      sent,
+      {
+        label: 'Rad etildi',
+        meta: stamp(redemption.rejectedAt, redemption.rejectedBy),
+        state: 'rejected',
+      },
+      { label: '—', meta: '', state: 'todo' },
     ];
   }
-  const order: RedemptionStatus[] = ['pending', 'approved', 'delivered'];
-  const labels = ['Kutilmoqda', 'Tasdiqlangan', 'Topshirilgan'];
-  const currentIdx = order.indexOf(status);
-  return labels.map((label, idx) => ({
-    label,
-    state: idx <= currentIdx ? 'done' : 'pending',
-  }));
+  const approved = redemption.status === 'approved' || redemption.status === 'delivered';
+  const delivered = redemption.status === 'delivered';
+  return [
+    sent,
+    {
+      label: approved ? 'Tasdiqlandi' : 'Tasdiqlash',
+      meta: approved ? stamp(redemption.approvedAt, redemption.approvedBy) : '—',
+      state: approved ? 'done' : 'todo',
+    },
+    {
+      label: delivered ? 'Yetkazildi' : 'Yetkazish',
+      meta: delivered
+        ? stamp(redemption.deliveredAt, redemption.deliveredBy)
+        : approved
+          ? 'kutilmoqda'
+          : '—',
+      state: delivered ? 'done' : 'todo',
+    },
+  ];
+}
+
+function statusNote(redemption: Redemption) {
+  switch (redemption.status) {
+    case 'pending':
+      return redemption.adminNote || "Olmos yechildi, admin ko'rib chiqmoqda";
+    case 'approved':
+      return redemption.adminNote || 'Admin topshirgach yakunlanadi';
+    case 'delivered':
+      return redemption.deliveryNote || 'Mukofot sizga topshirildi';
+    case 'rejected':
+      return `Sabab: «${redemption.rejectReason || redemption.adminNote || "ko'rsatilmagan"}» · ${formatNumber(redemption.diamondsSpent)} olmos qaytarildi`;
+  }
 }
 
 export default function MyRedemptionsPage() {
-  const { data, isLoading, isError, refetch } = useMyRedemptions(1, 24);
+  const { data, isLoading, isError, refetch } = useMyRedemptions(1, 50);
+  const [filter, setFilter] = useState<Filter>('all');
+
+  const all = data?.items ?? [];
+  const items = all.filter((r) => {
+    if (filter === 'open') return r.status === 'pending' || r.status === 'approved';
+    if (filter === 'delivered') return r.status === 'delivered';
+    if (filter === 'rejected') return r.status === 'rejected';
+    return true;
+  });
 
   return (
-    <div>
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/student/rewards" />}>Mukofotlar</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Mening yutuqlarim</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div className="mx-auto w-full max-w-5xl">
+      <PageHeader
+        title="Mukofot so'rovlarim"
+        breadcrumbs={[{ label: 'Mukofotlar', href: '/student/rewards' }, { label: "So'rovlarim" }]}
+      />
 
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">Mening yutuqlarim</h1>
-      <p className="mt-1 text-muted-foreground">Almashtirilgan mukofotlar tarixi</p>
+      {isLoading ? (
+        <div className="flex flex-col gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-[20px] bg-muted" />
+          ))}
+        </div>
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : all.length === 0 ? (
+        <EmptyState icon={PackageCheck} title="Hali mukofotga almashtirmagansiz" />
+      ) : (
+        <div className="flex flex-col gap-4">
+          <FilterPills
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: 'all', label: 'Barchasi' },
+              {
+                value: 'open',
+                label: 'Jarayonda',
+                count: all.filter((r) => r.status === 'pending' || r.status === 'approved').length,
+              },
+              { value: 'delivered', label: 'Topshirilgan' },
+              { value: 'rejected', label: 'Rad etilgan' },
+            ]}
+          />
 
-      <div className="mt-6">
-        {isLoading ? (
-          <SkeletonList count={4} itemClassName="h-20 rounded-md" />
-        ) : isError ? (
-          <ErrorState onRetry={() => refetch()} />
-        ) : !data || data.items.length === 0 ? (
-          <EmptyState icon={PackageCheck} title="Hali mukofotga almashtirmagansiz" />
-        ) : (
-          <div className="space-y-3">
-            {data.items.map((redemption) => {
+          {items.length === 0 ? (
+            <EmptyState icon={PackageCheck} title="Bu bo'limda so'rovlar yo'q" />
+          ) : (
+            items.map((redemption) => {
               const reward = typeof redemption.reward === 'object' ? redemption.reward : null;
               const image = resolveAssetUrl(reward?.image);
-              const steps = getProgressSteps(redemption.status);
-
-              let note: string | undefined;
-              if (redemption.status === 'pending') {
-                note = redemption.adminNote || "Administrator ko'rib chiqmoqda";
-              } else if (redemption.status === 'approved') {
-                note = redemption.adminNote;
-              } else if (redemption.status === 'delivered') {
-                note =
-                  redemption.deliveryNote ||
-                  (redemption.deliveredAt
-                    ? `Topshirildi: ${formatDate(redemption.deliveredAt)}`
-                    : undefined);
-              } else if (redemption.status === 'rejected') {
-                note = redemption.rejectReason || redemption.adminNote;
-              }
-
+              const pill = STATUS_PILL[redemption.status];
               return (
-                <Card key={redemption._id} className="rounded-2xl border-border/70 p-0 shadow-xs">
-                  <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap">
-                    <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted">
-                      {image ? (
-                        <Image
-                          src={image}
-                          alt={reward?.title ?? 'Mukofot'}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-full items-center justify-center text-muted-foreground">
-                          <Gift className="size-5" />
-                        </div>
-                      )}
+                <article
+                  key={redemption._id}
+                  className="flex flex-wrap items-center gap-4 rounded-[20px] border border-border bg-card px-5 py-[18px] sm:gap-[18px]"
+                >
+                  <span className="flex size-[60px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-muted">
+                    {image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={image} alt="" className="size-full object-cover" />
+                    ) : (
+                      <Gift className="size-6 text-muted-foreground" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-[1_1_200px]">
+                    <div className="flex flex-wrap items-center gap-x-2 text-base font-bold">
+                      {reward?.title ?? 'Mukofot'}
+                      <span className="flex items-center gap-1 font-heading text-[13px] text-gold-foreground">
+                        <DiamondIcon className="size-3.5" />{' '}
+                        {formatNumber(redemption.diamondsSpent)}
+                      </span>
                     </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-base font-semibold text-foreground">
-                        {reward?.title ?? 'Mukofot'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(redemption.createdAt)} ·{' '}
-                        {formatNumber(redemption.diamondsSpent)} olmos
-                      </p>
-                      {note && (
-                        <p
+                    <p className="mt-0.5 text-sm text-muted-foreground">{statusNote(redemption)}</p>
+                  </div>
+                  <div className="grid flex-[1_1_320px] grid-cols-3 gap-2">
+                    {steps(redemption).map((step, i) => (
+                      <div key={i} className="flex flex-col gap-1.5">
+                        <div
                           className={cn(
-                            'mt-1 text-xs',
-                            redemption.status === 'rejected'
-                              ? 'font-medium text-destructive'
-                              : 'text-muted-foreground'
+                            'h-1.5 rounded-full',
+                            step.state === 'done'
+                              ? 'bg-success'
+                              : step.state === 'rejected'
+                                ? 'bg-destructive'
+                                : 'bg-border'
                           )}
-                        >
-                          {note}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="hidden w-56 shrink-0 flex-col gap-1.5 sm:flex">
-                      <div className="flex gap-1.5">
-                        {steps.map((step, idx) => (
-                          <span
-                            key={idx}
-                            className={cn(
-                              'h-1.5 flex-1 rounded-full',
-                              step.state === 'done' && 'bg-success',
-                              step.state === 'rejected' && 'bg-destructive',
-                              step.state === 'pending' && 'bg-muted',
-                              step.state === 'none' && 'bg-transparent'
-                            )}
-                          />
-                        ))}
+                        />
+                        <span className="text-xs font-bold">{step.label}</span>
+                        <span className="text-xs text-muted-foreground">{step.meta}</span>
                       </div>
-                      <div className="flex text-[11px]">
-                        {steps.map((step, idx) => (
-                          <span
-                            key={idx}
-                            className={cn(
-                              'flex-1',
-                              idx === 0 && 'text-left',
-                              idx === 1 && 'text-center',
-                              idx === 2 && 'text-right',
-                              step.state === 'done' && 'font-medium text-foreground',
-                              step.state === 'rejected' && 'font-medium text-destructive',
-                              (step.state === 'pending' || step.state === 'none') &&
-                                'text-muted-foreground'
-                            )}
-                          >
-                            {step.label}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Badge
-                      className={cn(
-                        'shrink-0 rounded-full px-3 py-1',
-                        STATUS_STYLES[redemption.status]
-                      )}
-                    >
-                      {STATUS_LABELS[redemption.status]}
-                    </Badge>
-                  </CardContent>
-                </Card>
+                    ))}
+                  </div>
+                  <StatusPill tone={pill.tone} className="px-3 py-1.5 text-[13px]">
+                    {pill.label}
+                  </StatusPill>
+                </article>
               );
-            })}
-          </div>
-        )}
-      </div>
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

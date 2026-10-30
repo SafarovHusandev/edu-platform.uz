@@ -18,6 +18,7 @@ const PUBLIC_PATHS = [
   "/courses",
   "/books",
   "/certificates/verify",
+  "/rewards",
   "/donate",
   "/oferta",
   "/maxfiylik-siyosati",

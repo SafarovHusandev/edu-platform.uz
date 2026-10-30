@@ -129,3 +129,26 @@ export function initials(name: string | null | undefined) {
     .map((part) => part[0]?.toUpperCase())
     .join('');
 }
+
+// "2 soat 15 daq qoldi" / "3 kun qoldi"; muddat o'tgan bo'lsa null
+export function formatTimeLeft(untilIso: string) {
+  const minutes = Math.floor((new Date(untilIso).getTime() - Date.now()) / 60_000);
+  if (minutes <= 0) return null;
+  const days = Math.floor(minutes / 1440);
+  if (days >= 1) return `${days} kun qoldi`;
+  const hours = Math.floor(minutes / 60);
+  return hours > 0 ? `${hours} soat ${minutes % 60} daq qoldi` : `${minutes} daq qoldi`;
+}
+
+// Fayl hajmi: 14 680 064 -> "14.0 MB"
+export function formatFileSize(bytes: number | null | undefined) {
+  if (!bytes || bytes <= 0) return null;
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`;
+}

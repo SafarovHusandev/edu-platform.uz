@@ -1,31 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Crown, Loader2, ShieldCheck, Wallet } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
-import { useAuthStore } from '@/store/auth-store';
+import { PaymentsHistory } from '@/components/payments/payments-history';
 import { useCreatePayment } from '@/hooks/use-payment';
+import { useAuthStore } from '@/store/auth-store';
 import { formatNumber, formatPrice, toTiyin } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const QUICK_AMOUNTS = [20000, 50000, 100000, 200000];
+const MIN_AMOUNT = 1000;
 
 export default function WalletPage() {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const createPayment = useCreatePayment();
   const [amount, setAmount] = useState(50000);
+  const [custom, setCustom] = useState('');
+
+  const effectiveAmount = custom ? Number(custom) : amount;
+  const valid = Number.isFinite(effectiveAmount) && effectiveAmount >= MIN_AMOUNT;
 
   function handleTopUp() {
+    if (!valid) return;
     createPayment.mutate(
       {
         purpose: 'wallet',
-        amount: toTiyin(amount),
-        returnUrl: typeof window !== 'undefined' ? `${window.location.origin}/student/wallet` : '',
+        amount: toTiyin(effectiveAmount),
+        returnUrl: `${window.location.origin}/student/wallet`,
       },
       {
         onSuccess: (invoice) => {
@@ -40,80 +46,80 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        title="Hamyon"
-        description="Balansingizni to'ldiring va Premium imkoniyatlardan foydalaning"
-      />
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+      <PageHeader title="Hamyon" className="mb-0" />
 
-      <Card className="bg-linear-to-br from-primary to-primary/70 text-primary-foreground">
-        <CardContent className="flex items-center gap-4 pt-2">
-          <span className="flex size-12 items-center justify-center rounded-md bg-white/15">
-            <Wallet className="size-6" />
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <section className="flex flex-col justify-between gap-2.5 rounded-[22px] bg-primary p-6 text-primary-foreground">
+          <span className="text-primary-foreground/80">Joriy balans</span>
+          <span className="font-heading text-3xl font-bold sm:text-[34px]">
+            {formatPrice(user?.balance ?? 0)}
           </span>
-          <div>
-            <p className="text-2xl font-semibold">{formatPrice(user?.balance ?? 0)}</p>
-            <p className="text-sm text-primary-foreground/80">Joriy balans</p>
-          </div>
-        </CardContent>
-      </Card>
+          <span className="text-sm text-primary-foreground/80">
+            Kurs va Premium xaridida &quot;Hamyon balansidan&quot; usulini tanlasangiz, darhol
+            to&apos;lanadi.
+          </span>
+        </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Hamyonni to&apos;ldirish</CardTitle>
-          <CardDescription>Miqdorni tanlang yoki qo&apos;lda kiriting</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {QUICK_AMOUNTS.map((value) => (
-              <Button
-                key={value}
-                type="button"
-                variant={amount === value ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAmount(value)}
-              >
-                {formatNumber(value)}
-              </Button>
-            ))}
+        <section className="flex flex-col gap-3 rounded-[22px] border border-border bg-card p-5 sm:p-[22px]">
+          <label htmlFor="amount" className="font-bold">
+            Balansni to&apos;ldirish
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_AMOUNTS.map((value) => {
+              const active = !custom && amount === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setAmount(value);
+                    setCustom('');
+                  }}
+                  className={cn(
+                    'rounded-[10px] px-4 py-2.5 font-semibold transition-colors',
+                    active
+                      ? 'border-[1.5px] border-primary bg-primary-soft font-bold text-primary'
+                      : 'border border-input bg-card hover:bg-muted'
+                  )}
+                >
+                  {formatNumber(value)}
+                </button>
+              );
+            })}
           </div>
-          <Input
-            type="number"
-            min={1000}
-            step={1000}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            aria-label="To'lov miqdori (so'm)"
-          />
-          <Button onClick={handleTopUp} disabled={createPayment.isPending || amount < 1000}>
-            {createPayment.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <CreditCard className="size-4" />
-            )}
-            {formatNumber(amount)} so&apos;m to&apos;lash
-          </Button>
-        </CardContent>
-      </Card>
-
-      {user?.tarif !== 'premium' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="size-4.5 text-gold" /> Premium a&apos;zolik
-            </CardTitle>
-            <CardDescription>
-              Cheklovlarsiz kirish, ustuvor qo&apos;llab-quvvatlash va eksklyuziv imkoniyatlar
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" render={<Link href="/premium" />}>
-              <Crown className="size-4" />
-              Premium sotib olish
+          <div className="flex flex-wrap gap-2.5">
+            <Input
+              id="amount"
+              type="number"
+              inputMode="numeric"
+              min={MIN_AMOUNT}
+              step={1000}
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              placeholder="Boshqa summa, so'm"
+              className="h-12 flex-[1_1_220px]"
+            />
+            <Button
+              size="lg"
+              className="h-12"
+              onClick={handleTopUp}
+              disabled={createPayment.isPending || !valid}
+            >
+              {createPayment.isPending && <Loader2 className="size-4 animate-spin" />}
+              Multicard orqali to&apos;ldirish
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+          {custom && !valid && (
+            <span className="text-[13px] text-destructive">
+              Eng kam summa: {formatNumber(MIN_AMOUNT)} so&apos;m
+            </span>
+          )}
+        </section>
+      </div>
+
+      <PaymentsHistory title="To'lovlar tarixi" />
     </div>
   );
 }

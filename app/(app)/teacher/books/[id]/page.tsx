@@ -114,7 +114,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
   });
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
   }
 
   if (isError) {
@@ -234,7 +234,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
           <CardTitle className="text-base">Kitob fayli</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <FileText className="size-5" />
           </span>
           <div className="flex-1">
@@ -411,7 +411,7 @@ export default function TeacherBookDetailPage({ params }: PageProps) {
       </Card>
 
       {!book.isPublished && (
-        <div className="flex items-center gap-2.5 rounded-md border border-gold/30 bg-gold/10 p-4 text-sm text-gold-foreground">
+        <div className="flex items-center gap-2.5 rounded-xl border border-gold/30 bg-gold/10 p-4 text-sm text-gold-foreground">
           <BookMarked className="size-5 shrink-0" />
           Bu kitob hali qoralama holatida — nashr qilinmaguncha kutubxonada ko&apos;rinmaydi.
         </div>

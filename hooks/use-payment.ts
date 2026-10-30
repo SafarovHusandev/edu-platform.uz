@@ -25,7 +25,9 @@ export interface CreatePaymentPayload {
   courseId?: string
   plan?: PremiumPlanKey
   promoCode?: string
-  returnUrl: string
+  // true — Multicard'ga chiqmasdan hamyon balansidan yechiladi (course/premium/donation)
+  useBalance?: boolean
+  returnUrl?: string
 }
 
 export function useCreatePayment() {
@@ -71,8 +73,12 @@ export interface PaymentHistoryFilters {
 
 // O'zining to'lovlar tarixi — istalgan rol (student/teacher/admin/superadmin)
 // chaqirishi mumkin, rol bo'yicha cheklov yo'q.
-export function useMyPayments(filters: PaymentHistoryFilters = {}) {
+export function useMyPayments(
+  filters: PaymentHistoryFilters = {},
+  options: { enabled?: boolean } = {}
+) {
   return useQuery({
+    enabled: options.enabled ?? true,
     queryKey: ["payments-my", filters],
     queryFn: () => api.get<Paginated<PaymentRecord>>("/payment/my", { ...filters }),
     placeholderData: (prev) => prev,
@@ -81,11 +87,18 @@ export function useMyPayments(filters: PaymentHistoryFilters = {}) {
 
 export interface AdminPaymentFilters extends PaymentHistoryFilters {
   userId?: string
+  // ISO sana-vaqt
+  from?: string
+  to?: string
 }
 
 // Barcha foydalanuvchilarning to'lovlari — faqat admin/superadmin.
-export function useAllPayments(filters: AdminPaymentFilters = {}) {
+export function useAllPayments(
+  filters: AdminPaymentFilters = {},
+  options: { enabled?: boolean } = {}
+) {
   return useQuery({
+    enabled: options.enabled ?? true,
     queryKey: ["payments-all", filters],
     queryFn: () => api.get<Paginated<PaymentRecord>>("/payment", { ...filters }),
     placeholderData: (prev) => prev,

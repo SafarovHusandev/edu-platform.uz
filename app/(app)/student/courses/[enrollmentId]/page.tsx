@@ -2,22 +2,14 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle, PlayCircle, GraduationCap } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { ArrowRight, GraduationCap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
+import { CourseLessonsList, sortLessons } from '@/components/courses/course-lessons-list';
+import { CourseCover, enrollmentProgress } from '@/components/courses/enrollment-card';
 import { useEnrollment } from '@/hooks/use-enrollment';
 import { useCourseLessons } from '@/hooks/use-lessons';
-import { cn } from '@/lib/utils';
 
 interface PageProps {
   params: Promise<{ enrollmentId: string }>;
@@ -27,14 +19,13 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
   const { enrollmentId } = use(params);
   const { data: enrollment, isLoading, isError, refetch } = useEnrollment(enrollmentId);
   const course = enrollment && typeof enrollment.course === 'object' ? enrollment.course : null;
-  const { data: lessons } = useCourseLessons(course?._id);
-  const completedLessons = new Set(enrollment?.completedLessons ?? []);
+  const { data: courseLessons } = useCourseLessons(course?._id);
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-24 animate-pulse rounded-md bg-muted" />
-        <div className="h-64 animate-pulse rounded-md bg-muted" />
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+        <div className="h-40 animate-pulse rounded-[22px] bg-muted" />
+        <div className="h-64 animate-pulse rounded-[22px] bg-muted" />
       </div>
     );
   }
@@ -50,88 +41,78 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
         title="Kurs topilmadi"
         description="Bu kursga yozilmagansiz yoki kurs o'chirilgan bo'lishi mumkin."
         action={
-          <Link
-            href="/student/courses"
-            className="text-sm font-medium text-primary hover:underline"
-          >
+          <Button variant="outline" render={<Link href="/student/courses" />}>
             Kurslarimga qaytish
-          </Link>
+          </Button>
         }
       />
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/student/courses" />}>
-              Mening kurslarim
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{course.title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+  const lessons = sortLessons(courseLessons);
+  const completed = new Set(enrollment.completedLessons ?? []);
+  const progress = enrollmentProgress(enrollment, lessons.length || undefined);
+  const nextLesson = lessons.find((l) => !completed.has(l._id));
+  const teacher = typeof course.teacher === 'object' ? course.teacher : null;
 
-      <div className="flex flex-col gap-4 rounded-2xl border border-border p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <span className="flex size-12 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <GraduationCap className="size-6" />
-          </span>
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+      <nav aria-label="Yo'l" className="text-sm text-muted-foreground">
+        <Link href="/student/courses" className="hover:text-foreground">
+          Kurslarim
+        </Link>{' '}
+        / {course.title}
+      </nav>
+
+      <section className="overflow-hidden rounded-[22px] border border-border bg-card sm:flex">
+        <CourseCover course={course} index={0} className="h-36 sm:h-auto sm:w-56 sm:shrink-0" />
+        <div className="flex flex-1 flex-col gap-3 p-5">
           <div>
-            <h1 className="font-heading text-xl font-semibold">{course.title}</h1>
-            <p className="text-sm text-muted-foreground">{lessons?.length ?? 0} ta dars</p>
+            <h1 className="font-heading text-xl font-semibold wrap-break-word sm:text-2xl">
+              {course.title}
+            </h1>
+            {teacher?.name && <p className="mt-1 text-sm text-muted-foreground">{teacher.name}</p>}
+          </div>
+          <div className="h-2 rounded-full bg-muted">
+            <div
+              className={
+                enrollment.isCompleted
+                  ? 'h-2 rounded-full bg-success'
+                  : 'h-2 rounded-full bg-primary'
+              }
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">
+              {progress.done}/{lessons.length} dars · {progress.percent}%
+            </span>
+            {nextLesson ? (
+              <Button render={<Link href={`/student/lessons/${nextLesson._id}`} />}>
+                {progress.done > 0 ? 'Davom ettirish' : 'Boshlash'}{' '}
+                <ArrowRight className="size-4" />
+              </Button>
+            ) : (
+              lessons.length > 0 && (
+                <span className="font-semibold text-success">Kurs tugatilgan ✓</span>
+              )
+            )}
           </div>
         </div>
-        <div className="w-full sm:w-56">
-          <Progress value={enrollment.progress ?? 0} />
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            {Math.round(enrollment.progress ?? 0)}% bajarildi
-          </p>
-        </div>
-      </div>
+      </section>
 
-      <div>
-        <h2 className="mb-3 text-lg font-semibold">Darslar</h2>
-        {!lessons || lessons.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Bu kursda hali darslar yo&apos;q</p>
+      <section className="rounded-[20px] border border-border bg-card p-4">
+        <h2 className="px-1 pb-3 text-lg font-bold">Darslar</h2>
+        {lessons.length === 0 ? (
+          <p className="px-1 text-sm text-muted-foreground">Bu kursda hali darslar yo&apos;q</p>
         ) : (
-          <ol className="space-y-2">
-            {lessons
-              .sort((a, b) => a.order - b.order)
-              .map((lesson, idx) => {
-                const isDone = completedLessons.has(lesson._id);
-                return (
-                  <li key={lesson._id}>
-                    <Link
-                      href={`/student/lessons/${lesson._id}`}
-                      className={cn(
-                        'flex items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:border-primary/40',
-                        isDone && 'bg-success/5'
-                      )}
-                    >
-                      {isDone ? (
-                        <CheckCircle2 className="size-5 shrink-0 text-success" />
-                      ) : (
-                        <Circle className="size-5 shrink-0 text-muted-foreground" />
-                      )}
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                        {idx + 1}
-                      </span>
-                      <span className="flex-1 text-sm font-medium">{lesson.title}</span>
-                      {isDone && <Badge variant="secondary">Tugallangan</Badge>}
-                      <PlayCircle className="size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  </li>
-                );
-              })}
-          </ol>
+          <CourseLessonsList
+            lessons={lessons}
+            completed={completed}
+            currentLessonId={nextLesson?._id}
+          />
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   Camera,
   CheckCircle2,
@@ -14,17 +13,14 @@ import {
   KeyRound,
   Loader2,
   Send,
-  ShieldCheck,
+  LogOut,
   Unlink,
-  UserRound,
   Wallet,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { StatusCard } from '@/components/layout/status-card';
+import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Form,
   FormControl,
@@ -68,7 +64,7 @@ import {
   useUpdateProfile,
   useUploadAvatar,
 } from '@/hooks/use-users';
-import { refreshCurrentUser } from '@/hooks/use-auth';
+import { refreshCurrentUser, useLogout } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
 import { ROLE_LABELS } from '@/lib/roles';
 import { resolveAssetUrl, TELEGRAM_BOT_USERNAME } from '@/lib/config';
@@ -118,6 +114,7 @@ export default function ProfilePage() {
   const changePassword = useChangePassword();
   const linkTelegram = useLinkTelegram();
   const unlinkTelegram = useUnlinkTelegram();
+  const logout = useLogout();
 
   // Backend PATCH /users/me'da o'quvchi yuborgan "name"ni jimgina e'tiborsiz
   // qoldiradi — shu sabab o'quvchi faqat sinfini, qolgan rollar esa ismini tahrirlaydi.
@@ -194,49 +191,71 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
+  const isStudent = user.role === 'student';
+  const isPremium = user.tarif === 'premium';
   const premiumDaysLeft = user.premiumExpiresAt ? daysUntil(user.premiumExpiresAt) : null;
+  const gradeNumberError = gradeForm.formState.errors.gradeNumber?.message;
+  const gradeLetterError = gradeForm.formState.errors.gradeLetter?.message;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <PageHeader title="Profil" description="Shaxsiy ma'lumotlaringizni boshqaring" />
+    <div className="mx-auto w-full max-w-6xl">
+      <PageHeader title="Profil" />
 
-      {user.role === 'student' && <StatusCard />}
-
-      <Card className="overflow-hidden rounded-2xl border-none pt-0 shadow-md ring-1 ring-border/60">
-        <div className="h-20 bg-linear-to-r from-primary via-primary/80 to-gold/50 sm:h-28" />
-        <CardContent className="flex flex-col items-center gap-5 pt-0 sm:flex-row sm:gap-6">
-          <div className="relative -mt-16 shrink-0 sm:-mt-24">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+        <section className="flex min-w-0 flex-col gap-4 rounded-[20px] border border-border bg-card p-5 sm:p-6">
+          {/* Avatar va asosiy ma'lumot */}
+          <div className="flex flex-wrap items-center gap-4">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="group/avatar relative block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="rounded-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               aria-label="Profil rasmini o'zgartirish"
             >
-              <Avatar
-                size="xl"
-                className="size-44 shadow-lg ring-4 ring-background transition-transform group-hover/avatar:scale-[1.03] sm:size-72"
-              >
+              <Avatar className="size-20">
                 <AvatarImage src={resolveAssetUrl(user.avatar)} alt={user.name} />
-                <AvatarFallback className="text-5xl font-semibold sm:text-6xl">
+                <AvatarFallback className="bg-primary font-heading text-2xl font-bold text-primary-foreground">
                   {initials(user.name)}
                 </AvatarFallback>
               </Avatar>
-              {/* <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover/avatar:opacity-100">
-                <Camera className="size-7 text-white" />
-              </span> */}
             </button>
-            <button
-              type="button"
+            <div className="min-w-0 flex-1">
+              <div className="text-lg font-bold wrap-break-word">{user.name}</div>
+              <div className="text-muted-foreground">
+                +{user.phone} · {ROLE_LABELS[user.role]}
+                {isPremium && (
+                  <>
+                    {' · '}
+                    <Link href="/premium" className="font-bold text-gold-foreground">
+                      Premium
+                      {user.premiumExpiresAt ? ` · ${formatDate(user.premiumExpiresAt)} gacha` : ''}
+                    </Link>
+                  </>
+                )}
+              </div>
+              {isPremium && premiumDaysLeft !== null && premiumDaysLeft <= 5 && (
+                <Link
+                  href="/premium"
+                  className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-foreground hover:underline"
+                >
+                  <Crown className="size-4" />
+                  Muddat{' '}
+                  {premiumDaysLeft <= 0 ? 'tugadi' : `${premiumDaysLeft} kundan keyin tugaydi`} —
+                  uzaytiring
+                </Link>
+              )}
+            </div>
+            <Button
+              variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-0.5 -right-0.5 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-4 ring-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Rasm yuklash"
+              disabled={uploadAvatar.isPending}
             >
               {uploadAvatar.isPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Camera className="size-3.5" />
+                <Camera className="size-4" />
               )}
-            </button>
+              Avatar yuklash
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -249,161 +268,124 @@ export default function ProfilePage() {
               }}
             />
           </div>
-          <div className="flex-1 text-center sm:text-left">
-            <h2 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-              {user.name}
-            </h2>
-            <p className="mt-1 text-base text-muted-foreground">{user.phone}</p>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <Badge variant="secondary" className="rounded-full px-3 py-1 text-sm">
-                {ROLE_LABELS[user.role]}
-              </Badge>
-              {user.tarif === 'premium' && (
-                <Badge className="rounded-full bg-gold px-3 py-1 text-sm text-gold-foreground">
-                  <ShieldCheck className="size-3.5" />
-                  Premium
-                  {user.premiumExpiresAt ? `: ${formatDate(user.premiumExpiresAt)} gacha` : ''}
-                </Badge>
-              )}
-            </div>
-            {user.tarif === 'premium' && premiumDaysLeft !== null && premiumDaysLeft <= 5 && (
-              <Link
-                href="/premium"
-                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-foreground hover:underline"
-              >
-                <Crown className="size-4" />
-                Muddat {premiumDaysLeft <= 0 ? 'tugadi' : `${premiumDaysLeft} kundan keyin tugaydi`}
-                — Premiumni uzaytiring
-              </Link>
-            )}
-          </div>
-          {user.role === 'student' && (
-            <div className="flex w-full gap-3 border-t pt-5 sm:w-auto sm:border-t-0 sm:border-l sm:pl-6 sm:pt-0">
-              <div className="flex-1 rounded-xl bg-gold/10 px-4 py-3 text-center ring-1 ring-gold/15 sm:flex-none">
-                <p className="flex items-center justify-center gap-1.5 text-xl font-bold text-gold-foreground">
-                  <Image src="/diamond.png" alt="" width={32} height={32} className="size-5" />{' '}
-                  {formatNumber(user.diamonds ?? 0)}
+
+          {isStudent && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-gold-soft px-4 py-3">
+                <p className="flex items-center gap-1.5 font-heading text-xl font-bold text-gold-foreground">
+                  <DiamondIcon className="size-5" /> {formatNumber(user.diamonds ?? 0)}
                 </p>
-                <p className="mt-0.5 text-xs font-medium text-muted-foreground">Olmoslar</p>
+                <p className="text-xs font-semibold text-muted-foreground">Olmoslar</p>
               </div>
-              <div className="flex-1 rounded-xl bg-primary/10 px-4 py-3 text-center ring-1 ring-primary/15 sm:flex-none">
-                <p className="flex items-center justify-center gap-1.5 text-xl font-bold text-primary">
+              <Link href="/student/wallet" className="rounded-xl bg-primary-soft px-4 py-3">
+                <p className="flex items-center gap-1.5 font-heading text-xl font-bold text-primary">
                   <Wallet className="size-5" /> {formatPrice(user.balance ?? 0)}
                 </p>
-                <p className="mt-0.5 text-xs font-medium text-muted-foreground">Hamyon</p>
-              </div>
+                <p className="text-xs font-semibold text-muted-foreground">Hamyon</p>
+              </Link>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      <Card className="rounded-2xl shadow-sm ring-1 ring-border/60">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-              <UserRound className="size-5" />
-            </span>
-            <div>
-              <CardTitle className="text-lg">Shaxsiy ma&apos;lumotlar</CardTitle>
-              <CardDescription className="text-sm">
-                {user.role === 'student'
-                  ? "Ismingizni faqat o'qituvchi yoki administrator o'zgartira oladi"
-                  : 'Ismingizni yangilang'}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {user.role === 'student' ? (
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <p className="text-sm font-medium">To&apos;liq ism</p>
-                <Input value={user.name} readOnly disabled />
-              </div>
-              <Form {...gradeForm}>
-                <form
-                  onSubmit={gradeForm.handleSubmit((values) =>
-                    updateProfile.mutate({
-                      grade: { number: Number(values.gradeNumber), letter: values.gradeLetter },
-                    })
-                  )}
-                  className="flex flex-col gap-4 sm:flex-row sm:items-start"
-                >
-                  <FormField
-                    control={gradeForm.control}
-                    name="gradeNumber"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel>Sinf raqami</FormLabel>
-                        <Select value={field.value} onValueChange={(v) => field.onChange(v ?? '')}>
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Sinfni tanlang" />
+          {/* Shaxsiy ma'lumotlar */}
+          {isStudent ? (
+            <Form {...gradeForm}>
+              <form
+                onSubmit={gradeForm.handleSubmit((values) =>
+                  updateProfile.mutate({
+                    grade: { number: Number(values.gradeNumber), letter: values.gradeLetter },
+                  })
+                )}
+                className="flex flex-col gap-4"
+              >
+                <div className="grid gap-3.5 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="profile-name" className="text-sm font-semibold">
+                      Ism familiya
+                    </label>
+                    <Input id="profile-name" value={user.name} readOnly disabled className="h-11" />
+                    <span className="text-xs text-muted-foreground">
+                      Ismni faqat o&apos;qituvchi yoki administrator o&apos;zgartira oladi.
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-semibold">Sinf</span>
+                    <div className="flex gap-2">
+                      <FormField
+                        control={gradeForm.control}
+                        name="gradeNumber"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={(v) => field.onChange(v ?? '')}
+                          >
+                            <SelectTrigger className="h-11 w-full" aria-label="Sinf raqami">
+                              <SelectValue placeholder="Sinf" />
                             </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {GRADE_NUMBERS.map((n) => (
-                              <SelectItem key={n} value={n}>
-                                {n}-sinf
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={gradeForm.control}
-                    name="gradeLetter"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel>Guruh harfi</FormLabel>
-                        <Select value={field.value} onValueChange={(v) => field.onChange(v ?? '')}>
-                          <FormControl>
-                            <SelectTrigger className="w-full">
+                            <SelectContent>
+                              {GRADE_NUMBERS.map((n) => (
+                                <SelectItem key={n} value={n}>
+                                  {n}-sinf
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      <FormField
+                        control={gradeForm.control}
+                        name="gradeLetter"
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={(v) => field.onChange(v ?? '')}
+                          >
+                            <SelectTrigger className="h-11 w-full" aria-label="Sinf harfi">
                               <SelectValue placeholder="Harf" />
                             </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {GRADE_LETTERS.map((l) => (
-                              <SelectItem key={l} value={l}>
-                                &quot;{l}&quot; guruhi
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                            <SelectContent>
+                              {GRADE_LETTERS.map((l) => (
+                                <SelectItem key={l} value={l}>
+                                  {l}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    {(gradeNumberError || gradeLetterError) && (
+                      <span className="text-xs text-destructive">
+                        {gradeNumberError ?? gradeLetterError}
+                      </span>
                     )}
-                  />
-                  <Button
-                    type="submit"
-                    className="sm:mt-6"
-                    disabled={updateProfile.isPending || !gradeForm.formState.isDirty}
-                  >
-                    {updateProfile.isPending && <Loader2 className="size-4 animate-spin" />}
-                    Saqlash
-                  </Button>
-                </form>
-              </Form>
-            </div>
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  className="h-11 self-start px-5"
+                  disabled={updateProfile.isPending || !gradeForm.formState.isDirty}
+                >
+                  {updateProfile.isPending && <Loader2 className="size-4 animate-spin" />}
+                  Saqlash
+                </Button>
+              </form>
+            </Form>
           ) : (
             <Form {...nameForm}>
               <form
                 onSubmit={nameForm.handleSubmit((values) =>
                   updateProfile.mutate({ name: values.name })
                 )}
-                className="flex flex-col gap-4 sm:flex-row sm:items-start"
+                className="flex flex-col gap-4"
               >
                 <FormField
                   control={nameForm.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>To&apos;liq ism</FormLabel>
+                    <FormItem className="sm:max-w-md">
+                      <FormLabel className="font-semibold">Ism familiya</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input className="h-11" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -411,7 +393,7 @@ export default function ProfilePage() {
                 />
                 <Button
                   type="submit"
-                  className="sm:mt-6"
+                  className="h-11 self-start px-5"
                   disabled={updateProfile.isPending || !nameForm.formState.isDirty}
                 >
                   {updateProfile.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -420,24 +402,11 @@ export default function ProfilePage() {
               </form>
             </Form>
           )}
-        </CardContent>
-      </Card>
 
-      <Card className="rounded-2xl shadow-sm ring-1 ring-border/60">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-              <KeyRound className="size-5" />
-            </span>
-            <div>
-              <CardTitle className="text-lg">Parolni o&apos;zgartirish</CardTitle>
-              <CardDescription className="text-sm">
-                Xavfsizlik uchun kuchli parol tanlang
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+          <div className="h-px bg-border" />
+
+          {/* Parol */}
+          <h2 className="font-bold">Parolni o&apos;zgartirish</h2>
           <Form {...passwordForm}>
             <form
               onSubmit={passwordForm.handleSubmit((values) => {
@@ -446,51 +415,53 @@ export default function ProfilePage() {
                   { onSuccess: () => passwordForm.reset() }
                 );
               })}
-              className="grid gap-4 sm:grid-cols-3"
+              className="flex flex-col gap-4"
             >
-              <FormField
-                control={passwordForm.control}
-                name="oldPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Joriy parol</FormLabel>
-                    <FormControl>
-                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={passwordForm.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Yangi parol</FormLabel>
-                    <FormControl>
-                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={passwordForm.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Yangi parolni tasdiqlang</FormLabel>
-                    <FormControl>
-                      <Input type="password" className="h-11 rounded-md text-base" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <FormField
+                  control={passwordForm.control}
+                  name="oldPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Joriy parol</FormLabel>
+                      <FormControl>
+                        <Input type="password" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="newPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Yangi parol</FormLabel>
+                      <FormControl>
+                        <Input type="password" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Takrorlang</FormLabel>
+                      <FormControl>
+                        <Input type="password" className="h-11" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <Button
                 type="submit"
-                size="lg"
-                className="h-11 rounded-md px-6 text-base sm:col-span-3 sm:w-fit"
+                variant="outline"
+                className="h-11 self-start px-5"
                 disabled={changePassword.isPending}
               >
                 {changePassword.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -498,100 +469,90 @@ export default function ProfilePage() {
               </Button>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </section>
 
-      <Card className="rounded-2xl shadow-sm ring-1 ring-border/60">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-              <Send className="size-5" />
+        <div className="flex min-w-0 flex-col gap-5">
+          <section className="flex flex-col items-center gap-3 rounded-[20px] border border-border bg-card p-5 text-center">
+            <span className="flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+              <Send className="size-6" />
             </span>
-            <div>
-              <CardTitle className="text-lg">Telegram</CardTitle>
-              <CardDescription className="text-sm">
-                Ulasangiz, barcha bildirishnomalar (to&apos;lov, kursga yozilish, test natijasi,
-                mukofot) Telegram botga ham keladi
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {user.telegramId ? (
-            <div className="flex flex-col items-start justify-between gap-3 rounded-md bg-success/10 px-4 py-3 sm:flex-row sm:items-center">
-              <span className="flex items-center gap-2 text-sm font-medium text-success">
-                <CheckCircle2 className="size-4" />
-                Telegram ulangan{user.telegramUsername ? ` (@${user.telegramUsername})` : ''}
-              </span>
-              <AlertDialog>
-                <AlertDialogTrigger
-                  render={<Button variant="outline" size="sm" className="rounded-lg" />}
+            <h2 className="font-bold">Telegram</h2>
+            {user.telegramId ? (
+              <>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-success">
+                  <CheckCircle2 className="size-4" />
+                  Ulangan{user.telegramUsername ? ` · @${user.telegramUsername}` : ''}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  Barcha bildirishnomalar Telegram botga ham keladi.
+                </span>
+                <AlertDialog>
+                  <AlertDialogTrigger render={<Button variant="outline" className="w-full" />}>
+                    <Unlink className="size-4" /> Uzish
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Telegramni uzasizmi?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Telegram orqali bildirishnomalar kelmay qo&apos;yadi. Davom etasizmi?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleUnlinkTelegram}>Uzish</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            ) : telegramState === 'waiting' ? (
+              <>
+                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Botda ulanishni yakunlang — bu yerda avtomatik yangilanadi
+                </span>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    stopTelegramPolling();
+                    setTelegramState('idle');
+                  }}
                 >
-                  <Unlink className="size-4" /> Uzish
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Telegramni uzasizmi?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Telegram orqali bildirishnomalar kelmay qo&apos;yadi. Davom etasizmi?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleUnlinkTelegram}>Uzish</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          ) : telegramState === 'waiting' ? (
-            <div className="flex flex-col items-start gap-3 rounded-md bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Telegram botida ulanishni yakunlang, bu yerda avtomatik yangilanadi...
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-lg"
-                onClick={() => {
-                  stopTelegramPolling();
-                  setTelegramState('idle');
-                }}
-              >
-                Bekor qilish
-              </Button>
-            </div>
-          ) : telegramState === 'timeout' ? (
-            <div className="flex flex-col items-start gap-3 rounded-md bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm text-muted-foreground">
-                Ulanmadi, qayta urinib ko&apos;ring
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg"
-                onClick={handleLinkTelegram}
-              >
-                <Send className="size-4" /> Qayta urinish
-              </Button>
-            </div>
-          ) : (
-            <Button
-              size="lg"
-              className="h-11 rounded-md px-6 text-base"
-              onClick={handleLinkTelegram}
-              disabled={linkTelegram.isPending}
-            >
-              {linkTelegram.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
-              )}
-              Telegramni ulash
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+                  Bekor qilish
+                </Button>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-muted-foreground">
+                  {telegramState === 'timeout'
+                    ? "Ulanmadi, qayta urinib ko'ring."
+                    : "Ulasangiz, to'lov, test natijasi va mukofot xabarlari Telegram botga ham keladi."}
+                </span>
+                <Button
+                  className="w-full"
+                  onClick={handleLinkTelegram}
+                  disabled={linkTelegram.isPending}
+                >
+                  {linkTelegram.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Send className="size-4" />
+                  )}
+                  {telegramState === 'timeout' ? 'Qayta urinish' : 'Telegramni ulash'}
+                </Button>
+              </>
+            )}
+          </section>
+
+          <button
+            type="button"
+            onClick={() => logout.mutate()}
+            className="flex items-center justify-center gap-2 rounded-[14px] border border-destructive/35 bg-card p-3.5 font-bold text-destructive transition-colors hover:bg-destructive-soft"
+          >
+            <LogOut className="size-4" /> Hisobdan chiqish
+          </button>
+        </div>
+      </div>
 
       <Dialog open={setPasswordOpen} onOpenChange={setSetPasswordOpen}>
         <DialogContent className="rounded-2xl">

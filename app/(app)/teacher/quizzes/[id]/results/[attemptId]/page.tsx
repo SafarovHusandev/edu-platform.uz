@@ -74,7 +74,7 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (quizLoading || attemptsLoading) {
-    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
   }
 
   if (quizError || attemptsError) {
@@ -338,7 +338,7 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
                           : `${a.attemptNumber ?? idx + 1}-urinish — ${a.scorePercent ?? 0}%`
                     }
                     className={cn(
-                      'inline-flex size-8 shrink-0 items-center justify-center  text-md px-10 rounded-md font-semibold transition-all',
+                      'inline-flex size-8 shrink-0 items-center justify-center  text-md px-10 rounded-xl font-semibold transition-all',
                       isActive
                         ? 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/30 ring-offset-2 ring-offset-background'
                         : a.status === 'submitted'

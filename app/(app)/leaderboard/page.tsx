@@ -1,422 +1,292 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import {
-  ChevronsUp,
-  ClipboardList,
-  Crown,
-  GraduationCap,
-  Library,
-  LogIn,
-  Medal,
-  NotebookText,
-  Presentation,
-  Sparkles,
-  Star,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
-import { Container } from '@/components/layout/container';
+import { Presentation, Star, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { FilterPills } from '@/components/ui/filter-pills';
+import { PageHeader } from '@/components/ui/page-header';
 import { PaginationBar } from '@/components/ui/pagination-bar';
+import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { useLeaderboard } from '@/hooks/use-users';
 import { useTopTeachers } from '@/hooks/use-stats';
 import { useAuthStore } from '@/store/auth-store';
 import { resolveAssetUrl } from '@/lib/config';
 import { formatNumber, initials } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { ApiError } from '@/lib/api-client';
 import type { TeacherRanking, User } from '@/types';
 
+const STUDENT_WINDOW = 50;
+
+type Tab = 'students' | 'teachers';
+
+function gradeLabel(user: User) {
+  return user.grade?.number ? `${user.grade.number}-${user.grade.letter ?? ''}` : null;
+}
+
+// Podium tartibi: 2 · 1 · 3 (dizayndagidek o'rtada birinchi o'rin)
+const PODIUM_ORDER = [1, 0, 2];
 const PODIUM_STYLES = [
   {
-    order: 'sm:order-2',
-    ring: 'ring-amber-400 dark:ring-amber-400',
-    badge: 'bg-linear-to-r from-amber-400 to-amber-500 text-slate-950 font-bold',
-    card: 'sm:-translate-y-5 bg-linear-to-b from-amber-500/15 via-card to-card border-2 border-amber-400/50 shadow-2xl shadow-amber-500/20 card-hover-glow',
-    avatarSize: 'size-20 sm:size-24',
-    icon: Crown,
-    rankNum: '1',
+    avatar: 'size-[76px] bg-white text-primary text-xl',
+    column: 'h-[140px] bg-gold text-admin',
+    rank: 'text-3xl',
+    diamonds: 'text-gold-foreground',
   },
   {
-    order: 'sm:order-1',
-    ring: 'ring-slate-300 dark:ring-slate-400',
-    badge: 'bg-linear-to-r from-slate-300 to-slate-400 text-slate-900 font-bold',
-    card: 'bg-linear-to-b from-slate-400/15 via-card to-card border border-slate-300 dark:border-slate-700 shadow-xl shadow-slate-500/10 card-hover-glow',
-    avatarSize: 'size-16 sm:size-18',
-    icon: Medal,
-    rankNum: '2',
+    avatar: 'size-16 bg-admin-muted text-admin text-lg',
+    column: 'h-[100px] bg-white/15',
+    rank: 'text-2xl',
+    diamonds: 'text-gold',
   },
   {
-    order: 'sm:order-3',
-    ring: 'ring-orange-400 dark:ring-orange-500',
-    badge: 'bg-linear-to-r from-orange-400 to-orange-600 text-white font-bold',
-    card: 'bg-linear-to-b from-orange-500/15 via-card to-card border border-orange-400/40 dark:border-orange-500/30 shadow-xl shadow-orange-500/10 card-hover-glow',
-    avatarSize: 'size-16 sm:size-18',
-    icon: Medal,
-    rankNum: '3',
+    avatar: 'size-16 bg-[#B45309] text-white text-lg',
+    column: 'h-[76px] bg-white/15',
+    rank: 'text-[22px]',
+    diamonds: 'text-gold',
   },
 ];
 
-// O'qituvchilar reytingida ham 1-2-3 o'rin uchun bir xil rang tili (Crown/Medal,
-// oltin/kumush/bronza) ishlatiladi, lekin metrikalar ko'pligi sababli (kurs,
-// test, dars, kitob, reyting, o'quvchi) qatorlar podium-karta emas, bitta
-// tekis ro'yxat sifatida ko'rsatiladi — shaffoflik uchun har bir ko'rsatkich
-// bir xil darajada ko'rinib turishi kerak.
-const TEACHER_RANK_BADGES: Record<number, { badge: string; icon: LucideIcon }> = {
-  1: { badge: 'bg-linear-to-r from-amber-400 to-amber-500 text-slate-950', icon: Crown },
-  2: { badge: 'bg-linear-to-r from-slate-300 to-slate-400 text-slate-900', icon: Medal },
-  3: { badge: 'bg-linear-to-r from-orange-400 to-orange-600 text-white', icon: Medal },
-};
+function Podium({ entries }: { entries: User[] }) {
+  return (
+    <section className="grid grid-cols-3 items-end gap-2 rounded-3xl bg-primary px-3 pt-6 text-primary-foreground sm:gap-4 sm:px-7 sm:pt-7">
+      {PODIUM_ORDER.map((index) => {
+        const entry = entries[index];
+        if (!entry) return <div key={index} />;
+        const style = PODIUM_STYLES[index];
+        return (
+          <div key={entry._id} className="flex min-w-0 flex-col items-center gap-2 text-center">
+            <Avatar className={cn('font-bold', style.avatar)}>
+              <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
+              <AvatarFallback className={cn('font-bold', style.avatar)}>
+                {initials(entry.name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="w-full truncate text-sm font-bold sm:text-base">{entry.name}</span>
+            {gradeLabel(entry) && (
+              <span className="text-[13px] text-primary-foreground/75">{gradeLabel(entry)}</span>
+            )}
+            <div
+              className={cn(
+                'flex w-full flex-col items-center justify-center rounded-t-2xl',
+                style.column
+              )}
+            >
+              <span className={cn('font-heading font-bold', style.rank)}>{index + 1}</span>
+              <span className={cn('flex items-center gap-1 text-sm font-bold', style.diamonds)}>
+                <DiamondIcon className="size-4" /> {formatNumber(entry.diamonds ?? 0)}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
 
-function PodiumCard({ entry, rank }: { entry: User; rank: number }) {
-  const style = PODIUM_STYLES[rank - 1];
-  const Icon = style.icon;
-
+function StudentRow({ rank, entry, isMe }: { rank: string; entry: User; isMe: boolean }) {
   return (
     <div
       className={cn(
-        'relative flex flex-col items-center gap-2.5 rounded-3xl p-5 text-center transition-all duration-300',
-        style.order,
-        style.card
+        'flex items-center gap-3 border-b border-muted px-4 py-3.5 last:border-0 sm:px-5',
+        isMe && 'bg-primary-soft'
       )}
     >
-      <div className="relative">
-        <Avatar
-          className={cn(
-            style.avatarSize,
-            'ring-4 ring-offset-2 ring-offset-background shadow-md',
-            style.ring
-          )}
-        >
-          <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
-          <AvatarFallback className="text-xl font-bold">{initials(entry.name)}</AvatarFallback>
-        </Avatar>
-        <span
-          className={cn(
-            'absolute -bottom-2 left-1/2 flex size-7 -translate-x-1/2 items-center justify-center rounded-full shadow-lg',
-            style.badge
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-      </div>
-      <div className="mt-2 w-full">
-        <p className="line-clamp-1 text-sm sm:text-base font-extrabold text-foreground">
-          {entry.name}
-        </p>
-        {entry.grade?.number && (
-          <p className="text-xs font-medium text-muted-foreground mt-0.5">
-            {entry.grade.number}-{entry.grade.letter} sinf
-          </p>
+      <span className="w-9 shrink-0 font-heading font-semibold text-muted-foreground">{rank}</span>
+      <span className="min-w-0 flex-1 truncate font-semibold">
+        {entry.name}
+        {isMe && ' (siz)'}
+        {gradeLabel(entry) && (
+          <span className="text-sm font-medium text-muted-foreground"> · {gradeLabel(entry)}</span>
         )}
-      </div>
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-sm font-extrabold text-amber-600 dark:text-amber-400 shadow-xs">
-        <Image src="/diamond.png" alt="" width={32} height={32} className="size-4.5" />
-        {formatNumber(entry.diamonds ?? 0)}
+      </span>
+      <span className="flex shrink-0 items-center gap-1 font-heading font-semibold text-gold-foreground">
+        <DiamondIcon className="size-4" /> {formatNumber(entry.diamonds ?? 0)}
       </span>
     </div>
   );
 }
 
-function MetricChip({
-  icon: Icon,
-  value,
-  label,
-  className,
-}: {
-  icon: LucideIcon;
-  value: string | number;
-  label: string;
-  className?: string;
-}) {
+function StudentsRanking() {
+  const user = useAuthStore((s) => s.user);
+  const { data, isLoading, isError, refetch } = useLeaderboard(1, STUDENT_WINDOW);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="h-64 animate-pulse rounded-3xl bg-muted" />
+        <div className="h-80 animate-pulse rounded-[20px] bg-muted" />
+      </div>
+    );
+  }
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
+
+  const items = data?.items ?? [];
+  if (items.length === 0) return <EmptyState icon={Trophy} title="Hali reyting mavjud emas" />;
+
+  const hasPodium = items.length >= 3;
+  const rest = hasPodium ? items.slice(3) : items;
+  const meInList = items.some((entry) => entry._id === user?._id);
+  const showMe = user?.role === 'student' && !meInList;
+
   return (
-    <span
-      title={label}
-      className={cn(
-        'inline-flex items-center gap-1 rounded-lg bg-background px-2 py-1 text-xs font-semibold text-muted-foreground shadow-xs ring-1 ring-border/60',
-        className
+    <div className="flex flex-col gap-5">
+      {hasPodium && <Podium entries={items.slice(0, 3)} />}
+      {(rest.length > 0 || showMe) && (
+        <section className="overflow-hidden rounded-[20px] border border-border bg-card">
+          {rest.map((entry, idx) => (
+            <StudentRow
+              key={entry._id}
+              rank={String(idx + (hasPodium ? 4 : 1))}
+              entry={entry}
+              isMe={entry._id === user?._id}
+            />
+          ))}
+          {showMe && user && (
+            <StudentRow
+              rank={data?.me ? String(data.me.rank) : `${STUDENT_WINDOW}+`}
+              entry={{ ...user, diamonds: data?.me?.diamonds ?? user.diamonds }}
+              isMe
+            />
+          )}
+        </section>
       )}
-    >
-      <Icon className="size-3.5" /> {value}
-    </span>
+    </div>
+  );
+}
+
+function TeachersRanking() {
+  const user = useAuthStore((s) => s.user);
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, refetch } = useTopTeachers(page, 10);
+  // Backend "me" ni o'rin va ball bilan qaytaradi; kurs/test soni faqat
+  // o'qituvchi joriy sahifada bo'lsa ma'lum
+  const me = data?.me ?? null;
+  const meDetails = user ? data?.items.find((t) => t._id === user._id) : undefined;
+
+  return (
+    <div className="flex flex-col gap-5">
+      {me && (
+        <section className="flex flex-wrap items-center gap-5 rounded-[20px] bg-primary px-6 py-5 text-primary-foreground">
+          <span className="font-heading text-[44px] font-bold leading-none">{me.rank}</span>
+          <div className="min-w-0 flex-[1_1_220px]">
+            <p className="text-lg font-bold">Siz · {user?.name}</p>
+            <p className="text-sm text-primary-foreground/75">
+              Faollik balingiz: {formatNumber(me.activityScore)}
+            </p>
+          </div>
+          {meDetails && (
+            <div className="flex gap-6">
+              {[
+                { value: meDetails.coursesCount, label: 'kurs' },
+                { value: meDetails.quizzesCount, label: 'test' },
+                { value: meDetails.avgRating.toFixed(1), label: 'reyting' },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <div className="font-heading text-xl font-bold">{stat.value}</div>
+                  <div className="text-[13px] text-primary-foreground/75">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {isLoading ? (
+        <div className="h-96 animate-pulse rounded-[20px] bg-muted" />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !data || data.items.length === 0 ? (
+        <EmptyState icon={Presentation} title="Hali o'qituvchilar reytingi mavjud emas" />
+      ) : (
+        <>
+          <section className="overflow-hidden rounded-[20px] border border-border bg-card">
+            {data.items.map((teacher) => (
+              <TeacherRow key={teacher._id} teacher={teacher} isMe={teacher._id === user?._id} />
+            ))}
+          </section>
+          <PaginationBar
+            page={page}
+            totalPages={data.totalPages}
+            total={data.total}
+            itemLabel="o'qituvchi"
+            onPageChange={setPage}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
 function TeacherRow({ teacher, isMe }: { teacher: TeacherRanking; isMe: boolean }) {
-  const rankStyle = TEACHER_RANK_BADGES[teacher.rank];
-  const RankIcon = rankStyle?.icon;
-
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 rounded-2xl border p-4 shadow-xs transition-all duration-200 card-hover-glow sm:flex-row sm:items-center',
-        isMe
-          ? 'border-primary/50 bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/20'
-          : 'border-border/80 bg-card hover:border-primary/30'
+        'flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-muted px-4 py-3.5 last:border-0 sm:px-5',
+        isMe && 'bg-primary-soft'
       )}
     >
-      <div className="flex items-center gap-3">
-        <div className="relative shrink-0">
-          <Avatar className="size-12 border border-border">
-            <AvatarImage src={resolveAssetUrl(teacher.avatar)} alt={teacher.name} />
-            <AvatarFallback className="font-bold">{initials(teacher.name)}</AvatarFallback>
-          </Avatar>
-          {rankStyle && RankIcon ? (
-            <span
-              className={cn(
-                'absolute -bottom-1 -right-1 flex size-5.5 items-center justify-center rounded-full shadow-sm ring-2 ring-background',
-                rankStyle.badge
-              )}
-            >
-              <RankIcon className="size-3" />
-            </span>
-          ) : (
-            <span className="absolute -bottom-1 -right-1 flex size-5.5 items-center justify-center rounded-full bg-muted font-mono text-[10px] font-extrabold text-muted-foreground ring-2 ring-background">
-              {teacher.rank}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 truncate text-sm font-bold text-foreground">
-            <span className="truncate">{teacher.name}</span>
-            {isMe && (
-              <span className="shrink-0 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-extrabold text-primary">
-                Siz
-              </span>
-            )}
-          </p>
-          <p className="text-xs text-muted-foreground">#{teacher.rank}-o&apos;rin</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-muted/40 p-1.5 sm:ml-auto">
-        <MetricChip icon={GraduationCap} value={teacher.coursesCount} label="Kurslar" />
-        <MetricChip icon={ClipboardList} value={teacher.quizzesCount} label="Testlar" />
-        <MetricChip icon={NotebookText} value={teacher.lessonsCount} label="Darslar" />
-        <MetricChip icon={Library} value={teacher.booksCount} label="Kitoblar" />
-        <MetricChip
-          icon={Star}
-          value={teacher.avgRating.toFixed(1)}
-          label="O'rtacha reyting"
-          className="bg-gold/15 text-gold-foreground ring-gold/30"
-        />
-        <MetricChip
-          icon={Users}
-          value={teacher.studentsCount}
-          label="O'quvchilar"
-          className="bg-primary/10 text-primary ring-primary/20"
-        />
-      </div>
+      <span
+        className={cn(
+          'flex size-8 shrink-0 items-center justify-center rounded-[10px] font-heading text-sm font-bold',
+          teacher.rank === 1
+            ? 'bg-gold text-admin'
+            : teacher.rank <= 3
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground'
+        )}
+      >
+        {teacher.rank}
+      </span>
+      <Avatar>
+        <AvatarImage src={resolveAssetUrl(teacher.avatar)} alt={teacher.name} />
+        <AvatarFallback className="text-[13px] font-bold">{initials(teacher.name)}</AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 flex-[1_1_160px]">
+        <span className="block truncate font-bold">
+          {teacher.name}
+          {isMe && ' (siz)'}
+        </span>
+        <span className="block text-[13px] text-muted-foreground">
+          {formatNumber(teacher.studentsCount)} o&apos;quvchi · {formatNumber(teacher.lessonsCount)}{' '}
+          dars · {formatNumber(teacher.booksCount)} kitob
+        </span>
+      </span>
+      <span className="w-20 text-sm text-secondary-foreground">{teacher.coursesCount} kurs</span>
+      <span className="w-20 text-sm text-secondary-foreground">{teacher.quizzesCount} test</span>
+      <span className="flex w-16 items-center justify-end gap-1 font-bold">
+        <Star className="size-4 fill-gold text-gold" /> {teacher.avgRating.toFixed(1)}
+      </span>
     </div>
   );
 }
 
 export default function LeaderboardPage() {
-  const user = useAuthStore((s) => s.user);
-  // O'qituvchilar reytingi faqat o'qituvchi/admin va anonim tashrifchilarga
-  // ko'rinadi — o'quvchilar uchun yashirilgan (faqat o'z reytingini ko'rishi kerak).
-  const canSeeTeacherRanking = user?.role !== 'student';
-
-  const [studentPage] = useState(1);
-  const { data, isLoading, error } = useLeaderboard(studentPage, 20);
-
-  const [teacherPage, setTeacherPage] = useState(1);
-  const { data: teachersData, isLoading: isTeachersLoading } = useTopTeachers(teacherPage, 10, {
-    enabled: canSeeTeacherRanking,
-  });
-  // O'qituvchining o'z o'rnini topish uchun — alohida, kattaroq limitli so'rov
-  // (backendda alohida "mening o'rnim" endpointi yo'q, shuning uchun ro'yxat
-  // ichidan qidiramiz). Faqat teacher rolidagi foydalanuvchi uchun yuboriladi.
-  const { data: myRankData } = useTopTeachers(1, 100, { enabled: user?.role === 'teacher' });
-  const myTeacherEntry = user ? myRankData?.items.find((t) => t._id === user._id) : undefined;
-
-  const isUnauthorized = error instanceof ApiError && error.status === 401;
-  const items = data?.items ?? [];
-  const hasPodium = items.length >= 3;
-  const podium = hasPodium ? items.slice(0, 3) : [];
-  const rest = hasPodium ? items.slice(3) : items;
-
-  const studentsContent = isLoading ? (
-    <div className="space-y-3">
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-48 animate-pulse rounded-3xl bg-muted" />
-        ))}
-      </div>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted" />
-      ))}
-    </div>
-  ) : (
-    <div className="space-y-6">
-      {hasPodium && (
-        <div className="mb-10 grid grid-cols-3 items-end gap-3 sm:gap-4">
-          {podium.map((entry, idx) => (
-            <PodiumCard key={entry._id} entry={entry} rank={idx + 1} />
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-2.5">
-        {rest.map((entry, idx) => {
-          const rank = idx + (hasPodium ? 4 : 1);
-          const isMe = !!user && entry._id === user._id;
-          return (
-            <div
-              key={entry._id}
-              className={cn(
-                'flex items-center gap-4 rounded-2xl border p-4 shadow-xs transition-all duration-200 card-hover-glow',
-                isMe
-                  ? 'border-primary/50 bg-primary/10 dark:bg-primary/20 ring-2 ring-primary/20'
-                  : 'border-border/80 bg-card hover:border-primary/30'
-              )}
-            >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/60 font-mono text-sm font-extrabold text-muted-foreground">
-                {rank}
-              </div>
-              <Avatar className="size-10 border border-border">
-                <AvatarImage src={resolveAssetUrl(entry.avatar)} alt={entry.name} />
-                <AvatarFallback className="font-bold">{initials(entry.name)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="flex items-center gap-2 text-sm font-bold text-foreground truncate">
-                  <span>{entry.name}</span>
-                  {isMe && (
-                    <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-extrabold text-primary">
-                      Siz
-                    </span>
-                  )}
-                </p>
-                {entry.grade?.number && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {entry.grade.number}-{entry.grade.letter} sinf
-                  </p>
-                )}
-              </div>
-              <span className="inline-flex items-center gap-1.5 text-sm font-extrabold text-amber-600 dark:text-amber-400 shrink-0">
-                <Image src="/diamond.png" alt="" width={32} height={32} className="size-4.5" />
-                {formatNumber(entry.diamonds ?? 0)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  const teachersContent = (
-    <>
-      {user?.role === 'teacher' && myTeacherEntry && (
-        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-            <ChevronsUp className="size-5" />
-          </span>
-          <div>
-            <p className="text-sm font-bold text-foreground">
-              Siz hozir #{myTeacherEntry.rank} o&apos;rinda turibsiz
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Faollik balingiz: {myTeacherEntry.activityScore}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isTeachersLoading ? (
-        <div className="space-y-2.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />
-          ))}
-        </div>
-      ) : !teachersData || teachersData.items.length === 0 ? (
-        <EmptyState icon={Presentation} title="Hali o'qituvchilar reytingi mavjud emas" />
-      ) : (
-        <>
-          <div className="space-y-2.5">
-            {teachersData.items.map((teacher) => (
-              <TeacherRow
-                key={teacher._id}
-                teacher={teacher}
-                isMe={!!user && teacher._id === user._id}
-              />
-            ))}
-          </div>
-          <PaginationBar
-            page={teacherPage}
-            totalPages={teachersData.totalPages}
-            total={teachersData.total}
-            itemLabel="o'qituvchi"
-            onPageChange={setTeacherPage}
-          />
-        </>
-      )}
-    </>
-  );
+  const role = useAuthStore((s) => s.user?.role);
+  // O'qituvchilar reytingi o'quvchilardan yashirilgan
+  const canSeeTeachers = role !== 'student';
+  const [tab, setTab] = useState<Tab>(role === 'teacher' ? 'teachers' : 'students');
+  const activeTab = canSeeTeachers ? tab : 'students';
 
   return (
-    <Container className="py-12 max-w-4xl">
-      <div className="mx-auto mb-10 max-w-xl text-center space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-          <Sparkles className="size-3.5" />
-          <span>Eng Faol Ishtirokchilar</span>
-        </div>
-        <h1 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-          Reyting Jadvali
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          Darslar va testlarni muvaffaqiyatli topshirib eng ko&apos;p olmos to&apos;plagan
-          o&apos;quvchilar, hamda eng faol o&apos;qituvchilar
-        </p>
-      </div>
-
-      {isUnauthorized && !user ? (
-        <div className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl border border-dashed border-border/80 p-8 sm:p-12 text-center bg-card/60">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <LogIn className="size-7" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-base font-bold text-foreground">
-              Reytingni ko&apos;rish uchun tizimga kiring
-            </p>
-            <p className="text-xs text-muted-foreground">
-              O&apos;z o&apos;rningizni bilish va raqobatda qatnashish uchun kiring
-            </p>
-          </div>
-          <Button
-            render={<Link href="/login?redirect=/leaderboard" />}
-            className="rounded-xl px-6 font-bold shadow-md shadow-primary/20"
-          >
-            Tizimga kirish
-          </Button>
-        </div>
-      ) : canSeeTeacherRanking ? (
-        <Tabs defaultValue="students" className="mx-auto max-w-2xl ">
-          <TabsList className="mx-auto h-auto! flex gap-4 p-1">
-            <TabsTrigger value="students" className={'p-2 cursor-pointer text-[15px]'}>
-              <GraduationCap className="size-5" /> O&apos;quvchilar
-            </TabsTrigger>
-            <TabsTrigger value="teachers" className={'p-2 cursor-pointer text-[15px]'}>
-              <Presentation className="size-5" /> O&apos;qituvchilar
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="students" className="mt-6">
-            {studentsContent}
-          </TabsContent>
-
-          <TabsContent value="teachers" className="mt-6">
-            {teachersContent}
-          </TabsContent>
-        </Tabs>
-      ) : (
-        <div className="mx-auto max-w-2xl">{studentsContent}</div>
-      )}
-    </Container>
+    <div className="mx-auto w-full max-w-4xl">
+      <PageHeader
+        title={activeTab === 'students' ? "Eng ko'p olmos to'plaganlar" : "Eng faol o'qituvchilar"}
+        actions={
+          canSeeTeachers && (
+            <FilterPills
+              value={activeTab}
+              onChange={setTab}
+              options={[
+                { value: 'students', label: "O'quvchilar" },
+                { value: 'teachers', label: "O'qituvchilar" },
+              ]}
+            />
+          )
+        }
+      />
+      {activeTab === 'students' ? <StudentsRanking /> : <TeachersRanking />}
+    </div>
   );
 }

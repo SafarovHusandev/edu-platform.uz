@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Mukofotlar katalogi — Edu Platform UZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F6FA}
+a{color:#2B44D6}a:hover{color:#1E32A8}
+input,textarea{font:inherit}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+
+</head>
+<body>
+
+
+<div style="font-family: Onest, system-ui, sans-serif; color: #111827; background: #F5F6FA; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #111827">
+
+<nav aria-label="Admin menyusi" style="font-family: Onest, system-ui, sans-serif; color: #FFFFFF; background: #111827; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; width: 100%; min-height: 900px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 10px 20px"><span style="width: 34px; height: 34px; border-radius: 10px; background: #F2A516; color: #111827; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700">E</span><span style="font-family: Unbounded, sans-serif; font-weight: 600">Admin</span></div>
+
+<a href="AdminDash.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Dashboard</span></a>
+
+<a href="AdminUsers.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Foydalanuvchilar</span><span style="padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #F2A516; color: #111827">12</span></a>
+
+<a href="AdminRewards.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; background: #1F2937; color: #FFFFFF; font-weight: 700"><span>Mukofotlar katalogi</span></a>
+
+<a href="AdminRequests.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Mukofot so'rovlari</span><span style="padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #C2362B; color: #FFFFFF">5</span></a>
+
+<a href="AdminCategories.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Kategoriyalar</span></a>
+
+<a href="AdminPayments.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>To'lovlar</span></a>
+
+<a href="AdminPromo.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Promokodlar</span></a>
+
+<div style="margin-top: 20px; padding: 12px; border-radius: 12px; background: #1F2937; font-size: 13px; color: #D1D5DB; line-height: 1.5">Rol: <strong style="color: #F2A516">superadmin</strong><br>Nodira Yusupova</div>
+</nav>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-family: Unbounded, sans-serif; font-size: 26px; font-weight: 600">Mukofotlar katalogi</h1>
+<button type="button" style="padding: 12px 18px; border-radius: 12px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">+ Mukofot qo'shish</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<div style="flex: 2 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 600px">
+<thead><tr style="text-align: left; color: #5B6474; font-size: 13px; background: #FAFBFC"><th style="padding: 14px 20px; font-weight: 600">Mukofot</th><th style="padding: 14px 12px; font-weight: 600">Narx</th><th style="padding: 14px 12px; font-weight: 600">Qoldiq</th><th style="padding: 14px 12px; font-weight: 600">Kimlarga</th><th style="padding: 14px 20px"></th></tr></thead>
+<tbody>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 12px 20px"><div style="display: flex; gap: 12px; align-items: center"><span style="width: 44px; height: 44px; border-radius: 10px; background: #EEF0F5; font-size: 10px; color: #5B6474; display: flex; align-items: center; justify-content: center; font-weight: 600">[RASM]</span><span style="font-weight: 600">Daftar to'plami</span></div></td>
+<td style="padding: 12px; font-family: Unbounded, sans-serif; font-weight: 600; color: #7A4B00">◆ 300</td>
+<td style="padding: 12px"><span style="font-weight: 600">24</span></td>
+<td style="padding: 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #EEF0F5; color: #374151">Barcha</span></td>
+<td style="padding: 12px 20px; text-align: right"><button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 12px 20px"><div style="display: flex; gap: 12px; align-items: center"><span style="width: 44px; height: 44px; border-radius: 10px; background: #EEF0F5; font-size: 10px; color: #5B6474; display: flex; align-items: center; justify-content: center; font-weight: 600">[RASM]</span><span style="font-weight: 600">Kitob sertifikati</span></div></td>
+<td style="padding: 12px; font-family: Unbounded, sans-serif; font-weight: 600; color: #7A4B00">◆ 900</td>
+<td style="padding: 12px"><span style="font-weight: 600">8</span></td>
+<td style="padding: 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #EEF0F5; color: #374151">Barcha</span></td>
+<td style="padding: 12px 20px; text-align: right"><button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 12px 20px"><div style="display: flex; gap: 12px; align-items: center"><span style="width: 44px; height: 44px; border-radius: 10px; background: #EEF0F5; font-size: 10px; color: #5B6474; display: flex; align-items: center; justify-content: center; font-weight: 600">[RASM]</span><span style="font-weight: 600">Ryukzak</span></div></td>
+<td style="padding: 12px; font-family: Unbounded, sans-serif; font-weight: 600; color: #7A4B00">◆ 1 800</td>
+<td style="padding: 12px"><span style="font-weight: 600">5</span></td>
+<td style="padding: 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #EEF0F5; color: #374151">Barcha</span></td>
+<td style="padding: 12px 20px; text-align: right"><button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 12px 20px"><div style="display: flex; gap: 12px; align-items: center"><span style="width: 44px; height: 44px; border-radius: 10px; background: #EEF0F5; font-size: 10px; color: #5B6474; display: flex; align-items: center; justify-content: center; font-weight: 600">[RASM]</span><span style="font-weight: 600">Quloqchin</span></div></td>
+<td style="padding: 12px; font-family: Unbounded, sans-serif; font-weight: 600; color: #7A4B00">◆ 4 500</td>
+<td style="padding: 12px"><span style="color: #7A4B00; font-weight: 700">3</span></td>
+<td style="padding: 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #F2A516; color: #111827">Premium</span></td>
+<td style="padding: 12px 20px; text-align: right"><button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 12px 20px"><div style="display: flex; gap: 12px; align-items: center"><span style="width: 44px; height: 44px; border-radius: 10px; background: #EEF0F5; font-size: 10px; color: #5B6474; display: flex; align-items: center; justify-content: center; font-weight: 600">[RASM]</span><span style="font-weight: 600">Kino chiptasi</span></div></td>
+<td style="padding: 12px; font-family: Unbounded, sans-serif; font-weight: 600; color: #7A4B00">◆ 1 200</td>
+<td style="padding: 12px"><span style="padding: 3px 9px; border-radius: 6px; background: #FDECEA; color: #9B2C22; font-weight: 700; font-size: 12px">Tugagan</span></td>
+<td style="padding: 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #F2A516; color: #111827">Premium</span></td>
+<td style="padding: 12px 20px; text-align: right"><button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 12px 20px"><div style="display: flex; gap: 12px; align-items: center"><span style="width: 44px; height: 44px; border-radius: 10px; background: #EEF0F5; font-size: 10px; color: #5B6474; display: flex; align-items: center; justify-content: center; font-weight: 600">[RASM]</span><span style="font-weight: 600">Ruchka to'plami</span></div></td>
+<td style="padding: 12px; font-family: Unbounded, sans-serif; font-weight: 600; color: #7A4B00">◆ 200</td>
+<td style="padding: 12px"><span style="font-weight: 600">40</span></td>
+<td style="padding: 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #EEF0F5; color: #374151">Barcha</span></td>
+<td style="padding: 12px 20px; text-align: right"><button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button></td>
+</tr>
+
+</tbody>
+</table>
+</div>
+<aside aria-label="Mukofotni tahrirlash" style="flex: 1 1 320px; min-width: 0; background: #FFFFFF; border: 1.5px solid #2B44D6; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">Quloqchin</h2>
+<div style="height: 140px; border-radius: 14px; border: 1.5px dashed #9CA3AF; background: #F5F6FA; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #4B5466; font-weight: 600">Rasm yuklash</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="rt" style="font-weight: 600; font-size: 14px">Nomi</label><input id="rt" value="Quloqchin" style="padding: 12px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="rd" style="font-weight: 600; font-size: 14px">Tavsif</label><textarea id="rd" rows="2" style="padding: 12px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px; resize: vertical">Simsiz quloqchin</textarea></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="rc" style="font-weight: 600; font-size: 14px">Narx (olmos)</label><input id="rc" value="4500" style="padding: 12px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="rs" style="font-weight: 600; font-size: 14px">Qoldiq</label><input id="rs" value="3" style="padding: 12px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+</div>
+<label style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 12px; background: #FFF4D9; font-weight: 600; color: #5C3B00"><span>Faqat Premium uchun</span><input type="checkbox" checked style="width: 20px; height: 20px"></label>
+<div style="display: flex; gap: 8px"><button type="button" style="padding: 12px 14px; border-radius: 12px; border: 1px solid #E8B4AE; background: #FFFFFF; color: #9B2C22; font: inherit; font-weight: 600; cursor: pointer">O'chirish</button><button type="button" style="flex: 1; padding: 12px; border-radius: 12px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Saqlash</button></div>
+</aside>
+</div>
+</main>
+</div>
+
+<a href="index.html" style="position:fixed;right:16px;bottom:16px;z-index:9999;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;font:600 13px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.25)">← Barcha sahifalar</a>
+</body>
+</html>

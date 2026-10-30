@@ -46,6 +46,7 @@ export function useCreateLesson(courseId: string) {
       description?: string
       content?: string
       order: number
+      durationMinutes?: number
     }) => {
       const res = await api.post<{ lesson: Lesson }>(`/courses/${courseId}/lessons`, payload)
       return res.lesson
@@ -71,6 +72,7 @@ export function useUpdateLesson(courseId?: string) {
       description?: string
       content?: string
       order?: number
+      durationMinutes?: number | null
     }) => {
       const res = await api.patch<{ lesson: Lesson }>(`/lessons/${id}`, payload)
       return res.lesson
@@ -134,6 +136,8 @@ export function useCompleteLesson() {
     },
     onSuccess: async ({ alreadyCompleted }) => {
       queryClient.invalidateQueries({ queryKey: ["my-enrollments"] })
+      queryClient.invalidateQueries({ queryKey: ["enrollment"] })
+      queryClient.invalidateQueries({ queryKey: ["lesson"] })
       if (!alreadyCompleted) {
         await refreshCurrentUser()
         toast.success("Tabriklaymiz! Diamant qo'lga kiritdingiz")
@@ -142,5 +146,19 @@ export function useCompleteLesson() {
       }
     },
     onError: (error) => toast.error(errorMessage(error, "Darsni yakunlashda xatolik")),
+  })
+}
+
+// Kursdagi BARCHA darslar yangi tartibda yuboriladi
+export function useReorderLessons(courseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (lessonIds: string[]) =>
+      api.patch(`/courses/${courseId}/lessons/reorder`, { lessonIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["course-lessons", courseId] })
+      queryClient.invalidateQueries({ queryKey: ["course", courseId] })
+    },
+    onError: (error) => toast.error(errorMessage(error, "Tartibni saqlashda xatolik")),
   })
 }

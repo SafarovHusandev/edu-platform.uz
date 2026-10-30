@@ -12,6 +12,18 @@ export function useNotifications(page = 1, limit = 20) {
   })
 }
 
+// Header va menyudagi son belgisi uchun — ro'yxatni yuklamasdan
+export function useUnreadNotificationsCount() {
+  return useQuery({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: async () => {
+      const res = await api.get<{ count: number }>("/notifications/unread-count")
+      return res.count
+    },
+    refetchInterval: 60_000,
+  })
+}
+
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient()
   return useMutation({

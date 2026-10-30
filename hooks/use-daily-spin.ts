@@ -36,12 +36,30 @@ export function useDailySpinStatus() {
   })
 }
 
+export interface DailySpinHistoryItem {
+  diamondsWon: number
+  createdAt: string
+}
+
+export function useDailySpinHistory(limit = 10) {
+  return useQuery({
+    queryKey: ["daily-spin-history", limit],
+    queryFn: async () => {
+      const res = await api.get<{ history: DailySpinHistoryItem[] }>("/daily-spin/history", {
+        limit,
+      })
+      return res.history
+    },
+  })
+}
+
 export function useDailySpin() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => api.post<DailySpinResult>("/daily-spin/spin"),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["daily-spin-status"] })
+      queryClient.invalidateQueries({ queryKey: ["daily-spin-history"] })
       await refreshCurrentUser()
     },
     onError: (error) => toast.error(errorMessage(error, "Aylantirishda xatolik")),

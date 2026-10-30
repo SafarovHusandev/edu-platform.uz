@@ -1,46 +1,57 @@
 import Link from 'next/link';
-import { Logo } from '@/components/logo';
+import { ArrowLeft } from 'lucide-react';
+import { BrandMark } from '@/components/layout/brand-mark';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { ArrowLeft, Sparkles } from 'lucide-react';
 
+// Kirish / ro'yxatdan o'tish (edu-platform-dizayn: Auth)
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-svh flex flex-col justify-between overflow-hidden bg-background bg-grid-pattern">
-      {/* Decorative ambient gradients */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-linear-to-tr from-primary/20 via-primary/10 to-transparent blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 -left-40 -z-10 h-[400px] w-[400px] rounded-full bg-linear-to-r from-gold/15 to-transparent blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 -right-40 -z-10 h-[450px] w-[450px] rounded-full bg-linear-to-l from-primary/15 to-transparent blur-3xl" />
+    <div className="flex min-h-svh flex-col bg-background lg:flex-row">
+      <aside className="hidden flex-col justify-between gap-10 bg-primary p-12 text-primary-foreground lg:flex lg:w-[44%] lg:max-w-[620px]">
+        <Link href="/" className="flex w-fit items-center gap-2.5">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-white font-heading font-bold text-primary">
+            E
+          </span>
+          <span className="font-heading text-lg font-semibold">Edu Platform</span>
+        </Link>
+        <div className="flex flex-col gap-4">
+          <h1 className="font-heading text-4xl leading-tight font-bold xl:text-[44px]">
+            Har bir dars — yangi olmos
+          </h1>
+          <p className="max-w-md text-lg leading-relaxed text-primary-foreground/80">
+            Kurslar, testlar va mukofotlar. Telegram&apos;ni ulasangiz natija va bildirishnomalar
+            botga ham keladi.
+          </p>
+        </div>
+        <ul className="flex flex-col gap-3 text-[15px]">
+          <li className="flex items-center gap-2.5">
+            <span className="size-2.5 rounded-full bg-gold" />
+            Telefon orqali ro&apos;yxatdan o&apos;tganlar admin tasdiqini kutadi
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="size-2.5 rounded-full bg-[#4ADE80]" />
+            Telegram bot orqali — darhol faol hisob
+          </li>
+        </ul>
+      </aside>
 
-      {/* Header */}
-      <header className="w-full border-b border-border/40 bg-background/60 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3.5">
-          <Logo />
-          <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between px-4 py-3.5 sm:px-6">
+          <BrandMark className="lg:invisible" />
+          <div className="flex items-center gap-2">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground rounded-full px-3 py-1.5 hover:bg-muted"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <ArrowLeft className="size-4" />
-              <span>Bosh sahifa</span>
+              <ArrowLeft className="size-4" /> Bosh sahifa
             </Link>
-            <div className="h-4 w-px bg-border hidden sm:block" />
             <ThemeToggle />
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex flex-1 items-center justify-center p-4   sm:py-6 z-10">{children}</main>
-
-      {/* Footer minimal info */}
-      <footer className="w-full border-t border-border/40 bg-background/40 py-4 text-center text-xs text-muted-foreground backdrop-blur-xs">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="flex items-center gap-1">
-            <Sparkles className="size-3 text-primary" /> Edu Platform — Zamonaviy bilimlar makoni
-          </p>
-          <p>© {new Date().getFullYear()} Barcha huquqlar himoyalangan</p>
-        </div>
-      </footer>
+        </header>
+        <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
+          <div className="w-full max-w-[440px]">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

@@ -1,89 +1,82 @@
-import Link from "next/link"
-import { BadgeCheck, XCircle, ArrowLeft } from "lucide-react"
-import { Container } from "@/components/layout/container"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { api } from "@/lib/api-client"
-import { formatDate } from "@/lib/format"
+import { Check, X } from 'lucide-react';
+import { VerifyShell } from '@/components/certificates/verify-shell';
+import { api } from '@/lib/api-client';
+import { formatDate } from '@/lib/format';
+import type { CertificateVerifyResult } from '@/hooks/use-certificates';
 
 interface PageProps {
-  params: Promise<{ number: string }>
-}
-
-interface VerifyResult {
-  valid: boolean
-  studentName?: string
-  courseTitle?: string
-  issuedAt?: string
-  certificateNumber?: string
+  params: Promise<{ number: string }>;
 }
 
 async function getCertificate(number: string) {
   try {
-    return await api.get<VerifyResult>(
+    return await api.get<CertificateVerifyResult>(
       `/certificates/verify/${encodeURIComponent(number)}`,
       undefined,
       { skipAuth: true }
-    )
+    );
   } catch {
-    return null
+    return null;
   }
 }
 
 export default async function CertificateVerifyResultPage({ params }: PageProps) {
-  const { number } = await params
-  const result = await getCertificate(number)
-  const isValid = result?.valid ?? false
+  const { number: rawNumber } = await params;
+  const number = decodeURIComponent(rawNumber);
+  const result = await getCertificate(number);
 
   return (
-    <Container className="flex flex-col items-center py-20 text-center">
-      {isValid ? (
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center gap-3 pt-4">
-            <span className="flex size-14 items-center justify-center rounded-2xl bg-success/15 text-success">
-              <BadgeCheck className="size-7" />
+    <VerifyShell defaultValue={number}>
+      {result?.valid ? (
+        <section
+          role="status"
+          className="overflow-hidden rounded-3xl border-[1.5px] border-success/40 bg-card"
+        >
+          <div className="flex items-center gap-2.5 bg-success-soft px-6 py-4 text-lg font-bold text-success">
+            <span className="flex size-8 items-center justify-center rounded-full bg-success text-success-foreground">
+              <Check className="size-5" />
             </span>
-            <h1 className="font-heading text-2xl font-semibold">Sertifikat tasdiqlandi</h1>
-            <p className="text-sm text-muted-foreground">№ {result?.certificateNumber}</p>
-            <div className="mt-4 w-full space-y-2 rounded-lg bg-muted/50 p-4 text-left text-sm">
-              {result?.studentName && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">O&apos;quvchi</span>
-                  <span className="font-medium">{result.studentName}</span>
+            Sertifikat haqiqiy
+          </div>
+          <dl className="grid gap-4 p-6 sm:grid-cols-2">
+            {[
+              { label: 'Egasi', value: result.studentName },
+              { label: 'Kurs', value: result.courseTitle },
+              {
+                label: 'Berilgan sana',
+                value: result.issuedAt ? formatDate(result.issuedAt) : undefined,
+              },
+              { label: 'Raqam', value: result.certificateNumber ?? number, mono: true },
+            ]
+              .filter((row) => row.value)
+              .map((row) => (
+                <div key={row.label}>
+                  <dt className="text-[13px] text-muted-foreground">{row.label}</dt>
+                  <dd
+                    className={row.mono ? 'mt-0.5 font-heading font-semibold' : 'mt-0.5 font-bold'}
+                  >
+                    {row.value}
+                  </dd>
                 </div>
-              )}
-              {result?.courseTitle && (
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Kurs</span>
-                  <span className="text-right font-medium">{result.courseTitle}</span>
-                </div>
-              )}
-              {result?.issuedAt && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Berilgan sana</span>
-                  <span className="font-medium">{formatDate(result.issuedAt)}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              ))}
+          </dl>
+        </section>
       ) : (
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center gap-3 pt-4">
-            <span className="flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-              <XCircle className="size-7" />
-            </span>
-            <h1 className="font-heading text-2xl font-semibold">Sertifikat topilmadi</h1>
-            <p className="text-sm text-muted-foreground">
-              &quot;{number}&quot; raqamli sertifikat mavjud emas yoki noto&apos;g&apos;ri
-              kiritildi.
-            </p>
-          </CardContent>
-        </Card>
+        <section
+          role="status"
+          className="flex items-start gap-3.5 rounded-3xl border-[1.5px] border-destructive/35 bg-destructive-soft p-5"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-destructive text-white">
+            <X className="size-5" />
+          </span>
+          <div>
+            <div className="font-bold text-destructive">Sertifikat topilmadi</div>
+            <div className="mt-0.5 text-secondary-foreground">
+              &quot;{number}&quot; raqamli sertifikat mavjud emas. Raqamni qayta tekshiring.
+            </div>
+          </div>
+        </section>
       )}
-      <Button variant="ghost" className="mt-6" render={<Link href="/certificates/verify" />}>
-        <ArrowLeft className="size-4" /> Qayta tekshirish
-      </Button>
-    </Container>
-  )
+    </VerifyShell>
+  );
 }

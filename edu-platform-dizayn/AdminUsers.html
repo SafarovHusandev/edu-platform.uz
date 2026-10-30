@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Foydalanuvchilar — Edu Platform UZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F6FA}
+a{color:#2B44D6}a:hover{color:#1E32A8}
+input,select{font:inherit}
+</style>
+
+</head>
+<body>
+
+
+<div style="font-family: Onest, system-ui, sans-serif; color: #111827; background: #F5F6FA; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<aside style="flex: 1 1 240px; max-width: 100%; background: #111827; color: #FFFFFF; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 10px 20px"><span style="width: 34px; height: 34px; border-radius: 10px; background: #F2A516; color: #111827; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700">E</span><span style="font-family: Unbounded, sans-serif; font-weight: 600">Admin</span></div>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #D1D5DB; text-decoration: none; font-weight: 500">Dashboard</a>
+<a href="AdminUsers.html" style="padding: 12px; border-radius: 12px; background: #1F2937; color: #FFFFFF; text-decoration: none; font-weight: 700; display: flex; justify-content: space-between">Foydalanuvchilar <span style="padding: 1px 8px; border-radius: 999px; background: #F2A516; color: #111827; font-size: 12px; font-weight: 700">12</span></a>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #D1D5DB; text-decoration: none; font-weight: 500">Mukofotlar katalogi</a>
+<a href="AdminRequests.html" style="padding: 12px; border-radius: 12px; color: #D1D5DB; text-decoration: none; font-weight: 500; display: flex; justify-content: space-between">Mukofot so'rovlari <span style="padding: 1px 8px; border-radius: 999px; background: #C2362B; color: #FFFFFF; font-size: 12px; font-weight: 700">5</span></a>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #D1D5DB; text-decoration: none; font-weight: 500">Kategoriyalar</a>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #D1D5DB; text-decoration: none; font-weight: 500">To'lovlar</a>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #D1D5DB; text-decoration: none; font-weight: 500">Promokodlar</a>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-family: Unbounded, sans-serif; font-size: 26px; font-weight: 600">Foydalanuvchilar</h1>
+<button type="button" style="padding: 12px 18px; border-radius: 12px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">+ Foydalanuvchi <span style="font-size: 12px; opacity: 0.85">(superadmin)</span></button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<div role="tablist" style="display: flex; gap: 4px; padding: 4px; background: #E9ECF3; border-radius: 12px; flex-wrap: wrap">
+<button type="button" role="tab" aria-selected="false" style="padding: 9px 14px; border-radius: 9px; border: 0; background: transparent; color: #4B5466; font: inherit; font-weight: 600">Barchasi</button>
+<button type="button" role="tab" aria-selected="true" style="padding: 9px 14px; border-radius: 9px; border: 0; background: #FFFFFF; font: inherit; font-weight: 600; box-shadow: 0 1px 3px rgba(17,24,39,0.12)">Tasdiqlash kutilmoqda · 12</button>
+<button type="button" role="tab" aria-selected="false" style="padding: 9px 14px; border-radius: 9px; border: 0; background: transparent; color: #4B5466; font: inherit; font-weight: 600">Bloklangan</button>
+</div>
+<input aria-label="Qidiruv" placeholder="Ism yoki telefon bo'yicha qidirish" style="flex: 1 1 260px; padding: 12px 14px; border-radius: 12px; border: 1px solid #D5D9E4; background: #FFFFFF; font-size: 15px">
+<select aria-label="Rol" style="padding: 12px; border-radius: 12px; border: 1px solid #D5D9E4; background: #FFFFFF; font-size: 15px"><option>Barcha rollar</option></select>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 860px">
+<thead><tr style="text-align: left; color: #5B6474; font-size: 13px; background: #FAFBFC"><th style="padding: 14px 20px; font-weight: 600">Foydalanuvchi</th><th style="padding: 14px 12px; font-weight: 600">Telefon</th><th style="padding: 14px 12px; font-weight: 600">Rol</th><th style="padding: 14px 12px; font-weight: 600">Sinf</th><th style="padding: 14px 12px; font-weight: 600">Telegram</th><th style="padding: 14px 12px; font-weight: 600">Ro'yxatdan</th><th style="padding: 14px 20px; font-weight: 600; text-align: right">Amallar</th></tr></thead>
+<tbody>
+<tr style="border-top: 1px solid #EEF0F5"><td style="padding: 14px 20px"><div style="display: flex; gap: 10px; align-items: center"><span style="width: 34px; height: 34px; border-radius: 999px; background: #E9ECFF; color: #1E32A8; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">BS</span><span style="font-weight: 600">Bekzod Sobirov</span></div></td><td style="padding: 14px 12px">+998 93 412 08 77</td><td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; background: #EEF0F5; font-weight: 600; font-size: 12px">O'quvchi</span></td><td style="padding: 14px 12px">7-A</td><td style="padding: 14px 12px; color: #5B6474">—</td><td style="padding: 14px 12px">23.10 · 12:40</td><td style="padding: 14px 20px"><div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" style="padding: 8px 14px; border-radius: 10px; border: 0; background: #13795B; color: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tasdiqlash</button><button type="button" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Bloklash</button><button type="button" aria-label="Boshqa amallar" style="width: 36px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer">⋯</button></div></td></tr>
+<tr style="border-top: 1px solid #EEF0F5"><td style="padding: 14px 20px"><div style="display: flex; gap: 10px; align-items: center"><span style="width: 34px; height: 34px; border-radius: 999px; background: #E3F5EE; color: #0E5E46; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">GN</span><span style="font-weight: 600">Gulnora Nazarova</span></div></td><td style="padding: 14px 12px">+998 90 771 32 15</td><td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; background: #E9ECFF; color: #1E32A8; font-weight: 600; font-size: 12px">O'qituvchi</span></td><td style="padding: 14px 12px; color: #5B6474">—</td><td style="padding: 14px 12px; color: #5B6474">—</td><td style="padding: 14px 12px">23.10 · 10:05</td><td style="padding: 14px 20px"><div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" style="padding: 8px 14px; border-radius: 10px; border: 0; background: #13795B; color: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tasdiqlash</button><button type="button" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Bloklash</button><button type="button" aria-label="Boshqa amallar" style="width: 36px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer">⋯</button></div></td></tr>
+<tr style="border-top: 1px solid #EEF0F5; background: #FAFBFC"><td style="padding: 14px 20px"><div style="display: flex; gap: 10px; align-items: center"><span style="width: 34px; height: 34px; border-radius: 999px; background: #FFF4D9; color: #7A4B00; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">OR</span><span style="font-weight: 600">Otabek Rahmonov</span></div></td><td style="padding: 14px 12px">+998 97 205 66 41</td><td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; background: #EEF0F5; font-weight: 600; font-size: 12px">O'quvchi</span></td><td style="padding: 14px 12px">10-B</td><td style="padding: 14px 12px; color: #5B6474">—</td><td style="padding: 14px 12px">22.10 · 19:22</td><td style="padding: 14px 20px; position: relative"><div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" style="padding: 8px 14px; border-radius: 10px; border: 0; background: #13795B; color: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tasdiqlash</button><button type="button" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Bloklash</button><button type="button" aria-label="Boshqa amallar" aria-expanded="true" style="width: 36px; border-radius: 10px; border: 1.5px solid #2B44D6; background: #E9ECFF; font: inherit; font-weight: 700; cursor: pointer">⋯</button></div>
+<div role="menu" style="position: absolute; right: 20px; top: 56px; z-index: 3; width: 220px; background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 14px; box-shadow: 0 16px 32px -12px rgba(17,24,39,0.25); padding: 6px; display: flex; flex-direction: column">
+<span style="padding: 8px 10px 4px; font-size: 11px; font-weight: 700; color: #5B6474">SUPERADMIN</span>
+<button type="button" role="menuitem" style="text-align: left; padding: 10px; border-radius: 8px; border: 0; background: #FFFFFF; font: inherit; font-size: 14px; cursor: pointer">Tahrirlash (rol, tarif)</button>
+<button type="button" role="menuitem" style="text-align: left; padding: 10px; border-radius: 8px; border: 0; background: #FFFFFF; font: inherit; font-size: 14px; cursor: pointer">Parolni tiklash</button>
+<button type="button" role="menuitem" style="text-align: left; padding: 10px; border-radius: 8px; border: 0; background: #FFFFFF; font: inherit; font-size: 14px; cursor: pointer">Avatarni almashtirish</button>
+<button type="button" role="menuitem" style="text-align: left; padding: 10px; border-radius: 8px; border: 0; background: #FFFFFF; color: #9B2C22; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">O'chirish</button>
+</div></td></tr>
+<tr style="border-top: 1px solid #EEF0F5"><td style="padding: 14px 20px"><div style="display: flex; gap: 10px; align-items: center"><span style="width: 34px; height: 34px; border-radius: 999px; background: #EEF0F5; color: #374151; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">ZM</span><span style="font-weight: 600">Zarina Mirzayeva</span></div></td><td style="padding: 14px 12px">+998 99 830 14 02</td><td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; background: #EEF0F5; font-weight: 600; font-size: 12px">O'quvchi</span></td><td style="padding: 14px 12px">5-V</td><td style="padding: 14px 12px; color: #5B6474">—</td><td style="padding: 14px 12px">22.10 · 16:48</td><td style="padding: 14px 20px"><div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" style="padding: 8px 14px; border-radius: 10px; border: 0; background: #13795B; color: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tasdiqlash</button><button type="button" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Bloklash</button><button type="button" aria-label="Boshqa amallar" style="width: 36px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer">⋯</button></div></td></tr>
+</tbody>
+</table>
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-top: 1px solid #E4E7EE; font-size: 14px; color: #5B6474; flex-wrap: wrap; gap: 10px"><span>1–4 / 12</span><div style="display: flex; gap: 6px"><button type="button" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; cursor: pointer">Oldingi</button><button type="button" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; cursor: pointer">Keyingi</button></div></div>
+</div>
+</main>
+</div>
+
+<a href="index.html" style="position:fixed;right:16px;bottom:16px;z-index:9999;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;font:600 13px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.25)">← Barcha sahifalar</a>
+</body>
+</html>

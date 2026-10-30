@@ -48,6 +48,13 @@ const schema = z.object({
   title: z.string().min(2, { error: 'Kamida 2 ta belgi' }),
   description: z.string().optional(),
   content: z.string().optional(),
+  // Input qiymati sifatida satr; yuborishda songa aylantiriladi (bo'sh — o'chiriladi)
+  durationMinutes: z
+    .string()
+    .optional()
+    .refine((v) => !v || (Number.isInteger(Number(v)) && Number(v) > 0), {
+      error: 'Musbat butun son kiriting',
+    }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -71,12 +78,13 @@ function LessonEditContent({ id }: { id: string }) {
           title: lesson.title,
           description: lesson.description ?? '',
           content: lesson.content ?? '',
+          durationMinutes: lesson.durationMinutes ? String(lesson.durationMinutes) : '',
         }
       : undefined,
   });
 
   if (isLoading) {
-    return <div className="h-96 animate-pulse rounded-md bg-muted" />;
+    return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
   }
 
   if (isError) {
@@ -148,7 +156,13 @@ function LessonEditContent({ id }: { id: string }) {
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit((values) => updateLesson.mutate({ id, ...values }))}
+              onSubmit={form.handleSubmit(({ durationMinutes, ...values }) =>
+                updateLesson.mutate({
+                  id,
+                  ...values,
+                  durationMinutes: durationMinutes ? Number(durationMinutes) : null,
+                })
+              )}
               className="space-y-4"
             >
               <FormField
@@ -172,6 +186,25 @@ function LessonEditContent({ id }: { id: string }) {
                     <FormLabel>Qisqacha tavsif</FormLabel>
                     <FormControl>
                       <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="durationMinutes"
+                render={({ field }) => (
+                  <FormItem className="sm:max-w-48">
+                    <FormLabel>Davomiyligi (daqiqa)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        placeholder="15"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -209,7 +242,7 @@ function LessonEditContent({ id }: { id: string }) {
               {attachments.map(({ path, url, name }) => (
                 <li
                   key={path}
-                  className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2"
                 >
                   <a
                     href={url}
@@ -257,7 +290,7 @@ function LessonEditContent({ id }: { id: string }) {
 export default function TeacherLessonEditPage({ params }: PageProps) {
   const { id } = use(params);
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-md bg-muted" />}>
+    <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-muted" />}>
       <LessonEditContent id={id} />
     </Suspense>
   );

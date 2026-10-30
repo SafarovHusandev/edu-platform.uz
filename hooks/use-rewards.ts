@@ -127,9 +127,16 @@ export function useMyRedemptions(page = 1, limit = 10) {
 }
 
 export function useAllRedemptions(
-  filters: { status?: RedemptionStatus; page?: number; limit?: number } = {}
+  filters: {
+    // Bir nechta holat vergul bilan: "delivered,rejected"
+    status?: RedemptionStatus | `${RedemptionStatus},${RedemptionStatus}`
+    page?: number
+    limit?: number
+  } = {},
+  options: { enabled?: boolean } = {}
 ) {
   return useQuery({
+    enabled: options.enabled ?? true,
     queryKey: ['all-redemptions', filters],
     queryFn: () => api.get<Paginated<Redemption>>('/rewards/redemptions', { ...filters }),
     placeholderData: (prev) => prev,
@@ -146,6 +153,7 @@ export function useApproveRedemption() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-redemptions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       toast.success("So'rov tasdiqlandi");
     },
     onError: (error) => toast.error(errorMessage(error, 'Tasdiqlashda xatolik')),
@@ -165,6 +173,7 @@ export function useRejectRedemption() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-redemptions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       toast.success("So'rov rad etildi");
     },
     onError: (error) => toast.error(errorMessage(error, 'Rad etishda xatolik')),
@@ -184,6 +193,7 @@ export function useDeliverRedemption() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-redemptions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       toast.success('Mukofot topshirildi deb belgilandi');
     },
     onError: (error) => toast.error(errorMessage(error, 'Topshirishda xatolik')),

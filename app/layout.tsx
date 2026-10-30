@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist_Mono, Onest, Unbounded } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/providers/theme-provider';
 import { QueryProvider } from '@/providers/query-provider';
@@ -10,9 +10,16 @@ import NextTopLoader from 'nextjs-toploader';
 import Script from 'next/script';
 import { TelegramWebAppGate } from '@/components/auth/telegram-webapp-gate';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
+const onest = Onest({
+  variable: '--font-onest',
+  subsets: ['latin', 'cyrillic'],
+});
+
+// Sarlavhalar va katta raqamlar uchun (font-heading)
+const unbounded = Unbounded({
+  variable: '--font-display',
+  subsets: ['latin', 'cyrillic'],
+  weight: ['500', '600', '700'],
 });
 
 const geistMono = Geist_Mono({
@@ -39,7 +46,7 @@ export default function RootLayout({
       lang="uz"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${onest.variable} ${unbounded.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {/* Telegram Mini App ichida ochilganda initData va WebApp API'si uchun */}

@@ -1,18 +1,18 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Star } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState } from 'react';
+import { Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function StarRatingInput({
   value,
   onChange,
 }: {
-  value: number
-  onChange: (value: number) => void
+  value: number;
+  onChange: (value: number) => void;
 }) {
-  const [hover, setHover] = useState<number | null>(null)
-  const active = hover ?? value
+  const [hover, setHover] = useState<number | null>(null);
+  const active = hover ?? value;
 
   return (
     <div className="flex items-center gap-1">
@@ -28,12 +28,12 @@ export function StarRatingInput({
         >
           <Star
             className={cn(
-              "size-5 transition-colors",
-              star <= active ? "fill-gold text-gold" : "text-muted-foreground"
+              'size-5 transition-colors',
+              star <= active ? 'fill-gold text-gold' : 'text-muted-foreground'
             )}
           />
         </button>
       ))}
     </div>
-  )
+  );
 }

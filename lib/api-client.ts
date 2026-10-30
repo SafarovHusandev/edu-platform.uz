@@ -4,12 +4,20 @@ import { getTokenCookie } from '@/lib/cookies';
 export class ApiError extends Error {
   status: number;
   errors?: Record<string, string[]>;
+  // Mashina o'qiydigan xato kodi (masalan "ATTEMPT_EXPIRED"), backend yuborsa
+  code?: string;
 
-  constructor(message: string, status: number, errors?: Record<string, string[]>) {
+  constructor(
+    message: string,
+    status: number,
+    errors?: Record<string, string[]>,
+    code?: string
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.errors = errors;
+    this.code = code;
   }
 }
 
@@ -134,7 +142,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       json && typeof json === 'object' && 'errors' in json
         ? ((json as Record<string, unknown>).errors as Record<string, string[]>)
         : undefined;
-    throw new ApiError(message, res.status, errors);
+    const code =
+      json && typeof json === 'object' && typeof (json as Record<string, unknown>).code === 'string'
+        ? ((json as Record<string, unknown>).code as string)
+        : undefined;
+    throw new ApiError(message, res.status, errors, code);
   }
 
   return unwrap(json) as T;

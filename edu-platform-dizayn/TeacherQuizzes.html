@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web · Testlarim + ulashish — Edu Platform UZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F6FA}
+a{color:#2B44D6}a:hover{color:#1E32A8}
+input{font:inherit}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+
+</head>
+<body>
+
+
+<div style="font-family: Onest, system-ui, sans-serif; color: #111827; background: #F5F6FA; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; position: relative">
+<div style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E4E7EE">
+
+<nav aria-label="O'qituvchi menyusi" style="font-family: Onest, system-ui, sans-serif; color: #111827; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; width: 100%">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 10px 20px"><span style="width: 34px; height: 34px; border-radius: 10px; background: #2B44D6; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700">E</span><span style="font-family: Unbounded, sans-serif; font-weight: 600">O'qituvchi</span></div>
+
+<a href="TeacherDash.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #374151; font-weight: 500"><span>Dashboard</span></a>
+
+<a href="TeacherCourses.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #374151; font-weight: 500"><span>Kurslarim</span></a>
+
+<a href="TeacherQuizzes.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; background: #E9ECFF; color: #1E32A8; font-weight: 700"><span>Testlarim</span></a>
+
+<a href="QuizShares.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #374151; font-weight: 500"><span>Ulashilgan testlar</span><span style="padding: 1px 8px; border-radius: 999px; background: #C2362B; color: #FFFFFF; font-size: 12px; font-weight: 700">2</span></a>
+
+<a href="Grading.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #374151; font-weight: 500"><span>Baholash</span><span style="padding: 1px 8px; border-radius: 999px; background: #C2362B; color: #FFFFFF; font-size: 12px; font-weight: 700">7</span></a>
+
+<a href="TeacherBooks.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #374151; font-weight: 500"><span>Kitoblarim</span></a>
+
+<a href="TopTeachers.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #374151; font-weight: 500"><span>Reyting</span></a>
+
+<a href="TeacherProfile.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #374151; font-weight: 500"><span>Profil</span></a>
+
+</nav>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-family: Unbounded, sans-serif; font-size: 26px; font-weight: 600">Testlarim</h1>
+<a href="QuizBuilder.html" style="padding: 12px 18px; border-radius: 12px; background: #2B44D6; color: #FFFFFF; text-decoration: none; font-weight: 600">+ Yangi test</a>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 820px">
+<thead><tr style="text-align: left; color: #5B6474; font-size: 13px; background: #FAFBFC"><th style="padding: 14px 20px; font-weight: 600">Test</th><th style="padding: 14px 12px; font-weight: 600">Turi</th><th style="padding: 14px 12px; font-weight: 600">Sinflar</th><th style="padding: 14px 12px; font-weight: 600">Savollar</th><th style="padding: 14px 12px; font-weight: 600">Holat</th><th style="padding: 14px 20px; font-weight: 600; text-align: right">Amallar</th></tr></thead>
+<tbody>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 14px 20px; font-weight: 600">Algebra: 1-bob yakuniy</td>
+<td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 600; font-size: 12px; background: #EEF0F5; color: #374151">Kurs</span></td>
+<td style="padding: 14px 12px">8-A, 8-B</td>
+<td style="padding: 14px 12px">20</td>
+<td style="padding: 14px 12px"><span style="padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span></td>
+<td style="padding: 14px 20px"><div style="display: flex; gap: 6px; justify-content: flex-end">
+<a href="QuizResults.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Natijalar</a>
+<a href="QuizBuilder.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Tahrir</a>
+
+<span title="Faqat mustaqil testlar ulashiladi" style="padding: 8px 12px; border-radius: 10px; background: #F3F4F6; color: #4B5466; font-weight: 600; font-size: 13px">Ulashilmaydi</span>
+</div></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 14px 20px; font-weight: 600">Mantiqiy fikrlash</td>
+<td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 600; font-size: 12px; background: #E9ECFF; color: #1E32A8">Mustaqil</span></td>
+<td style="padding: 14px 12px">4-A</td>
+<td style="padding: 14px 12px">12</td>
+<td style="padding: 14px 12px"><span style="padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span></td>
+<td style="padding: 14px 20px"><div style="display: flex; gap: 6px; justify-content: flex-end">
+<a href="QuizResults.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Natijalar</a>
+<a href="QuizBuilder.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Tahrir</a>
+<button type="button" style="padding: 8px 12px; border-radius: 10px; border: 0; background: #E9ECFF; color: #1E32A8; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer">Ulashish</button>
+
+</div></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 14px 20px; font-weight: 600">Kvadrat ildiz — dars testi</td>
+<td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 600; font-size: 12px; background: #EEF0F5; color: #374151">Dars</span></td>
+<td style="padding: 14px 12px">8-A, 8-B</td>
+<td style="padding: 14px 12px">10</td>
+<td style="padding: 14px 12px"><span style="padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span></td>
+<td style="padding: 14px 20px"><div style="display: flex; gap: 6px; justify-content: flex-end">
+<a href="QuizResults.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Natijalar</a>
+<a href="QuizBuilder.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Tahrir</a>
+
+<span title="Faqat mustaqil testlar ulashiladi" style="padding: 8px 12px; border-radius: 10px; background: #F3F4F6; color: #4B5466; font-weight: 600; font-size: 13px">Ulashilmaydi</span>
+</div></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 14px 20px; font-weight: 600">Funksiyalar</td>
+<td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 600; font-size: 12px; background: #E9ECFF; color: #1E32A8">Mustaqil</span></td>
+<td style="padding: 14px 12px">9-A, 9-B</td>
+<td style="padding: 14px 12px">8</td>
+<td style="padding: 14px 12px"><span style="padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #EEF0F5; color: #374151">Qoralama</span></td>
+<td style="padding: 14px 20px"><div style="display: flex; gap: 6px; justify-content: flex-end">
+<a href="QuizResults.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Natijalar</a>
+<a href="QuizBuilder.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Tahrir</a>
+<button type="button" style="padding: 8px 12px; border-radius: 10px; border: 0; background: #E9ECFF; color: #1E32A8; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer">Ulashish</button>
+
+</div></td>
+</tr>
+
+<tr style="border-top: 1px solid #EEF0F5">
+<td style="padding: 14px 20px; font-weight: 600">Geometriya takrori</td>
+<td style="padding: 14px 12px"><span style="padding: 3px 9px; border-radius: 6px; font-weight: 600; font-size: 12px; background: #E9ECFF; color: #1E32A8">Mustaqil</span></td>
+<td style="padding: 14px 12px">7-A</td>
+<td style="padding: 14px 12px">10</td>
+<td style="padding: 14px 12px"><span style="padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #FFF4D9; color: #7A4B00">Faol emas</span></td>
+<td style="padding: 14px 20px"><div style="display: flex; gap: 6px; justify-content: flex-end">
+<a href="QuizResults.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Natijalar</a>
+<a href="QuizBuilder.html" style="padding: 8px 12px; border-radius: 10px; border: 1px solid #D5D9E4; color: #111827; text-decoration: none; font-weight: 600; font-size: 13px">Tahrir</a>
+<button type="button" style="padding: 8px 12px; border-radius: 10px; border: 0; background: #E9ECFF; color: #1E32A8; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer">Ulashish</button>
+
+</div></td>
+</tr>
+
+</tbody>
+</table>
+</div>
+<p style="margin: 0; font-size: 13px; color: #5B6474">Faqat mustaqil (kursga yoki darsga bog'lanmagan) testlarni boshqa o'qituvchiga ulashish mumkin.</p>
+</main>
+
+
+</div>
+
+<a href="index.html" style="position:fixed;right:16px;bottom:16px;z-index:9999;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;font:600 13px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.25)">← Barcha sahifalar</a>
+</body>
+</html>

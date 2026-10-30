@@ -1,13 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-import { Check, Gift, Loader2, PackageCheck, X, ZoomIn } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Check, Gift, Loader2, PackageCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -18,63 +14,65 @@ import {
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { SkeletonList } from '@/components/ui/skeleton';
 import { PaginationBar } from '@/components/ui/pagination-bar';
+import { FilterPills } from '@/components/ui/filter-pills';
+import { DiamondIcon } from '@/components/icons/diamond-icon';
+import { StatusPill } from '@/components/dashboard/dashboard-ui';
 import {
   useAllRedemptions,
   useApproveRedemption,
   useRejectRedemption,
   useDeliverRedemption,
 } from '@/hooks/use-rewards';
-import { formatDate } from '@/lib/format';
+import { formatNumber, formatTashkentDateTime } from '@/lib/format';
 import { resolveAssetUrl } from '@/lib/config';
 import { cn } from '@/lib/utils';
-import type { Redemption, RedemptionActor, RedemptionStatus } from '@/types';
+import type { Redemption, RedemptionActor, User } from '@/types';
 
 const PAGE_SIZE = 15;
 
-const STATUS_TABS: { value: RedemptionStatus | 'all'; label: string }[] = [
-  { value: 'all', label: 'Barchasi' },
-  { value: 'pending', label: 'Kutilmoqda' },
-  { value: 'approved', label: 'Tasdiqlangan' },
-  { value: 'delivered', label: 'Topshirilgan' },
-  { value: 'rejected', label: 'Rad etilgan' },
-];
-
-const STATUS_LABELS: Record<RedemptionStatus, string> = {
-  pending: 'Kutilmoqda',
-  approved: 'Tasdiqlangan',
-  delivered: 'Topshirildi',
-  rejected: 'Rad etildi',
-};
-
-const STATUS_STYLES: Record<RedemptionStatus, string> = {
-  pending: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  approved: 'bg-sky-500/10 text-sky-700 dark:text-sky-400',
-  delivered: 'bg-success/10 text-success',
-  rejected: 'bg-destructive/10 text-destructive',
-};
-
-const STATUS_DOT_COLORS: Record<RedemptionStatus, string> = {
-  pending: 'bg-amber-500',
-  approved: 'bg-sky-500',
-  delivered: 'bg-success',
-  rejected: 'bg-destructive',
-};
+type Stage = 'pending' | 'approved' | 'archive';
+type ArchiveStatus = 'all' | 'delivered' | 'rejected';
 
 function actorName(actor: RedemptionActor | string | null | undefined) {
-  if (!actor || typeof actor === 'string') return null;
-  return actor.name;
+  return actor && typeof actor === 'object' ? actor.name : null;
+}
+
+function statusLine(redemption: Redemption) {
+  switch (redemption.status) {
+    case 'pending':
+      return 'Olmos yechildi · kutilmoqda';
+    case 'approved':
+      return `Tasdiqlandi${actorName(redemption.approvedBy) ? ` · ${actorName(redemption.approvedBy)}` : ''} · topshirish kutilmoqda`;
+    case 'delivered':
+      return `Topshirildi${actorName(redemption.deliveredBy) ? ` · ${actorName(redemption.deliveredBy)}` : ''}${redemption.deliveredAt ? ` · ${formatTashkentDateTime(redemption.deliveredAt)}` : ''}${redemption.deliveryNote ? ` · «${redemption.deliveryNote}»` : ''}`;
+    case 'rejected':
+      return `Rad etildi${actorName(redemption.rejectedBy) ? ` · ${actorName(redemption.rejectedBy)}` : ''}${redemption.rejectReason ? ` · «${redemption.rejectReason}»` : ''} · olmos qaytarildi`;
+  }
 }
 
 export default function AdminRedemptionsPage() {
-  const [status, setStatus] = useState<RedemptionStatus | 'all'>('pending');
+  const [stage, setStage] = useState<Stage>('pending');
+  const [archiveStatus, setArchiveStatus] = useState<ArchiveStatus>('all');
   const [page, setPage] = useState(1);
+  // Arxiv "Barchasi": backend bir nechta holatni vergul bilan qabul qiladi
+  const status =
+    stage === 'archive'
+      ? archiveStatus === 'all'
+        ? ('delivered,rejected' as const)
+        : archiveStatus
+      : stage;
+
   const { data, isLoading, isError, refetch } = useAllRedemptions({
-    status: status === 'all' ? undefined : status,
+    status,
     page,
     limit: PAGE_SIZE,
   });
+  const { data: pendingCount } = useAllRedemptions({ status: 'pending', page: 1, limit: 1 });
+  const { data: approvedCount } = useAllRedemptions({ status: 'approved', page: 1, limit: 1 });
+  const { data: deliveredCount } = useAllRedemptions({ status: 'delivered', page: 1, limit: 1 });
+  const { data: rejectedCount } = useAllRedemptions({ status: 'rejected', page: 1, limit: 1 });
+
   const approveRedemption = useApproveRedemption();
   const rejectRedemption = useRejectRedemption();
   const deliverRedemption = useDeliverRedemption();
@@ -84,6 +82,27 @@ export default function AdminRedemptionsPage() {
   const [delivering, setDelivering] = useState<Redemption | null>(null);
   const [deliveryNote, setDeliveryNote] = useState('');
   const [previewImage, setPreviewImage] = useState<{ src: string; title: string } | null>(null);
+
+  const stages: { value: Stage; caption: string; label: string; count: number }[] = [
+    {
+      value: 'pending',
+      caption: '1-bosqich',
+      label: 'Kutilmoqda',
+      count: pendingCount?.total ?? 0,
+    },
+    {
+      value: 'approved',
+      caption: '2-bosqich',
+      label: 'Tasdiqlangan',
+      count: approvedCount?.total ?? 0,
+    },
+    {
+      value: 'archive',
+      caption: 'Arxiv',
+      label: 'Tarix',
+      count: (deliveredCount?.total ?? 0) + (rejectedCount?.total ?? 0),
+    },
+  ];
 
   function handleReject() {
     if (!rejecting) return;
@@ -102,151 +121,156 @@ export default function AdminRedemptionsPage() {
   }
 
   return (
-    <div>
-      <PageHeader title="Yutuqlar" description="Mukofot so'rovlarini ko'rib chiqing" />
+    <div className="mx-auto w-full max-w-5xl">
+      <PageHeader title="Mukofot so'rovlari" />
 
-      <Tabs
-        value={status}
-        onValueChange={(v) => {
-          setStatus(v as RedemptionStatus | 'all');
-          setPage(1);
-        }}
-        className="mb-6"
-      >
-        <TabsList className="h-auto flex-wrap gap-1 rounded-xl bg-muted/70 p-1.5">
-          {STATUS_TABS.map((tab) => (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              className="gap-1.5 rounded-lg px-3.5 py-1.5! text-sm font-medium"
-            >
-              {tab.value !== 'all' && (
-                <span className={cn('size-1.5 rounded-full', STATUS_DOT_COLORS[tab.value])} />
+      <div role="tablist" className="mb-5 grid grid-cols-3 gap-2.5 sm:gap-3">
+        {stages.map((item) => {
+          const active = stage === item.value;
+          return (
+            <button
+              key={item.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                setStage(item.value);
+                setPage(1);
+              }}
+              className={cn(
+                'rounded-2xl px-3.5 py-3 text-left transition-colors sm:px-4',
+                active
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-card hover:border-primary/40'
               )}
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+            >
+              <span className="block text-xs font-semibold opacity-80 sm:text-[13px]">
+                {item.caption}
+              </span>
+              <span className="mt-1 flex items-baseline justify-between gap-2">
+                <span className="truncate text-sm font-bold sm:text-[17px]">{item.label}</span>
+                <span className="font-heading text-lg font-bold sm:text-[22px]">
+                  {formatNumber(item.count)}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {stage === 'archive' && (
+        <FilterPills
+          className="mb-4"
+          value={archiveStatus}
+          onChange={(v) => {
+            setArchiveStatus(v);
+            setPage(1);
+          }}
+          options={[
+            { value: 'all', label: 'Barchasi' },
+            { value: 'delivered', label: 'Topshirilgan', count: deliveredCount?.total },
+            { value: 'rejected', label: 'Rad etilgan', count: rejectedCount?.total },
+          ]}
+        />
+      )}
 
       {isLoading ? (
-        <SkeletonList count={4} itemClassName="h-20" />
+        <div className="h-72 animate-pulse rounded-[20px] bg-muted" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState icon={PackageCheck} title="Bu bo'limda so'rovlar yo'q" />
       ) : (
         <>
-          <div className=" space-y-2">
+          <div className="overflow-hidden rounded-[20px] border border-border bg-card">
             {data.items.map((redemption) => {
               const reward = typeof redemption.reward === 'object' ? redemption.reward : null;
-              const student = typeof redemption.student === 'object' ? redemption.student : null;
+              const student =
+                typeof redemption.student === 'object' ? (redemption.student as User) : null;
               const rewardImage = resolveAssetUrl(reward?.image);
-              const approvedByName = actorName(redemption.approvedBy);
-              const rejectedByName = actorName(redemption.rejectedBy);
-              const deliveredByName = actorName(redemption.deliveredBy);
-              const note =
-                redemption.deliveryNote || redemption.rejectReason || redemption.adminNote;
-
+              const approving =
+                approveRedemption.isPending && approveRedemption.variables === redemption._id;
               return (
-                <Card key={redemption._id} className="rounded-md shadow-sm ring-1 ring-border/60">
-                  <CardContent className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
-                    <div className="flex size-20 shrink-0 items-center gap-3">
-                      {rewardImage ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPreviewImage({ src: rewardImage, title: reward?.title ?? 'Mukofot' })
-                          }
-                          aria-label="Rasmni kattalashtirish"
-                          className="group relative size-full shrink-0 overflow-hidden rounded-md bg-muted transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <Image
-                            src={rewardImage}
-                            alt={reward?.title ?? 'Mukofot'}
-                            fill
-                            unoptimized
-                            className="object-cover transition-transform duration-200 group-hover:scale-110"
-                          />
-                          <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                            <ZoomIn className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
-                          </span>
-                        </button>
-                      ) : (
-                        <div className="relative flex size-full shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-muted-foreground">
-                          <Gift className="size-5" />
-                        </div>
-                      )}
+                <div
+                  key={redemption._id}
+                  className="flex flex-wrap items-center gap-4 border-b border-muted px-5 py-4 last:border-0"
+                >
+                  {rewardImage ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewImage({ src: rewardImage, title: reward?.title ?? 'Mukofot' })
+                      }
+                      aria-label="Rasmni kattalashtirish"
+                      className="size-14 shrink-0 cursor-zoom-in overflow-hidden rounded-[14px] bg-muted"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={rewardImage} alt="" className="size-full object-cover" />
+                    </button>
+                  ) : (
+                    <span className="flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-muted text-muted-foreground">
+                      <Gift className="size-5" />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-[1_1_220px]">
+                    <div className="flex flex-wrap items-center gap-x-2 font-bold">
+                      {reward?.title ?? 'Mukofot'}
+                      <span className="flex items-center gap-1 font-heading text-[13px] font-semibold text-gold-foreground">
+                        <DiamondIcon className="size-3.5" />
+                        {formatNumber(redemption.diamondsSpent)}
+                      </span>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{student?.name ?? 'Foydalanuvchi'}</p>
-                      <p className="text-sm text-muted-foreground">{reward?.title ?? 'Mukofot'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(redemption.createdAt)}
-                      </p>
-                      {redemption.status === 'approved' &&
-                        (approvedByName || redemption.approvedAt) && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Tasdiqladi{approvedByName ? `: ${approvedByName}` : ''}
-                            {redemption.approvedAt && ` · ${formatDate(redemption.approvedAt)}`}
-                          </p>
-                        )}
-                      {redemption.status === 'delivered' &&
-                        (deliveredByName || redemption.deliveredAt) && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Topshirdi{deliveredByName ? `: ${deliveredByName}` : ''}
-                            {redemption.deliveredAt && ` · ${formatDate(redemption.deliveredAt)}`}
-                          </p>
-                        )}
-                      {redemption.status === 'rejected' &&
-                        (rejectedByName || redemption.rejectedAt) && (
-                          <p className="mt-1 text-xs text-destructive">
-                            Rad etdi{rejectedByName ? `: ${rejectedByName}` : ''}
-                            {redemption.rejectedAt && ` · ${formatDate(redemption.rejectedAt)}`}
-                          </p>
-                        )}
-                      {note && (
-                        <p
-                          className={cn(
-                            'mt-1 text-xs',
-                            redemption.status === 'rejected'
-                              ? 'text-destructive'
-                              : 'text-muted-foreground'
-                          )}
-                        >
-                          &quot;{note}&quot;
-                        </p>
-                      )}
+                    <div className="text-sm text-muted-foreground">
+                      {[
+                        student?.name ?? 'Foydalanuvchi',
+                        student?.grade?.number
+                          ? `${student.grade.number}-${student.grade.letter ?? ''}`
+                          : null,
+                        student?.tarif === 'premium' ? 'Premium' : null,
+                        formatTashkentDateTime(redemption.createdAt),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </div>
-                    <Badge
+                    <div
                       className={cn(
-                        'w-fit gap-1.5 rounded-full px-2.5 py-1',
-                        STATUS_STYLES[redemption.status]
+                        'mt-0.5 text-[13px]',
+                        redemption.status === 'rejected'
+                          ? 'text-destructive'
+                          : 'text-muted-foreground'
                       )}
                     >
-                      <span className="size-1.5 rounded-full bg-current" />
-                      {STATUS_LABELS[redemption.status]}
-                    </Badge>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      {redemption.status === 'pending' && (
+                      {statusLine(redemption)}
+                    </div>
+                  </div>
+
+                  {redemption.status === 'pending' || redemption.status === 'approved' ? (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="border-destructive/35 text-destructive hover:bg-destructive-soft hover:text-destructive"
+                        onClick={() => {
+                          setRejecting(redemption);
+                          setRejectReason('');
+                        }}
+                      >
+                        <X className="size-4" /> Rad etish
+                      </Button>
+                      {redemption.status === 'pending' ? (
                         <Button
-                          size="sm"
-                          className="rounded-md"
-                          disabled={approveRedemption.isPending}
+                          className="bg-success text-success-foreground hover:bg-success/90"
+                          disabled={approving}
                           onClick={() => approveRedemption.mutate(redemption._id)}
                         >
-                          {approveRedemption.isPending ? (
+                          {approving ? (
                             <Loader2 className="size-4 animate-spin" />
                           ) : (
                             <Check className="size-4" />
                           )}
                           Tasdiqlash
                         </Button>
-                      )}
-                      {redemption.status === 'approved' && (
+                      ) : (
                         <Button
-                          size="sm"
-                          className="rounded-md"
                           onClick={() => {
                             setDelivering(redemption);
                             setDeliveryNote('');
@@ -255,22 +279,13 @@ export default function AdminRedemptionsPage() {
                           <PackageCheck className="size-4" /> Topshirildi
                         </Button>
                       )}
-                      {(redemption.status === 'pending' || redemption.status === 'approved') && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-md"
-                          onClick={() => {
-                            setRejecting(redemption);
-                            setRejectReason('');
-                          }}
-                        >
-                          <X className="size-4" /> Rad etish
-                        </Button>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  ) : (
+                    <StatusPill tone={redemption.status === 'delivered' ? 'success' : 'danger'}>
+                      {redemption.status === 'delivered' ? 'Topshirildi' : 'Rad etildi'}
+                    </StatusPill>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -285,21 +300,22 @@ export default function AdminRedemptionsPage() {
       )}
 
       <Dialog open={!!rejecting} onOpenChange={(open) => !open && setRejecting(null)}>
-        <DialogContent className="rounded-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>So&apos;rovni rad etish</DialogTitle>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {formatNumber(rejecting?.diamondsSpent ?? 0)} olmos o&apos;quvchiga qaytariladi.
+          </p>
           <Textarea
-            placeholder="Rad etish sababi (ixtiyoriy)"
+            placeholder="Rad etish sababi (o'quvchiga ko'rinadi)"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            className="rounded-md text-base"
             maxLength={500}
           />
           <DialogFooter>
             <Button
-              variant="outline"
-              className="rounded-md"
+              variant="destructive"
               onClick={handleReject}
               disabled={rejectRedemption.isPending}
             >
@@ -311,7 +327,7 @@ export default function AdminRedemptionsPage() {
       </Dialog>
 
       <Dialog open={!!delivering} onOpenChange={(open) => !open && setDelivering(null)}>
-        <DialogContent className="rounded-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Mukofot topshirildi deb belgilash</DialogTitle>
           </DialogHeader>
@@ -319,15 +335,10 @@ export default function AdminRedemptionsPage() {
             placeholder="Topshirish haqida izoh (ixtiyoriy)"
             value={deliveryNote}
             onChange={(e) => setDeliveryNote(e.target.value)}
-            className="rounded-md text-base"
             maxLength={500}
           />
           <DialogFooter>
-            <Button
-              className="rounded-md"
-              onClick={handleDeliver}
-              disabled={deliverRedemption.isPending}
-            >
+            <Button onClick={handleDeliver} disabled={deliverRedemption.isPending}>
               {deliverRedemption.isPending && <Loader2 className="size-4 animate-spin" />}
               Topshirildi deb belgilash
             </Button>
@@ -336,17 +347,15 @@ export default function AdminRedemptionsPage() {
       </Dialog>
 
       <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-        <DialogContent className="max-w-lg rounded-md p-0 sm:max-w-xl">
+        <DialogContent className="max-w-lg p-0 sm:max-w-xl">
+          <DialogTitle className="sr-only">{previewImage?.title}</DialogTitle>
           {previewImage && (
-            <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted">
-              <Image
-                src={previewImage.src}
-                alt={previewImage.title}
-                fill
-                unoptimized
-                className="object-contain"
-              />
-            </div>
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewImage.src}
+              alt={previewImage.title}
+              className="max-h-[80vh] w-full rounded-xl object-contain"
+            />
           )}
         </DialogContent>
       </Dialog>

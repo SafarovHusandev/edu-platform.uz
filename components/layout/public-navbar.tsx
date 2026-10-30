@@ -3,17 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Award,
-  BookOpen,
-  HeartHandshake,
-  Home,
-  LayoutDashboard,
-  Library,
-  Menu,
-  X,
-} from 'lucide-react';
-import { Logo } from '@/components/logo';
+import { LayoutDashboard, Menu, X } from 'lucide-react';
+import { BrandMark } from '@/components/layout/brand-mark';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/layout/user-menu';
@@ -21,12 +12,13 @@ import { useAuthStore } from '@/store/auth-store';
 import { ROLE_HOME } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
+// Ochiq sahifalar sarlavhasi (edu-platform-dizayn: PHeader)
 const LINKS = [
-  { label: 'Bosh sahifa', href: '/', icon: Home },
-  { label: 'Kurslar', href: '/courses', icon: BookOpen },
-  { label: 'Kutubxona', href: '/books', icon: Library },
-  { label: 'Sertifikat tekshirish', href: '/certificates/verify', icon: Award },
-  { label: 'Homiylik', href: '/donate', icon: HeartHandshake },
+  { label: 'Kurslar', href: '/courses' },
+  { label: 'Kitoblar', href: '/books' },
+  { label: 'Mukofotlar', href: '/rewards' },
+  { label: 'Premium', href: '/premium' },
+  { label: 'Sertifikat tekshirish', href: '/certificates/verify' },
 ];
 
 export function PublicNavbar() {
@@ -35,52 +27,50 @@ export function PublicNavbar() {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/75 shadow-xs backdrop-blur-lg">
-      <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between px-4 py-2 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-6">
-          <Logo className="transition-transform hover:scale-[1.03]" />
-          <nav className="hidden items-center gap-1 md:flex">
-            {LINKS.map((link) => {
-              const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md">
+      <div className="mx-auto flex max-w-300 items-center gap-6 px-4 py-3.5 sm:px-6">
+        <BrandMark className="[&>span:last-child]:text-lg" />
 
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                    active
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  {/* <link.icon className="size-4" /> */}
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+        <nav aria-label="Asosiy" className="hidden flex-1 flex-wrap gap-1.5 text-[15px] lg:flex">
+          {LINKS.map((link) => {
+            const active = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'rounded-[10px] px-3 py-2 font-semibold whitespace-nowrap transition-colors',
+                  active
+                    ? 'bg-primary-soft text-primary'
+                    : 'text-secondary-foreground hover:bg-muted'
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 lg:ml-0">
           <ThemeToggle />
           {user ? (
             <>
               <Button
+                size="lg"
+                className="hidden sm:flex"
                 render={<Link href={ROLE_HOME[user.role]} />}
-                className="hidden items-center gap-1.5 rounded-full bg-linear-to-r from-primary to-primary/80 px-4 shadow-md shadow-primary/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 sm:flex"
               >
-                <LayoutDashboard className="size-4" />
-                Boshqaruv paneli
+                <LayoutDashboard className="size-4" /> Boshqaruv paneli
               </Button>
               <UserMenu />
             </>
           ) : (
-            <div className="hidden items-center gap-2 sm:flex">
-              <Button variant="ghost" render={<Link href="/login" />}>
+            <div className="hidden gap-2.5 sm:flex">
+              <Button size="lg" variant="outline" render={<Link href="/login" />}>
                 Kirish
               </Button>
-              <Button className="shadow-sm" render={<Link href="/register" />}>
+              <Button size="lg" render={<Link href="/register" />}>
                 Ro&apos;yxatdan o&apos;tish
               </Button>
             </div>
@@ -88,64 +78,61 @@ export function PublicNavbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="lg:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label="Menyu"
+            aria-expanded={open}
           >
-            {open ? <X className="size-4" /> : <Menu className="size-4" />}
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </Button>
         </div>
       </div>
 
       {open && (
-        <div className="border-t border-border/60 bg-background md:hidden">
-          <nav className="flex flex-col gap-1 px-4 py-3">
-            {LINKS.map((link) => {
-              const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
-              const isDonate = link.href === '/donate';
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[16px]! font-medium transition-colors',
-                    active
-                      ? isDonate
-                        ? 'bg-gold/15 text-gold-foreground'
-                        : 'bg-primary/10 text-primary'
-                      : isDonate
-                        ? 'text-gold-foreground/80 hover:bg-gold/10 hover:text-gold-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  <link.icon className="size-4.5" />
-                  {link.label}
-                </Link>
-              );
-            })}
+        <nav className="flex flex-col gap-1 border-t border-border bg-card px-4 py-3 lg:hidden">
+          {LINKS.map((link) => {
+            const active = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'rounded-xl px-3 py-2.5 font-semibold',
+                  active ? 'bg-primary-soft text-primary' : 'hover:bg-muted'
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+          <Link
+            href="/donate"
+            onClick={() => setOpen(false)}
+            className="rounded-xl px-3 py-2.5 font-semibold text-gold-foreground hover:bg-gold-soft"
+          >
+            Homiylik
+          </Link>
+          <div className="mt-2 flex gap-2 border-t border-border pt-3">
             {user ? (
-              <div className="mt-2 border-t border-border/60 pt-3">
-                <Button
-                  className="w-full rounded-xl bg-linear-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
-                  render={<Link href={ROLE_HOME[user.role]} onClick={() => setOpen(false)} />}
-                >
-                  <LayoutDashboard className="size-4" />
-                  Boshqaruv paneliga o&apos;tish
-                </Button>
-              </div>
+              <Button
+                className="flex-1"
+                render={<Link href={ROLE_HOME[user.role]} onClick={() => setOpen(false)} />}
+              >
+                <LayoutDashboard className="size-4" /> Boshqaruv paneli
+              </Button>
             ) : (
-              <div className="mt-2 flex items-center gap-2 border-t border-border/60 pt-3">
+              <>
                 <Button variant="outline" className="flex-1" render={<Link href="/login" />}>
                   Kirish
                 </Button>
                 <Button className="flex-1" render={<Link href="/register" />}>
                   Ro&apos;yxatdan o&apos;tish
                 </Button>
-              </div>
+              </>
             )}
-          </nav>
-        </div>
+          </div>
+        </nav>
       )}
     </header>
   );

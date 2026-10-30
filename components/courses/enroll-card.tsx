@@ -1,127 +1,188 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { BookOpen, Users, Star, Loader2, CheckCircle2, Tag } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { useAuthStore } from "@/store/auth-store"
-import { useEnroll } from "@/hooks/use-enrollment"
-import { useCreatePayment } from "@/hooks/use-payment"
-import { usePromoPreview } from "@/hooks/use-promo-codes"
-import { formatPrice, formatNumber } from "@/lib/format"
-import { ROLE_HOME } from "@/lib/roles"
-import type { Course } from "@/types"
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { Check, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { CourseCover } from '@/components/courses/enrollment-card';
+import { useAuthStore } from '@/store/auth-store';
+import { useEnroll } from '@/hooks/use-enrollment';
+import { useCreatePayment } from '@/hooks/use-payment';
+import { usePromoPreview } from '@/hooks/use-promo-codes';
+import { refreshCurrentUser } from '@/hooks/use-auth';
+import { formatPrice } from '@/lib/format';
+import { ROLE_HOME } from '@/lib/roles';
+import type { Course } from '@/types';
 
-export function EnrollCard({ course }: { course: Course }) {
-  const router = useRouter()
-  const user = useAuthStore((s) => s.user)
-  const enroll = useEnroll()
-  const createPayment = useCreatePayment()
-  const [promoCode, setPromoCode] = useState("")
-  const isPaid = course.price > 0
+// Kurs sahifasining o'ng paneli (edu-platform-dizayn: Course)
+export function EnrollCard({
+  course,
+  lessonsCount,
+  quizzesCount,
+}: {
+  course: Course;
+  lessonsCount: number;
+  quizzesCount?: number;
+}) {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const enroll = useEnroll();
+  const createPayment = useCreatePayment();
+  const [promoCode, setPromoCode] = useState('');
+  const [useBalance, setUseBalance] = useState(false);
+  const isPaid = course.price > 0;
+  const canBuy = !user || user.role === 'student';
   const promoPreview = usePromoPreview({
     code: isPaid ? promoCode.trim() : undefined,
-    purpose: "course",
+    purpose: 'course',
     courseId: course._id,
-  })
+  });
+
+  const price = promoPreview.data?.finalAmount ?? course.price;
+  const balanceEnough = (user?.balance ?? 0) >= price;
 
   function handleEnroll() {
     if (!user) {
-      router.push(`/login?redirect=/courses/${course._id}`)
-      return
+      router.push(`/login?redirect=/courses/${course._id}`);
+      return;
     }
-
     if (!isPaid) {
-      enroll.mutate(course._id, {
-        onSuccess: () => router.push("/student/courses"),
-      })
-      return
+      enroll.mutate(course._id, { onSuccess: () => router.push('/student/courses') });
+      return;
     }
-
+    const payWithBalance = useBalance && balanceEnough;
     createPayment.mutate(
       {
-        purpose: "course",
+        purpose: 'course',
         courseId: course._id,
         promoCode: promoCode.trim() || undefined,
-        returnUrl: `${window.location.origin}/student/courses`,
+        useBalance: payWithBalance,
+        returnUrl: payWithBalance ? undefined : `${window.location.origin}/student/courses`,
       },
       {
-        onSuccess: (invoice) => {
-          if (invoice.checkoutUrl) {
-            window.location.href = invoice.checkoutUrl
+        onSuccess: async (invoice) => {
+          if (invoice.paidWithBalance) {
+            await refreshCurrentUser();
+            toast.success('Kurs sotib olindi!');
+            router.push('/student/courses');
+          } else if (invoice.checkoutUrl) {
+            window.location.href = invoice.checkoutUrl;
           } else {
-            router.push(`/student/payment/${invoice.invoiceId}`)
+            router.push(`/student/payment/${invoice.invoiceId}`);
           }
         },
       }
-    )
+    );
   }
 
-  const isPending = enroll.isPending || createPayment.isPending
+  const isPending = enroll.isPending || createPayment.isPending;
 
   return (
-    <Card className="sticky top-20">
-      <CardContent className="flex flex-col gap-4 pt-2">
-        <div className="flex items-baseline justify-between">
-          <span className={course.price ? "text-2xl font-semibold" : "text-2xl font-semibold text-success"}>
-            {promoPreview.data?.finalAmount !== undefined
-              ? formatPrice(promoPreview.data.finalAmount)
-              : formatPrice(course.price)}
+    <aside className="overflow-hidden rounded-[22px] border border-border bg-card lg:sticky lg:top-24">
+      <CourseCover
+        course={course}
+        index={0}
+        className="h-44 items-center justify-center text-6xl"
+      />
+      <div className="flex flex-col gap-4 p-6">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span
+            className={
+              isPaid
+                ? 'font-heading text-3xl font-bold'
+                : 'font-heading text-3xl font-bold text-success'
+            }
+          >
+            {isPaid ? formatPrice(price) : 'Bepul'}
           </span>
-          {course.rating !== undefined && (
-            <span className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Star className="size-4 fill-gold text-gold" />
-              {course.rating.toFixed(1)} ({formatNumber(course.reviewsCount ?? 0)})
+          {promoPreview.data?.discountPercent ? (
+            <span className="text-sm text-muted-foreground line-through">
+              {formatPrice(course.price)}
             </span>
-          )}
+          ) : null}
         </div>
 
-        {isPaid && (user?.role === "student" || !user) && (
-          <div className="flex items-center gap-2">
-            <Tag className="size-4 shrink-0 text-muted-foreground" />
+        {isPaid && canBuy && (
+          <div className="flex flex-col gap-1.5">
             <Input
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="Promo kod (ixtiyoriy)"
-              className="h-9"
+              placeholder="Promokod (ixtiyoriy)"
+              aria-label="Promokod"
+              className="h-11"
             />
+            {promoPreview.data?.discountPercent ? (
+              <span className="text-[13px] font-semibold text-success">
+                −{promoPreview.data.discountPercent}% chegirma qo&apos;llandi
+              </span>
+            ) : null}
           </div>
         )}
-        {isPaid && promoPreview.data?.discountPercent ? (
-          <p className="-mt-2 text-xs text-success">
-            {promoPreview.data.discountPercent}% chegirma qo&apos;llandi
-          </p>
-        ) : null}
 
-        {user?.role === "student" || !user ? (
-          <Button size="lg" className="h-11" onClick={handleEnroll} disabled={isPending}>
+        {isPaid && user?.role === 'student' && (
+          <label
+            className={
+              balanceEnough
+                ? 'flex cursor-pointer items-center gap-2.5 text-sm'
+                : 'flex items-center gap-2.5 text-sm text-muted-foreground'
+            }
+          >
+            <input
+              type="checkbox"
+              checked={useBalance && balanceEnough}
+              disabled={!balanceEnough}
+              onChange={(e) => setUseBalance(e.target.checked)}
+              className="size-4 accent-primary"
+            />
+            Hamyon balansidan to&apos;lash ({formatPrice(user.balance ?? 0)})
+          </label>
+        )}
+
+        {canBuy ? (
+          <Button
+            size="lg"
+            className="h-[52px] text-base"
+            onClick={handleEnroll}
+            disabled={isPending}
+          >
             {isPending && <Loader2 className="size-4 animate-spin" />}
-            {course.price ? "Sotib olish" : "Kursga yozilish"}
+            {isPaid ? 'Sotib olish' : 'Yozilish'}
           </Button>
         ) : (
-          <Button size="lg" className="h-11" render={<Link href={ROLE_HOME[user.role]} />} variant="outline">
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-[52px]"
+            render={<Link href={ROLE_HOME[user!.role]} />}
+          >
             Boshqaruv paneliga o&apos;tish
           </Button>
         )}
 
-        <Separator />
+        {isPaid && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Multicard orqali yoki hamyon balansidan to&apos;lash mumkin.
+          </p>
+        )}
 
-        <ul className="space-y-2.5 text-sm text-muted-foreground">
-          <li className="flex items-center gap-2">
-            <BookOpen className="size-4" /> {course.lessonsCount ?? 0} ta dars
+        <div className="h-px bg-border" />
+
+        <ul className="flex flex-col gap-2.5 text-[15px]">
+          <li className="flex gap-2.5">
+            <Check className="mt-0.5 size-4 shrink-0 text-success" />
+            {lessonsCount} dars{quizzesCount ? `, ${quizzesCount} ta test` : ''}
           </li>
-          <li className="flex items-center gap-2">
-            <Users className="size-4" /> {formatNumber(course.studentsCount ?? 0)} o&apos;quvchi
+          <li className="flex gap-2.5">
+            <Check className="mt-0.5 size-4 shrink-0 text-success" /> Yakunda sertifikat
           </li>
-          <li className="flex items-center gap-2">
-            <CheckCircle2 className="size-4" /> Kurs yakunida sertifikat
+          <li className="flex gap-2.5">
+            <Check className="mt-0.5 size-4 shrink-0 text-success" /> Darslar va testlardan olmos
           </li>
         </ul>
-      </CardContent>
-    </Card>
-  )
+      </div>
+    </aside>
+  );
 }

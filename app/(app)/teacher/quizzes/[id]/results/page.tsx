@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import {
   AlertTriangle,
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   ArrowUpDown,
   CheckCircle2,
@@ -21,7 +20,6 @@ import {
   SlidersHorizontal,
   TimerOff,
   Trash2,
-  Users,
   X,
   XCircle,
 } from 'lucide-react';
@@ -65,14 +63,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonTable } from '@/components/ui/skeleton';
@@ -294,7 +284,12 @@ interface DeleteAttemptDialogProps {
 }
 
 // Faqat superadmin: texnik xato bo'lgan urinishni o'chirish
-function DeleteAttemptDialog({ attempt, isPending, onOpenChange, onConfirm }: DeleteAttemptDialogProps) {
+function DeleteAttemptDialog({
+  attempt,
+  isPending,
+  onOpenChange,
+  onConfirm,
+}: DeleteAttemptDialogProps) {
   return (
     <AlertDialog open={!!attempt} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -527,6 +522,23 @@ function ResultsContent({ quizId }: { quizId: string }) {
 
   const activeExportColumns = EXPORT_COLUMNS.filter((column) => selectedColumns[column.key]);
 
+  // Yuqoridagi ko'rsatkichlar: har bir o'quvchining oxirgi baholangan urinishi bo'yicha
+  const summary = (() => {
+    const reviewed = studentGroups
+      .map((g) => g.attempts.find((a) => a.status === 'reviewed'))
+      .filter((a): a is Attempt => !!a);
+    return {
+      pending: (attempts ?? []).filter((a) => a.status === 'submitted').length,
+      expired: (attempts ?? []).filter((a) => a.status === 'expired').length,
+      avgScore: reviewed.length
+        ? Math.round(reviewed.reduce((sum, a) => sum + (a.scorePercent ?? 0), 0) / reviewed.length)
+        : null,
+      passRate: reviewed.length
+        ? Math.round((reviewed.filter((a) => a.passed).length / reviewed.length) * 100)
+        : null,
+    };
+  })();
+
   async function handleExport() {
     if (activeExportColumns.length === 0) return;
     setIsExporting(true);
@@ -547,61 +559,72 @@ function ResultsContent({ quizId }: { quizId: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/teacher/quizzes" />}>Testlar</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href={`/teacher/quizzes/${quizId}`} />}>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <nav aria-label="Yo'l" className="text-sm text-muted-foreground">
+            <Link href="/teacher/quizzes" className="hover:text-foreground">
+              Testlarim
+            </Link>{' '}
+            /{' '}
+            <Link href={`/teacher/quizzes/${quizId}`} className="hover:text-foreground">
               {quiz?.title ?? 'Test'}
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Natijalar</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link href={`/teacher/quizzes/${quizId}`} />}
-            className="-ml-2 w-fit"
-          >
-            <ArrowLeft className="size-4" /> Testga qaytish
-          </Button>
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">Natijalar</h1>
-            <p className="text-muted-foreground">{quiz?.title}</p>
-          </div>
+            </Link>{' '}
+            / Natijalar
+          </nav>
+          <h1 className="mt-1 font-heading text-2xl font-semibold wrap-break-word sm:text-[26px]">
+            {quiz?.title ?? 'Natijalar'}
+          </h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {summary.pending > 0 && (
+            <Button render={<Link href={`/teacher/grading?quiz=${quizId}`} />}>
+              Baholash · {summary.pending}
+            </Button>
+          )}
           {!!attempts?.length && (
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Users className="size-4" /> {studentGroups.length} o&apos;quvchi
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <ClipboardCheck className="size-4" /> {attempts.length} urinish
-              </span>
-            </div>
+            <Button variant="outline" onClick={() => setExportOpen(true)}>
+              <Download className="size-4" /> Yuklab olish
+            </Button>
           )}
         </div>
-        {!!attempts?.length && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setExportOpen(true)}
-            className="w-fit  animate-glow"
-          >
-            <Download className="size-4" /> Yuklab olish
-          </Button>
-        )}
       </div>
+
+      {!!attempts?.length && (
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))]">
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="text-[13px] text-muted-foreground">Urinishlar</div>
+            <div className="mt-1 font-heading text-2xl font-bold">{attempts.length}</div>
+            <div className="text-xs text-muted-foreground">
+              {studentGroups.length} o&apos;quvchi
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="text-[13px] text-muted-foreground">O&apos;rtacha ball</div>
+            <div className="mt-1 font-heading text-2xl font-bold">
+              {summary.avgScore != null ? summary.avgScore : '—'}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="text-[13px] text-muted-foreground">O&apos;tganlar</div>
+            <div className="mt-1 font-heading text-2xl font-bold text-success">
+              {summary.passRate != null ? `${summary.passRate}%` : '—'}
+            </div>
+          </div>
+          <div className="rounded-2xl bg-gold-soft p-4">
+            <div className="text-[13px] text-gold-foreground/80">Tekshirish kerak</div>
+            <div className="mt-1 font-heading text-2xl font-bold text-gold-foreground">
+              {summary.pending}
+            </div>
+          </div>
+          <div className="rounded-2xl bg-destructive-soft p-4">
+            <div className="text-[13px] text-destructive/80">Vaqt tugagan</div>
+            <div className="mt-1 font-heading text-2xl font-bold text-destructive">
+              {summary.expired}
+            </div>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <SkeletonTable rows={6} />
@@ -611,7 +634,7 @@ function ResultsContent({ quizId }: { quizId: string }) {
         <EmptyState icon={ClipboardCheck} title="Hali hech kim testdan o'tmagan" />
       ) : (
         <>
-          <div className="mb-5 flex flex-col gap-3 rounded-md border border-border/70 bg-card p-3 shadow-xs sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -693,10 +716,10 @@ function ResultsContent({ quizId }: { quizId: string }) {
               }
             />
           ) : (
-            <div className="overflow-hidden rounded-md border border-border/70 bg-card shadow-xs">
+            <div className="overflow-x-auto rounded-[20px] border border-border bg-card">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <SortableHead
                       sortKeyValue="name"
                       activeKey={sortKey}
@@ -861,9 +884,12 @@ function ResultsContent({ quizId }: { quizId: string }) {
                             </Button>
                             {openEndedQuestions.length > 0 && group.pending && (
                               <Button
-                                variant="outline"
                                 size="sm"
-                                onClick={() => setManualAttemptId(group.pending!._id)}
+                                render={
+                                  <Link
+                                    href={`/teacher/grading?quiz=${quizId}&attempt=${group.pending._id}`}
+                                  />
+                                }
                               >
                                 Baholash
                               </Button>

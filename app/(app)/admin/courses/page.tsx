@@ -50,7 +50,7 @@ export default function AdminCoursesPage() {
   const deleteCourse = useDeleteCourse();
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-6xl">
       <PageHeader title="Kurslar" description="Platformadagi barcha kurslar" />
 
       <div className="relative mb-5 max-w-sm">
@@ -62,7 +62,7 @@ export default function AdminCoursesPage() {
             setPage(1);
           }}
           placeholder="Kurs nomi bo'yicha qidirish..."
-          className="h-11 rounded-md pl-10 text-base"
+          className="h-11 pl-10 text-base"
         />
       </div>
 
@@ -74,7 +74,7 @@ export default function AdminCoursesPage() {
         <EmptyState icon={BookOpen} title="Kurs topilmadi" />
       ) : (
         <>
-          <Card className="gap-0 overflow-hidden rounded-md py-0 shadow-sm ring-1 ring-border/60">
+          <Card className="gap-0 overflow-hidden py-0 shadow-sm ring-1 ring-border/60">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">

@@ -101,74 +101,78 @@ const REKVIZITLAR = [
 
 export default function OfertaPage() {
   return (
-    <Container className="max-w-3xl py-16">
-      <h1 className="font-heading text-3xl font-semibold tracking-tight">Ommaviy oferta</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        edu-platform.uz onlayn ta&apos;lim xizmatlaridan foydalanish shartlari to&apos;g&apos;risida
-      </p>
+    <Container className="max-w-200 py-10 sm:py-14">
+      <article className="rounded-[20px] border border-border bg-card p-6 sm:p-10">
+        <h1 className="font-heading text-3xl font-bold sm:text-4xl">Ommaviy oferta</h1>
+        <p className="mt-2 text-muted-foreground">
+          edu-platform.uz onlayn ta&apos;lim xizmatlaridan foydalanish shartlari
+          to&apos;g&apos;risida
+        </p>
 
-      <p className="mt-8 text-sm leading-relaxed text-muted-foreground">
-        Ushbu hujjat Oʻzbekiston Respublikasi Fuqarolik kodeksining 369-370- moddalariga,
-        &quot;Elektron tijorat toʻgʻrisida&quot;gi Qonunga, Vazirlar Mahkamasining 2016-yil
-        2-iyundagi 185-son qarori bilan tasdiqlangan &quot;Elektron tijoratni amalga oshirish
-        qoidalari&quot;ga hamda &quot;Isteʼmolchilarning huquqlarini himoya qilish
-        toʻgʻrisida&quot;gi Qonunga muvofiq ommaviy oferta (taklif) hisoblanadi va yakka tartibdagi
-        tadbirkor Safarov Husan Normamat o&apos;g&apos;li (F.I.Sh.) (bundan buyon matnda
-        &quot;Xizmat ko&apos;rsatuvchi&quot; deb yuritiladi) tomonidan edu-platform.uz
-        platformasidan foydalanuvchi shaxslarga (bundan buyon &quot;Foydalanuvchi&quot;) qaratilgan.
-      </p>
-      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-        Foydalanuvchi platformada roʻyxatdan oʻtishi, kursga yozilishi yoki xizmat uchun toʻlov
-        amalga oshirishi bilan ushbu Oferta shartlarini toʻliq va soʻzsiz qabul qilgan hisoblanadi
-        (aksept).
-      </p>
+        <p className="mt-8 text-[15px] leading-relaxed text-secondary-foreground">
+          Ushbu hujjat Oʻzbekiston Respublikasi Fuqarolik kodeksining 369-370- moddalariga,
+          &quot;Elektron tijorat toʻgʻrisida&quot;gi Qonunga, Vazirlar Mahkamasining 2016-yil
+          2-iyundagi 185-son qarori bilan tasdiqlangan &quot;Elektron tijoratni amalga oshirish
+          qoidalari&quot;ga hamda &quot;Isteʼmolchilarning huquqlarini himoya qilish
+          toʻgʻrisida&quot;gi Qonunga muvofiq ommaviy oferta (taklif) hisoblanadi va yakka
+          tartibdagi tadbirkor Safarov Husan Normamat o&apos;g&apos;li (F.I.Sh.) (bundan buyon
+          matnda &quot;Xizmat ko&apos;rsatuvchi&quot; deb yuritiladi) tomonidan edu-platform.uz
+          platformasidan foydalanuvchi shaxslarga (bundan buyon &quot;Foydalanuvchi&quot;)
+          qaratilgan.
+        </p>
+        <p className="mt-4 text-[15px] leading-relaxed text-secondary-foreground">
+          Foydalanuvchi platformada roʻyxatdan oʻtishi, kursga yozilishi yoki xizmat uchun toʻlov
+          amalga oshirishi bilan ushbu Oferta shartlarini toʻliq va soʻzsiz qabul qilgan hisoblanadi
+          (aksept).
+        </p>
 
-      <div className="mt-10 space-y-10">
-        {SECTIONS.map((section) => (
-          <section key={section.title}>
-            <h2 className="font-heading text-xl font-semibold tracking-tight">{section.title}</h2>
-            <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted-foreground">
-              {section.paragraphs?.map((p) => (
-                <p key={p}>{p}</p>
-              ))}
-              {section.items && (
-                <ul className="list-disc space-y-2 pl-5">
-                  {section.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              )}
-              {section.trailingParagraphs?.map((p) => (
-                <p key={p}>{p}</p>
-              ))}
-              {section.trailingItems && (
-                <ul className="list-disc space-y-2 pl-5">
-                  {section.trailingItems.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-        ))}
-
-        <section>
-          <h2 className="font-heading text-xl font-semibold tracking-tight">
-            9. Xizmat ko&apos;rsatuvchi rekvizitlari
-          </h2>
-          <dl className="mt-3 divide-y divide-border/60 rounded-lg border border-border/60 text-sm">
-            {REKVIZITLAR.map(([label, value]) => (
-              <div
-                key={label}
-                className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="font-medium text-foreground">{value}</dd>
+        <div className="mt-10 space-y-10">
+          {SECTIONS.map((section) => (
+            <section key={section.title}>
+              <h2 className="font-heading text-xl font-bold">{section.title}</h2>
+              <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-secondary-foreground">
+                {section.paragraphs?.map((p) => (
+                  <p key={p}>{p}</p>
+                ))}
+                {section.items && (
+                  <ul className="list-disc space-y-2 pl-5">
+                    {section.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+                {section.trailingParagraphs?.map((p) => (
+                  <p key={p}>{p}</p>
+                ))}
+                {section.trailingItems && (
+                  <ul className="list-disc space-y-2 pl-5">
+                    {section.trailingItems.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-            ))}
-          </dl>
-        </section>
-      </div>
+            </section>
+          ))}
+
+          <section>
+            <h2 className="font-heading text-xl font-bold">
+              9. Xizmat ko&apos;rsatuvchi rekvizitlari
+            </h2>
+            <dl className="mt-3 divide-y divide-border rounded-[14px] border border-border text-[15px]">
+              {REKVIZITLAR.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="font-medium text-foreground">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
+      </article>
     </Container>
   );
 }

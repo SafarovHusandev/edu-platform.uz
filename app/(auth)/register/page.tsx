@@ -6,15 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Loader2,
-  GraduationCap,
-  Presentation,
-  Sparkles,
-  UserCheck,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Loader2, GraduationCap, Presentation, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -33,11 +25,17 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { AuthTabs } from '@/components/auth/auth-tabs';
 import { cn } from '@/lib/utils';
 import { useRegister } from '@/hooks/use-auth';
 
 const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
 const GRADE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+const ROLE_OPTIONS = [
+  { value: 'student', label: "O'quvchi", hint: 'Darslar va testlar', icon: GraduationCap },
+  { value: 'teacher', label: "O'qituvchi", hint: 'Kurs va test yaratish', icon: Presentation },
+] as const;
 
 const schema = z
   .object({
@@ -100,249 +98,189 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto">
-      <div className="glass-card relative rounded-3xl p-6 sm:p-8 shadow-2xl border border-border/80 backdrop-blur-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border/60 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              Ro&apos;yxatdan o&apos;tish
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Bepul hisob yarating va o&apos;rganish yoki o&apos;qitishni boshlang
-            </p>
-          </div>
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 dark:bg-primary/20 text-primary">
-            <Sparkles className="size-6" />
-          </div>
-        </div>
+    <div className="flex flex-col gap-7">
+      <AuthTabs active="register" />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Role Picker */}
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Kim sifatida qo&apos;shilasiz?
-                  </FormLabel>
-                  <FormControl>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => field.onChange('student')}
-                        className={cn(
-                          'flex flex-col items-center gap-2 rounded-2xl border p-3.5 text-center transition-all duration-200 cursor-pointer',
-                          field.value === 'student'
-                            ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary shadow-md shadow-primary/10 ring-2 ring-primary/30'
-                            : 'border-border/80 bg-card/60 dark:bg-card/40 text-muted-foreground hover:bg-muted hover:text-foreground'
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            'flex size-10 items-center justify-center rounded-xl transition-colors',
-                            field.value === 'student'
-                              ? 'bg-primary text-white'
-                              : 'bg-muted text-muted-foreground'
-                          )}
-                        >
-                          <GraduationCap className="size-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-foreground">O&apos;quvchi</p>
-                          <p className="text-[11px] text-muted-foreground">Darslar & Testlar</p>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => field.onChange('teacher')}
-                        className={cn(
-                          'flex flex-col items-center gap-2 rounded-2xl border p-3.5 text-center transition-all duration-200 cursor-pointer',
-                          field.value === 'teacher'
-                            ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary shadow-md shadow-primary/10 ring-2 ring-primary/30'
-                            : 'border-border/80 bg-card/60 dark:bg-card/40 text-muted-foreground hover:bg-muted hover:text-foreground'
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            'flex size-10 items-center justify-center rounded-xl transition-colors',
-                            field.value === 'teacher'
-                              ? 'bg-primary text-white'
-                              : 'bg-muted text-muted-foreground'
-                          )}
-                        >
-                          <Presentation className="size-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-foreground">O&apos;qituvchi</p>
-                          <p className="text-[11px] text-muted-foreground">Kurslar & Dars berish</p>
-                        </div>
-                      </button>
-                    </div>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    To&apos;liq ism familiyangiz
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Masalan: Ali Valiyev"
-                      {...field}
-                      className="h-12 rounded-xl border-border/80 bg-background/70 text-base focus:ring-2 focus:ring-primary/30"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Telefon raqam
-                  </FormLabel>
-                  <FormControl>
-                    <PhoneInput
-                      {...field}
-                      className="h-12 rounded-xl border-border/80 bg-background/70 text-base focus-within:ring-2 focus-within:ring-primary/30"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Parol
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder=""
-                        {...field}
-                        className="h-12 rounded-xl border-border/80 bg-background/70 pr-11 text-base focus:ring-2 focus:ring-primary/30"
-                      />
-                      <button
-                        type="button"
-                        aria-label={showPassword ? 'Parolni yashirish' : "Parolni ko'rsatish"}
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-
-            {role === 'student' && (
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <FormField
-                  control={form.control}
-                  name="gradeNumber"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Sinf raqami
-                      </FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-border/80 bg-background/70 w-full text-base">
-                            <SelectValue placeholder="Sinfni tanlang" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {GRADE_NUMBERS.map((n) => (
-                            <SelectItem key={n} value={n}>
-                              {n}-sinf
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="gradeLetter"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Guruh harfi
-                      </FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger className="h-12 rounded-xl border-border/80 bg-background/70 w-full text-base">
-                            <SelectValue placeholder="Harf" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {GRADE_LETTERS.map((l) => (
-                            <SelectItem key={l} value={l}>
-                              &quot;{l}&quot; guruhi
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="h-12 w-full rounded-xl bg-linear-to-r from-primary to-indigo-600 text-base font-bold text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:opacity-95 transition-all duration-200 mt-2 cursor-pointer"
-              disabled={register.isPending}
-            >
-              {register.isPending ? (
-                <Loader2 className="size-5 animate-spin" />
-              ) : (
-                <>
-                  <UserCheck className="size-4 mr-1.5" />
-                  Ro&apos;yxatdan o&apos;tish
-                </>
-              )}
-            </Button>
-          </form>
-        </Form>
-
-        <div className="mt-6 pt-4 border-t border-border/60 text-center">
-          <p className="text-sm text-muted-foreground">
-            Hisobingiz bormi?{' '}
-            <Link
-              href="/login"
-              className="font-bold text-primary transition-colors hover:underline"
-            >
-              Tizimga kiring
-            </Link>
-          </p>
-        </div>
+      <div>
+        <h2 className="font-heading text-[28px] font-bold">Hisob yaratish</h2>
+        <p className="mt-1 text-secondary-foreground">
+          Ro&apos;yxatdan o&apos;tgach, admin hisobingizni tasdiqlaydi.
+        </p>
       </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Kim sifatida qo&apos;shilasiz?</FormLabel>
+                <FormControl>
+                  <div className="grid grid-cols-2 gap-3">
+                    {ROLE_OPTIONS.map((option) => {
+                      const selected = field.value === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => field.onChange(option.value)}
+                          className={cn(
+                            'flex items-center gap-3 rounded-[14px] border-[1.5px] p-3 text-left transition-colors',
+                            selected
+                              ? 'border-primary bg-primary-soft'
+                              : 'border-border bg-card hover:bg-muted'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'flex size-9 shrink-0 items-center justify-center rounded-[10px]',
+                              selected
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted text-muted-foreground'
+                            )}
+                          >
+                            <option.icon className="size-4.5" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block font-semibold">{option.label}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {option.hint}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Ism familiya</FormLabel>
+                <FormControl>
+                  <Input placeholder="Masalan: Ali Valiyev" autoComplete="name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Telefon raqam</FormLabel>
+                <FormControl>
+                  <PhoneInput {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Parol</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Kamida 6 ta belgi"
+                      autoComplete="new-password"
+                      {...field}
+                      className="pr-11"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Parolni yashirish' : "Parolni ko'rsatish"}
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {role === 'student' && (
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="gradeNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sinf</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sinfni tanlang" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {GRADE_NUMBERS.map((n) => (
+                          <SelectItem key={n} value={n}>
+                            {n}-sinf
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="gradeLetter"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Guruh</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Harf" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {GRADE_LETTERS.map((l) => (
+                          <SelectItem key={l} value={l}>
+                            &quot;{l}&quot; guruhi
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
+
+          <Button type="submit" size="lg" className="mt-1 w-full" disabled={register.isPending}>
+            {register.isPending ? <Loader2 className="size-5 animate-spin" /> : "Ro'yxatdan o'tish"}
+          </Button>
+        </form>
+      </Form>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Hisobingiz bormi?{' '}
+        <Link href="/login" className="font-semibold text-primary hover:underline">
+          Kirish
+        </Link>
+      </p>
     </div>
   );
 }

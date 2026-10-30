@@ -23,12 +23,12 @@ import {
   UserPlus,
   Users,
   X,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
@@ -46,14 +46,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,7 +84,14 @@ import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
 import { ROLE_LABELS } from '@/lib/roles';
 import { resolveAssetUrl } from '@/lib/config';
-import { formatDate, formatNumber, formatRelativeTime, initials } from '@/lib/format';
+import {
+  formatDate,
+  formatDateTime,
+  formatNumber,
+  formatRelativeTime,
+  initials,
+} from '@/lib/format';
+import { StatusPill } from '@/components/dashboard/dashboard-ui';
 import { cn } from '@/lib/utils';
 import type { Role, Tarif, User } from '@/types';
 
@@ -102,12 +101,6 @@ const TARIFS: Tarif[] = ['standart', 'premium'];
 const TARIF_LABELS: Record<Tarif, string> = { standart: 'Standart', premium: 'Premium' };
 const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
 const GRADE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
-const ROLE_BADGE_STYLES: Record<Role, string> = {
-  student: 'bg-sky-500/10 text-sky-700 dark:text-sky-400',
-  teacher: 'bg-violet-500/10 text-violet-700 dark:text-violet-400',
-  admin: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  superadmin: 'bg-primary/10 text-primary',
-};
 
 const userCreateSchema = z
   .object({
@@ -152,7 +145,9 @@ function AdminUsersPageContent() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | Role>('all');
   const [tarifFilter, setTarifFilter] = useState<'all' | Tarif>('all');
-  const [onlyUnverified, setOnlyUnverified] = useState(initialTab === 'unverified');
+  const [statusTab, setStatusTab] = useState<'all' | 'unverified' | 'blocked'>(
+    initialTab === 'unverified' || initialTab === 'blocked' ? initialTab : 'all'
+  );
   const [nameSort, setNameSort] = useState<'asc' | 'desc'>('asc');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -160,7 +155,8 @@ function AdminUsersPageContent() {
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    isVerified: onlyUnverified ? false : undefined,
+    isVerified: statusTab === 'unverified' ? false : undefined,
+    isBlocked: statusTab === 'blocked' ? true : undefined,
     role: roleFilter === 'all' ? undefined : roleFilter,
     tarif: tarifFilter === 'all' ? undefined : tarifFilter,
   });
@@ -173,6 +169,7 @@ function AdminUsersPageContent() {
   const { data: studentStats } = useUsers({ limit: 1, role: 'student' });
   const { data: teacherStats } = useUsers({ limit: 1, role: 'teacher' });
   const { data: unverifiedStats } = useUsers({ limit: 1, isVerified: false });
+  const { data: blockedStats } = useUsers({ limit: 1, isBlocked: true });
 
   const toggleBlock = useToggleUserBlock();
   const verifyUser = useVerifyUser();
@@ -372,130 +369,51 @@ function AdminUsersPageContent() {
   }
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Foydalanuvchilar"
+        description={`Jami ${formatNumber(allStats?.total ?? 0)} · o'quvchilar ${formatNumber(studentStats?.total ?? 0)} · o'qituvchilar ${formatNumber(teacherStats?.total ?? 0)}`}
         actions={
           isSuperadmin && (
-            <Button onClick={openCreate} className="rounded-md p-5 text-md">
-              <UserPlus className="size-4" /> Qo&apos;shish
+            <Button size="lg" onClick={openCreate}>
+              <UserPlus className="size-4" /> Foydalanuvchi
             </Button>
           )
         }
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <button
-          type="button"
-          onClick={() => {
-            setRoleFilter('all');
-            setOnlyUnverified(false);
-            setPage(1);
-          }}
-          className={cn(
-            'rounded-2xl border p-4 text-left transition-colors',
-            roleFilter === 'all' && !onlyUnverified
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border/70 bg-card hover:border-primary/40'
-          )}
-        >
-          <p
-            className={cn(
-              'text-sm font-medium',
-              roleFilter === 'all' && !onlyUnverified
-                ? 'text-primary-foreground/80'
-                : 'text-muted-foreground'
-            )}
-          >
-            Barchasi
-          </p>
-          <p className="mt-1 text-3xl font-bold">{formatNumber(allStats?.total ?? 0)}</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setRoleFilter('student');
-            setOnlyUnverified(false);
-            setPage(1);
-          }}
-          className={cn(
-            'rounded-2xl border p-4 text-left transition-colors',
-            roleFilter === 'student' && !onlyUnverified
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border/70 bg-card hover:border-primary/40'
-          )}
-        >
-          <p
-            className={cn(
-              'text-sm font-medium',
-              roleFilter === 'student' && !onlyUnverified
-                ? 'text-primary-foreground/80'
-                : 'text-muted-foreground'
-            )}
-          >
-            O&apos;quvchilar
-          </p>
-          <p className="mt-1 text-3xl font-bold">{formatNumber(studentStats?.total ?? 0)}</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setRoleFilter('teacher');
-            setOnlyUnverified(false);
-            setPage(1);
-          }}
-          className={cn(
-            'rounded-2xl border p-4 text-left transition-colors',
-            roleFilter === 'teacher' && !onlyUnverified
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border/70 bg-card hover:border-primary/40'
-          )}
-        >
-          <p
-            className={cn(
-              'text-sm font-medium',
-              roleFilter === 'teacher' && !onlyUnverified
-                ? 'text-primary-foreground/80'
-                : 'text-muted-foreground'
-            )}
-          >
-            O&apos;qituvchilar
-          </p>
-          <p className="mt-1 text-3xl font-bold">{formatNumber(teacherStats?.total ?? 0)}</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setOnlyUnverified(true);
-            setPage(1);
-          }}
-          className={cn(
-            'rounded-2xl border p-4 text-left transition-colors',
-            onlyUnverified
-              ? 'border-amber-500 bg-amber-500 text-white'
-              : 'border-amber-500/30 bg-amber-500/10 hover:border-amber-500/60'
-          )}
-        >
-          <p
-            className={cn(
-              'text-sm font-medium',
-              onlyUnverified ? 'text-white/80' : 'text-amber-700 dark:text-amber-400'
-            )}
-          >
-            Tasdiqlanmagan
-          </p>
-          <p
-            className={cn(
-              'mt-1 text-3xl font-bold',
-              onlyUnverified ? 'text-white' : 'text-amber-700 dark:text-amber-400'
-            )}
-          >
-            {formatNumber(unverifiedStats?.total ?? 0)}
-          </p>
-        </button>
-      </div>
-
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+      <div className="mb-4 flex flex-col gap-2.5 lg:flex-row lg:items-center">
+        <div role="tablist" className="flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+          {(
+            [
+              { value: 'all', label: 'Barchasi' },
+              {
+                value: 'unverified',
+                label: `Tasdiqlash kutilmoqda · ${formatNumber(unverifiedStats?.total ?? 0)}`,
+              },
+              { value: 'blocked', label: `Bloklangan · ${formatNumber(blockedStats?.total ?? 0)}` },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={statusTab === tab.value}
+              onClick={() => {
+                setStatusTab(tab.value);
+                setPage(1);
+              }}
+              className={cn(
+                'rounded-[9px] px-3.5 py-2 font-semibold whitespace-nowrap transition-colors',
+                statusTab === tab.value
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -504,71 +422,64 @@ function AdminUsersPageContent() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Ism, telefon (998...) yoki sinf"
-            className="h-11 rounded-xl pl-10 text-base md:text-base"
+            placeholder="Ism yoki telefon bo'yicha qidirish"
+            className="h-11 pl-10"
           />
         </div>
-        <Select
-          value={roleFilter}
-          onValueChange={(v) => {
-            setRoleFilter((v as 'all' | Role) ?? 'all');
-            setPage(1);
-          }}
-          items={{ all: 'Barcha rollar', ...ROLE_LABELS }}
-        >
-          <SelectTrigger className="h-11 w-full rounded-xl text-base sm:w-40">
-            <SelectValue placeholder="Rol" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha rollar</SelectItem>
-            {ROLES.map((r) => (
-              <SelectItem key={r} value={r}>
-                {ROLE_LABELS[r]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={tarifFilter}
-          onValueChange={(v) => {
-            setTarifFilter((v as 'all' | Tarif) ?? 'all');
-            setPage(1);
-          }}
-          items={{ all: 'Barcha tariflar', ...TARIF_LABELS }}
-        >
-          <SelectTrigger className="h-11 w-full rounded-xl text-base sm:w-40">
-            <SelectValue placeholder="Tarif" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Barcha tariflar</SelectItem>
-            {TARIFS.map((t) => (
-              <SelectItem key={t} value={t}>
-                {TARIF_LABELS[t]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select
+            value={roleFilter}
+            onValueChange={(v) => {
+              setRoleFilter((v as 'all' | Role) ?? 'all');
+              setPage(1);
+            }}
+            items={{ all: 'Barcha rollar', ...ROLE_LABELS }}
+          >
+            <SelectTrigger className="h-11 w-full sm:w-40">
+              <SelectValue placeholder="Rol" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha rollar</SelectItem>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={tarifFilter}
+            onValueChange={(v) => {
+              setTarifFilter((v as 'all' | Tarif) ?? 'all');
+              setPage(1);
+            }}
+            items={{ all: 'Barcha tariflar', ...TARIF_LABELS }}
+          >
+            <SelectTrigger className="h-11 w-full sm:w-40">
+              <SelectValue placeholder="Tarif" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha tariflar</SelectItem>
+              {TARIFS.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {TARIF_LABELS[t]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
-          <span className="text-base font-semibold text-foreground">
-            {selectedIds.size} ta tanlandi
-          </span>
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/30 bg-primary-soft px-4 py-3">
+          <span className="font-semibold">{selectedIds.size} ta tanlandi</span>
           <span className="hidden h-4 w-px bg-border sm:block" />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-base"
-            onClick={handleBulkVerify}
-            disabled={bulkPending}
-          >
+          <Button variant="ghost" size="sm" onClick={handleBulkVerify} disabled={bulkPending}>
             <UserCheck className="size-4" /> Tasdiqlash
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="text-base"
             onClick={() => setBulkGradeOpen(true)}
             disabled={bulkPending}
           >
@@ -577,7 +488,7 @@ function AdminUsersPageContent() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-base text-destructive hover:text-destructive"
+            className="text-destructive hover:text-destructive"
             onClick={handleBulkBlock}
             disabled={bulkPending}
           >
@@ -587,7 +498,7 @@ function AdminUsersPageContent() {
           <Button
             variant="ghost"
             size="sm"
-            className="ml-auto text-base text-muted-foreground"
+            className="ml-auto text-muted-foreground"
             onClick={() => setSelectedIds(new Set())}
           >
             Bekor qilish
@@ -603,124 +514,167 @@ function AdminUsersPageContent() {
         <EmptyState icon={Users} title="Foydalanuvchi topilmadi" />
       ) : (
         <>
-          <Card className="gap-0 overflow-hidden rounded-2xl border-border/70 py-0 shadow-xs">
-            <Table className="text-base">
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10 px-4">
+          <div className="overflow-x-auto rounded-[20px] border border-border bg-card">
+            <table className="w-full min-w-[900px] border-collapse text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-left text-[13px] text-muted-foreground">
+                  <th className="w-10 px-4 py-3.5">
                     <Checkbox
                       checked={allSelectedOnPage}
                       onCheckedChange={(c) => toggleSelectAllOnPage(c === true)}
                       aria-label="Barchasini tanlash"
                     />
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none px-4"
-                    onClick={() => setNameSort((s) => (s === 'asc' ? 'desc' : 'asc'))}
-                  >
-                    <span className="inline-flex items-center gap-1">
+                  </th>
+                  <th className="px-3 py-3.5 font-semibold">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1"
+                      onClick={() => setNameSort((s) => (s === 'asc' ? 'desc' : 'asc'))}
+                    >
                       Foydalanuvchi
                       {nameSort === 'asc' ? (
-                        <ArrowUp className="size-3.5 text-muted-foreground" />
+                        <ArrowUp className="size-3.5" />
                       ) : (
-                        <ArrowDown className="size-3.5 text-muted-foreground" />
+                        <ArrowDown className="size-3.5" />
                       )}
-                    </span>
-                  </TableHead>
-                  <TableHead className="px-4">Rol</TableHead>
-                  <TableHead className="px-4">Sinf</TableHead>
-                  <TableHead className="px-4">Holat</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                    </button>
+                  </th>
+                  <th className="px-3 py-3.5 font-semibold">Telefon</th>
+                  <th className="px-3 py-3.5 font-semibold">Rol</th>
+                  <th className="px-3 py-3.5 font-semibold">Sinf</th>
+                  <th className="px-3 py-3.5 font-semibold">Telegram</th>
+                  <th className="px-3 py-3.5 font-semibold">Ro&apos;yxatdan</th>
+                  <th className="px-5 py-3.5 text-right font-semibold">Amallar</th>
+                </tr>
+              </thead>
+              <tbody>
                 {sortedItems.map((item) => {
-                  const status = !item.isVerified
-                    ? 'unverified'
-                    : item.isBlocked
-                      ? 'blocked'
-                      : item.tarif === 'premium'
-                        ? 'premium'
-                        : 'active';
+                  const isSelf = item._id === currentUser?._id;
                   return (
-                    <TableRow
+                    <tr
                       key={item._id}
-                      onClick={() => openDetail(item._id)}
-                      className="cursor-pointer hover:bg-muted/30"
+                      className={cn(
+                        'border-t border-muted',
+                        item.isBlocked && 'bg-destructive-soft/40',
+                        selectedIds.has(item._id) && 'bg-primary-soft/50'
+                      )}
                     >
-                      <TableCell className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3">
                         <Checkbox
                           checked={selectedIds.has(item._id)}
                           onCheckedChange={(c) => toggleSelect(item._id, c === true)}
                           aria-label={`${item.name}ni tanlash`}
                         />
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="shadow-sm ring-2 ring-background">
-                            <AvatarImage src={resolveAssetUrl(item.avatar)} alt={item.name} />
-                            <AvatarFallback>{initials(item.name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">{item.name}</p>
-                            <p className="truncate text-sm text-muted-foreground">{item.phone}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge
-                          className={cn('rounded-full px-2.5 py-1', ROLE_BADGE_STYLES[item.role])}
+                      </td>
+                      <td className="px-3 py-3">
+                        <button
+                          type="button"
+                          onClick={() => openDetail(item._id)}
+                          className="flex items-center gap-2.5 text-left"
                         >
-                          {ROLE_LABELS[item.role]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">
-                        {item.role === 'student' && item.grade?.number ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            {item.grade.number}-{item.grade.letter ?? ''}
-                            <span className="inline-flex items-center gap-0.5 text-sm">
-                              <Image
-                                src="/diamond.png"
-                                alt=""
-                                width={32}
-                                height={32}
-                                className="size-3.5"
-                              />
-                              {formatNumber(item.diamonds ?? 0)}
+                          <Avatar>
+                            <AvatarImage src={resolveAssetUrl(item.avatar)} alt={item.name} />
+                            <AvatarFallback className="text-[13px] font-bold">
+                              {initials(item.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="min-w-0">
+                            <span className="block font-semibold hover:text-primary">
+                              {item.name}
+                            </span>
+                            <span className="flex flex-wrap gap-1">
+                              {!item.isVerified && (
+                                <StatusPill tone="warning" className="px-2 py-0 text-[11px]">
+                                  Tasdiqlanmagan
+                                </StatusPill>
+                              )}
+                              {item.isBlocked && (
+                                <StatusPill tone="danger" className="px-2 py-0 text-[11px]">
+                                  Bloklangan
+                                </StatusPill>
+                              )}
+                              {item.tarif === 'premium' && (
+                                <StatusPill tone="warning" className="px-2 py-0 text-[11px]">
+                                  Premium
+                                </StatusPill>
+                              )}
                             </span>
                           </span>
+                        </button>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">+{item.phone}</td>
+                      <td className="px-3 py-3">
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-0.5 text-xs font-semibold',
+                            item.role === 'teacher'
+                              ? 'bg-primary-soft text-primary'
+                              : item.role === 'student'
+                                ? 'bg-muted text-secondary-foreground'
+                                : 'bg-admin text-admin-foreground'
+                          )}
+                        >
+                          {ROLE_LABELS[item.role]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        {item.role === 'student' && item.grade?.number ? (
+                          `${item.grade.number}-${item.grade.letter ?? ''}`
                         ) : (
-                          '—'
+                          <span className="text-muted-foreground">—</span>
                         )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        {status === 'unverified' && (
-                          <Badge className="gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-400">
-                            <span className="size-1.5 rounded-full bg-amber-500" />
-                            Tasdiqlanmagan
-                          </Badge>
-                        )}
-                        {status === 'blocked' && (
-                          <Badge variant="destructive" className="gap-1.5 rounded-full px-2.5 py-1">
-                            <span className="size-1.5 rounded-full bg-destructive" /> Bloklangan
-                          </Badge>
-                        )}
-                        {status === 'premium' && (
-                          <Badge className="gap-1.5 rounded-full bg-gold/15 px-2.5 py-1 text-gold-foreground">
-                            <span className="size-1.5 rounded-full bg-gold" /> Premium
-                          </Badge>
-                        )}
-                        {status === 'active' && (
-                          <Badge className="gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-success">
-                            <span className="size-1.5 rounded-full bg-success" /> Faol
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                      <td className="px-3 py-3 text-muted-foreground">
+                        {item.telegramId
+                          ? item.telegramUsername
+                            ? `@${item.telegramUsername}`
+                            : 'Ulangan'
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {item.createdAt ? formatDateTime(item.createdAt) : '—'}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          {!item.isVerified && (
+                            <Button
+                              size="sm"
+                              className="bg-success text-success-foreground hover:bg-success/90"
+                              disabled={verifyUser.isPending && verifyUser.variables === item._id}
+                              onClick={() => verifyUser.mutate(item._id)}
+                            >
+                              Tasdiqlash
+                            </Button>
+                          )}
+                          {!isSelf && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className={cn(
+                                !item.isBlocked &&
+                                  'border-destructive/35 text-destructive hover:bg-destructive-soft hover:text-destructive'
+                              )}
+                              onClick={() => setBlockTarget(item)}
+                            >
+                              {item.isBlocked ? 'Blokdan chiqarish' : 'Bloklash'}
+                            </Button>
+                          )}
+                          <Button
+                            size="icon-sm"
+                            variant="outline"
+                            aria-label="Boshqa amallar"
+                            onClick={() => openDetail(item._id)}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </Card>
+              </tbody>
+            </table>
+          </div>
 
           <div className="mt-4">
             <PaginationBar

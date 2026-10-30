@@ -1,288 +1,297 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  BookOpen,
-  Plus,
-  Star,
-  Users,
-  Wallet,
-  Sparkles,
-  BarChart3,
-  FileQuestion,
-  BookMarked,
-  ArrowRight,
-  TrendingUp,
-  Lightbulb,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ErrorState } from '@/components/ui/error-state';
-import { useTeacherStats } from '@/hooks/use-stats';
+import {
+  DashboardGreeting,
+  SectionCard,
+  SectionLink,
+  StatGrid,
+  StatTile,
+  StatusPill,
+  type StatusPillTone,
+} from '@/components/dashboard/dashboard-ui';
 import { useAuthStore } from '@/store/auth-store';
-import { formatNumber, formatPrice } from '@/lib/format';
+import { useTeacherStats, useTopTeachers } from '@/hooks/use-stats';
+import { usePendingReviews, useQuizShares, useQuizzesMy } from '@/hooks/use-quizzes';
+import { formatNumber, formatPrice, initials } from '@/lib/format';
+import type { Attempt, Quiz, User } from '@/types';
+
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'Xayrli tong';
+  if (hour < 18) return 'Xayrli kun';
+  return 'Xayrli kech';
+}
+
+function quizStatus(quiz: Quiz): { label: string; tone: StatusPillTone } {
+  if (!quiz.isActive) return { label: 'Qoralama', tone: 'neutral' };
+  const now = Date.now();
+  const starts = [quiz.availableFrom, ...quiz.targetGrades.map((tg) => tg.availableFrom)]
+    .filter((v): v is string => !!v)
+    .map((v) => new Date(v).getTime());
+  if (starts.length > 0 && Math.min(...starts) > now)
+    return { label: 'Rejalashtirilgan', tone: 'warning' };
+  return { label: 'Faol', tone: 'success' };
+}
+
+function gradesLabel(quiz: Quiz) {
+  if (quiz.targetGrades.length === 0) return '—';
+  return quiz.targetGrades
+    .map((tg) => (tg.letter ? `${tg.number}-${tg.letter}` : `${tg.number}-sinf`))
+    .join(', ');
+}
 
 export default function TeacherDashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const { data: stats, isLoading, isError, refetch } = useTeacherStats();
+  const stats = useTeacherStats();
+  const quizzes = useQuizzesMy({ page: 1, limit: 100 });
+  const { data: topTeachers } = useTopTeachers(1, 1);
+  const pending = usePendingReviews({ page: 1, limit: 4 });
+  const { data: incomingShares } = useQuizShares('incoming', 'pending');
+
+  const firstName = user?.name?.split(' ')[0] ?? '';
+  const isPremium = user?.tarif === 'premium';
+  const myRank = topTeachers?.me?.rank;
+  const pendingReviews = pending.data?.items ?? [];
+  const pendingTotal = pending.data?.total ?? 0;
+
+  const s = stats.data;
 
   return (
-    <div className="space-y-8 pb-8">
-      {/* Hero Teacher Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-indigo-800 via-purple-800 to-primary p-6 sm:p-8 md:p-10 text-white shadow-xl shadow-primary/20">
-        {/* Glow and background circles */}
-        <div className="pointer-events-none absolute -right-16 -top-16 size-80 rounded-full bg-white/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 -left-16 size-64 rounded-full bg-amber-400/25 blur-3xl" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/20 border border-white/25 px-3.5 py-1 text-xs font-bold backdrop-blur-md">
-              <Sparkles className="size-3.5 text-amber-300 shrink-0" />
-              <span>Ustoz & Muallif Boshqaruv Markazi</span>
-            </div>
-
-            <h1 className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Xush kelibsiz, {user?.name || 'Ustoz'}!
-            </h1>
-            <p className="text-white/90 text-sm sm:text-base leading-relaxed">
-              O&apos;quvchilaringizga yangi bilimlarni ulashing, kurslar sifatini oshiring va
-              ta&apos;lim natijalarini kuzatib boring.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              render={<Link href="/teacher/courses/new" />}
-              className="bg-white text-slate-900 hover:bg-slate-100 shadow-xl font-bold rounded-2xl h-11 px-5 cursor-pointer border border-white/40 active:scale-98"
-            >
-              <Plus className="size-4 mr-1.5 shrink-0" />
-              Yangi kurs yaratish
-            </Button>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 sm:gap-6">
+      <DashboardGreeting
+        title={`${greeting()}, ${firstName}`}
+        subtitle={
+          isPremium ? 'Tarif: Premium — testlarda kengaytirilgan urinish limiti' : 'Tarif: Standart'
+        }
+        actions={
+          <>
             <Button
               variant="outline"
-              render={<Link href="/teacher/quizzes" />}
-              className="border-white/40 text-white hover:bg-white/20 bg-white/10 backdrop-blur-md rounded-2xl h-11 px-5 font-bold cursor-pointer active:scale-98"
+              size="lg"
+              className="h-11 px-4 font-semibold"
+              render={<Link href="/teacher/courses/new" />}
             >
-              <FileQuestion className="size-4 mr-1.5 shrink-0" />
-              Testlar
+              <Plus className="size-4" /> Kurs
             </Button>
-          </div>
-        </div>
-      </div>
+            <Button
+              size="lg"
+              className="h-11 px-4 font-semibold"
+              render={<Link href="/teacher/quizzes/new" />}
+            >
+              <Plus className="size-4" /> Yangi test
+            </Button>
+          </>
+        }
+      />
 
-      {/* Stats Cards Grid */}
-      {isError ? (
-        <ErrorState onRetry={() => refetch()} />
+      {stats.isError ? (
+        <ErrorState onRetry={() => stats.refetch()} />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Kurslar */}
-          <div className="rounded-2xl border border-primary/30 bg-card p-5 shadow-xs transition-all hover:border-primary/50 card-hover-glow">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Mening Kurslarim
-              </span>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                <BookOpen className="size-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                {isLoading ? '—' : formatNumber(stats?.courses.total ?? 0)}
-              </p>
-              <p className="mt-1 text-xs text-primary font-bold flex items-center gap-1">
-                <TrendingUp className="size-3.5" /> Faol kurslar
-              </p>
-            </div>
-          </div>
-
-          {/* O'quvchilar */}
-          <div className="rounded-2xl border border-emerald-500/30 bg-card p-5 shadow-xs transition-all hover:border-emerald-500/50 card-hover-glow">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Jami O&apos;quvchilar
-              </span>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
-                <Users className="size-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                {isLoading ? '—' : formatNumber(stats?.students.total ?? 0)}
-              </p>
-              <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                Tinglovchilar auditoriyasi
-              </p>
-            </div>
-          </div>
-
-          {/* Daromad */}
-          <div className="rounded-2xl border border-amber-500/30 bg-card p-5 shadow-xs transition-all hover:border-amber-500/50 card-hover-glow">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Umumiy Daromad
-              </span>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
-                <Wallet className="size-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                {isLoading ? '—' : formatPrice(stats?.revenue.total ?? 0)}
-              </p>
-              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-bold">
-                Kurslar sotuvidan tushum
-              </p>
-            </div>
-          </div>
-
-          {/* O'rtacha Reyting */}
-          <div className="rounded-2xl border border-purple-500/30 bg-card p-5 shadow-xs transition-all hover:border-purple-500/50 card-hover-glow">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                O&apos;rtacha Reyting
-              </span>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/15 text-purple-500">
-                <Star className="size-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                {isLoading ? '—' : stats?.rating.avg ? stats.rating.avg.toFixed(1) : '5.0'}
-              </p>
-              <p className="mt-1 text-xs text-purple-600 dark:text-purple-400 font-bold">
-                O&apos;quvchilar bahosi
-              </p>
-            </div>
-          </div>
-        </div>
+        <StatGrid>
+          <StatTile
+            label="Kurslar"
+            value={formatNumber(s?.courses.total ?? 0)}
+            href="/teacher/courses"
+            loading={stats.isLoading}
+          />
+          <StatTile
+            label="Nashr qilingan"
+            value={formatNumber(s?.courses.published ?? 0)}
+            loading={stats.isLoading}
+          />
+          <StatTile
+            label="O'rtacha reyting"
+            value={s ? s.rating.avg.toFixed(1) : '—'}
+            loading={stats.isLoading}
+          />
+          <StatTile
+            label="Daromad"
+            value={<span className="text-[22px]">{formatPrice(s?.revenue.total ?? 0)}</span>}
+            loading={stats.isLoading}
+          />
+          <StatTile
+            label="O'rtacha test balli"
+            value={s ? Math.round(s.quizzes.avgScore) : '—'}
+            href="/teacher/stats"
+            loading={stats.isLoading}
+          />
+          <StatTile
+            label="O'tish foizi"
+            value={s ? `${Math.round(s.quizzes.passRate)}%` : '—'}
+            href="/teacher/stats"
+            loading={stats.isLoading}
+          />
+        </StatGrid>
       )}
 
-      {/* Control & Management Cards Grid */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-extrabold tracking-tight text-foreground">
-          Boshqaruv va Vositalar
-        </h2>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Link href="/teacher/courses" className="group">
-            <Card className="h-full border border-border/80 bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-lg card-hover-glow">
-              <CardContent className="flex flex-col justify-between h-full p-5">
-                <div className="space-y-3">
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 dark:bg-primary/20 text-primary group-hover:scale-105 transition-transform">
-                    <BookOpen className="size-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
-                      Kurslarni Boshqarish
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Yangi darslar qo&apos;shing, modullarni va narxlarni tahrirlang
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-bold text-primary pt-3 border-t border-border/60">
-                  <span>Kurslarga o&apos;tish</span>
-                  <ArrowRight className="size-3.5 ml-1 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/teacher/quizzes" className="group">
-            <Card className="h-full border border-border/80 bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-lg card-hover-glow">
-              <CardContent className="flex flex-col justify-between h-full p-5">
-                <div className="space-y-3">
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-500 group-hover:scale-105 transition-transform">
-                    <FileQuestion className="size-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
-                      Testlar & Savollar
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Savollar bankini boyiting va sinov testlari yarating
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-bold text-primary pt-3 border-t border-border/60">
-                  <span>Testlarga o&apos;tish</span>
-                  <ArrowRight className="size-3.5 ml-1 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/teacher/books" className="group">
-            <Card className="h-full border border-border/80 bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-lg card-hover-glow">
-              <CardContent className="flex flex-col justify-between h-full p-5">
-                <div className="space-y-3">
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-500 group-hover:scale-105 transition-transform">
-                    <BookMarked className="size-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
-                      Kitoblar & Resurslar
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      O&apos;quv materiallari va elektron kitoblarni boshqaring
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-bold text-primary pt-3 border-t border-border/60">
-                  <span>Kutubxonaga o&apos;tish</span>
-                  <ArrowRight className="size-3.5 ml-1 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/teacher/stats" className="group">
-            <Card className="h-full border border-border/80 bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-lg card-hover-glow">
-              <CardContent className="flex flex-col justify-between h-full p-5">
-                <div className="space-y-3">
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 text-purple-500 group-hover:scale-105 transition-transform">
-                    <BarChart3 className="size-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
-                      Batafsil Tahlillar
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      O&apos;quvchilar faolligi va daromad grafiklarini ko&apos;ring
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-bold text-primary pt-3 border-t border-border/60">
-                  <span>Tahlillarni ko&apos;rish</span>
-                  <ArrowRight className="size-3.5 ml-1 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      </div>
-
-      {/* Teacher Pro Tip / Motivation Box */}
-      <div className="rounded-3xl border border-primary/30 bg-primary/5 dark:bg-primary/10 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-          <Lightbulb className="size-6" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <h4 className="text-sm font-bold text-foreground">Ustoz uchun foydali maslahat:</h4>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Darslar so&apos;ngida qisqa 3-5 savolli testlar qo&apos;shish o&apos;quvchilarning
-            bilimni o&apos;zlashtirish darajasini va kurs reytingini sezilarli darajada oshiradi!
-          </p>
-        </div>
-        <Button
-          render={<Link href="/teacher/courses/new" />}
-          variant="outline"
-          size="sm"
-          className="rounded-xl shrink-0 font-bold"
+      {(incomingShares?.length ?? 0) > 0 && (
+        <Link
+          href="/teacher/quizzes"
+          className="flex items-center gap-3 rounded-[18px] border border-primary/30 bg-primary-soft p-4 transition-colors hover:border-primary/50"
         >
-          Dars yuklash
-        </Button>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Share2 className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">
+              Sizga {incomingShares!.length} ta test ulashildi
+            </span>
+            <span className="block text-sm text-muted-foreground">
+              Qabul qilsangiz, nusxasi testlaringizga qo&apos;shiladi
+            </span>
+          </span>
+          <span className="text-sm font-semibold text-primary">Ko&apos;rish →</span>
+        </Link>
+      )}
+
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+        <SectionCard
+          flush
+          title="Testlarim"
+          action={<SectionLink href="/teacher/quizzes">Barchasi</SectionLink>}
+        >
+          {quizzes.isError ? (
+            <div className="p-5">
+              <ErrorState onRetry={() => quizzes.refetch()} />
+            </div>
+          ) : quizzes.isLoading ? (
+            <div className="space-y-2 p-5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
+              ))}
+            </div>
+          ) : (quizzes.data?.items.length ?? 0) === 0 ? (
+            <div className="flex flex-col items-start gap-3 p-5">
+              <p className="text-muted-foreground">Hali test yaratmagansiz.</p>
+              <Button render={<Link href="/teacher/quizzes/new" />}>
+                <Plus className="size-4" /> Birinchi testni yaratish
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-[13px] text-muted-foreground">
+                    <th className="px-5 py-3 font-semibold">Test</th>
+                    <th className="px-3 py-3 font-semibold">Sinflar</th>
+                    <th className="px-3 py-3 font-semibold">Savollar</th>
+                    <th className="px-3 py-3 font-semibold">Holat</th>
+                    <th className="px-5 py-3 font-semibold">O&apos;rtacha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quizzes.data!.items.slice(0, 6).map((quiz) => {
+                    const status = quizStatus(quiz);
+                    return (
+                      <tr key={quiz._id} className="border-t border-muted">
+                        <td className="px-5 py-3.5 font-semibold">
+                          <Link
+                            href={`/teacher/quizzes/${quiz._id}`}
+                            className="hover:text-primary"
+                          >
+                            {quiz.title}
+                          </Link>
+                        </td>
+                        <td className="px-3 py-3.5">{gradesLabel(quiz)}</td>
+                        <td className="px-3 py-3.5 tabular-nums">
+                          {quiz.questionsCount ?? quiz.questions?.length ?? '—'}
+                        </td>
+                        <td className="px-3 py-3.5">
+                          <StatusPill tone={status.tone}>{status.label}</StatusPill>
+                        </td>
+                        <td className="px-5 py-3.5 tabular-nums">
+                          {quiz.stats?.avgScorePercent != null
+                            ? Math.round(quiz.stats.avgScorePercent)
+                            : '—'}
+                          {quiz.stats?.pendingReviews ? (
+                            <span className="ml-1.5 text-xs font-semibold text-gold-foreground">
+                              +{quiz.stats.pendingReviews} kutmoqda
+                            </span>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </SectionCard>
+
+        <div className="flex min-w-0 flex-col gap-5">
+          <SectionCard
+            title="Tekshirish kerak"
+            action={pendingTotal > 0 && <StatusPill tone="danger">{pendingTotal}</StatusPill>}
+            bodyClassName="flex flex-col gap-3"
+          >
+            {pending.isLoading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="h-10 animate-pulse rounded-xl bg-muted" />
+              ))
+            ) : pendingReviews.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Baholanishi kerak bo&apos;lgan javoblar yo&apos;q
+              </p>
+            ) : (
+              <>
+                {pendingReviews.map((attempt) => (
+                  <PendingReviewRow key={attempt._id} attempt={attempt} />
+                ))}
+                <Button
+                  size="lg"
+                  className="h-11 font-semibold"
+                  render={<Link href={`/teacher/grading?attempt=${pendingReviews[0]._id}`} />}
+                >
+                  Baholashni boshlash
+                </Button>
+              </>
+            )}
+          </SectionCard>
+
+          <Link
+            href="/leaderboard"
+            className="flex flex-col gap-1.5 rounded-[20px] bg-primary p-5 text-primary-foreground transition-opacity hover:opacity-95"
+          >
+            <span className="text-[13px] text-primary-foreground/75">
+              Eng faol o&apos;qituvchilar reytingi
+            </span>
+            <span className="font-heading text-2xl font-bold">
+              {myRank ? `${myRank}-o'rin` : "Reytingni ko'rish"}
+            </span>
+            <span className="text-sm text-primary-foreground/80">
+              Kurs, test, dars va kitoblar soniga qarab hisoblanadi
+            </span>
+          </Link>
+        </div>
       </div>
     </div>
+  );
+}
+
+function PendingReviewRow({ attempt }: { attempt: Attempt }) {
+  const student = typeof attempt.student === 'object' ? (attempt.student as User) : null;
+  const quiz = typeof attempt.quiz === 'object' ? attempt.quiz : null;
+  return (
+    <Link
+      href={`/teacher/grading?attempt=${attempt._id}`}
+      className="flex items-center gap-2.5 rounded-xl hover:bg-muted/60"
+    >
+      <Avatar>
+        <AvatarFallback className="bg-primary-soft text-[13px] font-bold text-primary">
+          {initials(student?.name)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{student?.name ?? "O'quvchi"}</span>
+        <span className="block truncate text-[13px] text-muted-foreground">
+          {quiz?.title ?? 'Test'}
+        </span>
+      </span>
+    </Link>
   );
 }

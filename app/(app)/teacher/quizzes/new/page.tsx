@@ -6,16 +6,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  CalendarClock,
-  ClipboardList,
-  Layers,
-  Lightbulb,
-  ListChecks,
-  Loader2,
-  Target,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CalendarClock, Lightbulb, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -164,381 +155,352 @@ export default function NewQuizPage() {
   }
   // yangi
   return (
-    <div className="mx-auto max-w-8xl">
-      <Card className="overflow-hidden rounded-2xl shadow-md ring-1 ring-border/60 p-0!">
-        <CardHeader className="items-center space-y-1 pt-8 text-center">
-          <CardTitle className="text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-5">
-            <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <ClipboardList className="size-7" />
-            </span>
-            Yangi test yaratish
-          </CardTitle>
-          <CardDescription className="text-base text-muted-foreground sm:text-lg">
-            Test ma&apos;lumotlarini kiriting, savollarni keyingi bosqichda qo&apos;shasiz
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-5 pb-6 sm:px-7">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-                <div className="space-y-6">
-                  <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4 sm:p-5">
-                    <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                      <ListChecks className="size-4" /> Asosiy ma&apos;lumotlar
-                    </p>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem className="space-y-1">
-                            <FormLabel className="text-[16px] font-medium text-foreground">
-                              Test nomi
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Matematika testi"
-                                {...field}
-                                className="h-11 rounded-md text-[16px]!"
-                              />
-                            </FormControl>
-                            <FormMessage className="text-[16px]" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="targetType"
-                        render={({ field }) => (
-                          <FormItem className="space-y-1">
-                            <FormLabel className="text-[16px] font-medium text-foreground">
-                              Test turi
-                            </FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={(v) => {
-                                field.onChange(v);
+    <div className="mx-auto w-full max-w-5xl">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <nav aria-label="Yo'l" className="text-sm text-muted-foreground">
+                <Link href="/teacher/quizzes" className="hover:text-foreground">
+                  Testlarim
+                </Link>{' '}
+                / Yangi test
+              </nav>
+              <h1 className="mt-1 font-heading text-2xl font-semibold sm:text-[26px]">
+                Yangi test
+              </h1>
+            </div>
+            <Button type="submit" size="lg" disabled={createQuiz.isPending}>
+              {createQuiz.isPending && <Loader2 className="size-4 animate-spin" />}
+              Saqlash va savollarga o&apos;tish
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5">
+              <section className="flex flex-col gap-4 rounded-[20px] border border-border bg-card p-5 sm:p-6">
+                <h2 className="text-lg font-bold">1. Asosiy sozlamalar</h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="font-semibold">Test nomi</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Matematika testi" {...field} className="h-11" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="targetType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="font-semibold">Biriktirish</FormLabel>
+                        <div className="flex flex-wrap gap-2">
+                          {(
+                            [
+                              { value: 'course', label: 'Kursga' },
+                              { value: 'lesson', label: 'Darsga' },
+                              { value: 'standalone', label: 'Mustaqil' },
+                            ] as const
+                          ).map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              aria-pressed={field.value === option.value}
+                              onClick={() => {
+                                field.onChange(option.value);
                                 form.setValue('course', '');
                                 form.setValue('lesson', '');
                               }}
-                              items={[
-                                { value: 'standalone', label: 'Mustaqil' },
-                                { value: 'course', label: 'Kurs' },
-                                { value: 'lesson', label: 'Dars' },
-                              ]}
+                              className={
+                                field.value === option.value
+                                  ? 'rounded-xl border-[1.5px] border-primary bg-primary-soft px-4 py-2.5 font-bold text-primary'
+                                  : 'rounded-xl border border-input bg-card px-4 py-2.5 font-semibold hover:bg-muted'
+                              }
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="font-semibold">Tavsif (ixtiyoriy)</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} className="min-h-20" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {(targetType === 'course' || targetType === 'lesson') && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="course"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="font-semibold">Kurs</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={(v) => {
+                              field.onChange(v);
+                              form.setValue('lesson', '');
+                            }}
+                            items={
+                              myCourses?.map((course) => ({
+                                value: course._id,
+                                label: course.title,
+                              })) ?? []
+                            }
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11 w-full">
+                                <SelectValue placeholder="Kursni tanlang" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {myCourses?.map((course) => (
+                                <SelectItem key={course._id} value={course._id}>
+                                  {course.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {targetType === 'lesson' && courseForLessons && (
+                      <FormField
+                        control={form.control}
+                        name="lesson"
+                        render={({ field }) => (
+                          <FormItem className="space-y-1">
+                            <FormLabel className="font-semibold">Dars</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              items={
+                                courseLessons?.map((lesson) => ({
+                                  value: lesson._id,
+                                  label: lesson.title,
+                                })) ?? []
+                              }
                             >
                               <FormControl>
-                                <SelectTrigger className="h-11 w-full rounded-md text-[16px]!">
-                                  <SelectValue />
+                                <SelectTrigger className="h-11 w-full">
+                                  <SelectValue placeholder="Darsni tanlang" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="standalone">Mustaqil</SelectItem>
-                                <SelectItem value="course">Kurs</SelectItem>
-                                <SelectItem value="lesson">Dars</SelectItem>
+                                {courseLessons?.map((lesson) => (
+                                  <SelectItem key={lesson._id} value={lesson._id}>
+                                    {lesson.title}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
-                            <FormMessage className="text-[16px]" />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormLabel className="text-[16px] font-medium text-foreground">
-                            Tavsif (ixtiyoriy)
-                          </FormLabel>
-                          <FormControl>
-                            <Textarea {...field} className="min-h-20 rounded-md text-[16px]!" />
-                          </FormControl>
-                          <FormMessage className="text-[16px]" />
-                        </FormItem>
-                      )}
-                    />
-                    {(targetType === 'course' || targetType === 'lesson') && (
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name="course"
-                          render={({ field }) => (
-                            <FormItem className="space-y-1">
-                              <FormLabel className="text-[16px] font-medium text-foreground">
-                                Kurs
-                              </FormLabel>
-                              <Select
-                                value={field.value}
-                                onValueChange={(v) => {
-                                  field.onChange(v);
-                                  form.setValue('lesson', '');
-                                }}
-                                items={
-                                  myCourses?.map((course) => ({
-                                    value: course._id,
-                                    label: course.title,
-                                  })) ?? []
-                                }
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="h-11 w-full rounded-md text-[16px]!">
-                                    <SelectValue placeholder="Kursni tanlang" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {myCourses?.map((course) => (
-                                    <SelectItem key={course._id} value={course._id}>
-                                      {course.title}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="text-[16px]" />
-                            </FormItem>
-                          )}
-                        />
-                        {targetType === 'lesson' && courseForLessons && (
-                          <FormField
-                            control={form.control}
-                            name="lesson"
-                            render={({ field }) => (
-                              <FormItem className="space-y-1">
-                                <FormLabel className="text-[16px] font-medium text-foreground">
-                                  Dars
-                                </FormLabel>
-                                <Select
-                                  value={field.value}
-                                  onValueChange={field.onChange}
-                                  items={
-                                    courseLessons?.map((lesson) => ({
-                                      value: lesson._id,
-                                      label: lesson.title,
-                                    })) ?? []
-                                  }
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="h-11 w-full rounded-md text-[16px]!">
-                                      <SelectValue placeholder="Darsni tanlang" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {courseLessons?.map((lesson) => (
-                                      <SelectItem key={lesson._id} value={lesson._id}>
-                                        {lesson.title}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage className="text-[16px]" />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-                      </div>
                     )}
                   </div>
+                )}
+              </section>
 
-                  <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4 sm:p-5">
-                    <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                      <Target className="size-4" /> Baholash sozlamalari (umumiy)
-                    </p>
+              <section className="flex flex-col gap-4 rounded-[20px] border border-border bg-card p-5 sm:p-6">
+                <h2 className="text-lg font-bold">Baholash (umumiy)</h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="passingScore"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="font-semibold">O&apos;tish balli (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            {...field}
+                            value={field.value as number}
+                            className="h-11"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="maxAttempts"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="font-semibold">Umumiy urinishlar</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={1}
+                            {...field}
+                            value={field.value as number}
+                            className="h-11"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        {!isPremium && Number(field.value) > 1 && (
+                          <p className="flex items-start gap-1.5 text-xs text-gold-foreground">
+                            <Lightbulb className="mt-0.5 size-3.5 shrink-0" />
+                            Ajoyib! Endi bu sonni ishga tushirish uchun Premium kerak bo&apos;ladi —{' '}
+                            <Link
+                              href="/premium"
+                              className="font-medium underline underline-offset-2"
+                            >
+                              batafsil
+                            </Link>
+                          </p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="timeLimit"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel className="font-semibold">
+                        Umumiy vaqt chegarasi (daqiqa) *
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="15"
+                          {...field}
+                          value={(field.value as number | undefined) ?? ''}
+                          className="h-11"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </section>
+            </div>
+
+            <div className="flex flex-col gap-5">
+              <section className="flex flex-col gap-3 rounded-[20px] border border-border bg-card p-5 sm:p-6">
+                <h2 className="text-lg font-bold">2. Sinflar</h2>
+                <p className="text-sm text-muted-foreground">
+                  Test qaysi sinf(lar)ga tayinlanishini tanlang. Har bir sinf uchun
+                  &quot;Kengaytirilgan sozlamalar&quot;da alohida vaqt/urinish belgilash mumkin —
+                  bo&apos;sh qoldirilsa, yuqoridagi umumiy qiymatlar ishlatiladi.
+                </p>
+                <div>
+                  <TargetGradesEditor
+                    value={targetGrades}
+                    onChange={setTargetGrades}
+                    isPremium={isPremium}
+                  />
+                </div>
+                {targetGradesError && (
+                  <p className="text-[16px] font-medium text-destructive">{targetGradesError}</p>
+                )}
+              </section>
+
+              <section className="flex flex-col gap-3 rounded-[20px] border border-border bg-card p-5 sm:p-6">
+                <h2 className="text-lg font-bold">3. Vaqt</h2>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="limit-availability"
+                    checked={limitAvailability}
+                    onCheckedChange={(checked) => setLimitAvailability(checked === true)}
+                  />
+                  <Label
+                    htmlFor="limit-availability"
+                    className="cursor-pointer text-[16px] font-normal"
+                  >
+                    Testni boshlash uchun vaqt belgilash
+                  </Label>
+                </div>
+                {limitAvailability && (
+                  <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <FormField
                         control={form.control}
-                        name="passingScore"
+                        name="availableFrom"
                         render={({ field }) => (
                           <FormItem className="space-y-1">
-                            <FormLabel className="text-[16px] font-medium text-foreground">
-                              O&apos;tish balli (%)
-                            </FormLabel>
+                            <FormLabel className="font-semibold">Boshlanish vaqti</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={100}
-                                {...field}
-                                value={field.value as number}
-                                className="h-11 rounded-md text-[16px]!"
-                              />
+                              <div className="relative">
+                                <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input type="datetime-local" className="h-11 pl-9" {...field} />
+                              </div>
                             </FormControl>
-                            <FormMessage className="text-[16px]" />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
                       <FormField
                         control={form.control}
-                        name="maxAttempts"
+                        name="availableUntil"
                         render={({ field }) => (
                           <FormItem className="space-y-1">
-                            <FormLabel className="text-[16px] font-medium text-foreground">
-                              Umumiy urinishlar
-                            </FormLabel>
+                            <FormLabel className="font-semibold">Tugash vaqti</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
-                                min={1}
-                                {...field}
-                                value={field.value as number}
-                                className="h-11 rounded-md text-[16px]!"
-                              />
+                              <div className="relative">
+                                <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input type="datetime-local" className="h-11 pl-9" {...field} />
+                              </div>
                             </FormControl>
-                            <FormMessage className="text-[16px]" />
-                            {!isPremium && Number(field.value) > 1 && (
-                              <p className="flex items-start gap-1.5 text-xs text-gold-foreground">
-                                <Lightbulb className="mt-0.5 size-3.5 shrink-0" />
-                                Ajoyib! Endi bu sonni ishga tushirish uchun Premium kerak
-                                bo&apos;ladi —{' '}
-                                <Link
-                                  href="/premium"
-                                  className="font-medium underline underline-offset-2"
-                                >
-                                  batafsil
-                                </Link>
-                              </p>
-                            )}
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-                    <FormField
-                      control={form.control}
-                      name="timeLimit"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormLabel className="text-[16px] font-medium text-foreground">
-                            Umumiy vaqt chegarasi (daqiqa) *
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={1}
-                              placeholder="15"
-                              {...field}
-                              value={(field.value as number | undefined) ?? ''}
-                              className="h-11 rounded-md text-[16px]!"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-[16px]" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-4 sm:p-5">
-                    <p className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                      <Layers className="size-4" /> Sinflar *
-                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Test qaysi sinf(lar)ga tayinlanishini tanlang. Har bir sinf uchun
-                      &quot;Kengaytirilgan sozlamalar&quot;da alohida vaqt/urinish belgilash mumkin
-                      — bo&apos;sh qoldirilsa, yuqoridagi umumiy qiymatlar ishlatiladi.
+                      Vaqtlar Toshkent vaqti (GMT+5) bo&apos;yicha kiritiladi
                     </p>
-                    <div className="rounded-lg border border-input bg-background p-3 sm:p-4">
-                      <TargetGradesEditor
-                        value={targetGrades}
-                        onChange={setTargetGrades}
-                        isPremium={isPremium}
-                      />
-                    </div>
-                    {targetGradesError && (
-                      <p className="text-[16px] font-medium text-destructive">
-                        {targetGradesError}
-                      </p>
-                    )}
                   </div>
+                )}
+                {!limitAvailability && (
+                  <p className="text-sm text-muted-foreground">
+                    Belgilanmasa, test istalgan vaqtda boshlanishi mumkin
+                  </p>
+                )}
+              </section>
+            </div>
+          </div>
 
-                  <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-4 sm:p-5">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="limit-availability"
-                        checked={limitAvailability}
-                        onCheckedChange={(checked) => setLimitAvailability(checked === true)}
-                      />
-                      <Label
-                        htmlFor="limit-availability"
-                        className="cursor-pointer text-[16px] font-normal"
-                      >
-                        Testni boshlash uchun vaqt belgilash
-                      </Label>
-                    </div>
-                    {limitAvailability && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <FormField
-                            control={form.control}
-                            name="availableFrom"
-                            render={({ field }) => (
-                              <FormItem className="space-y-1">
-                                <FormLabel className="text-[16px] font-medium text-foreground">
-                                  Boshlanish vaqti
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                      type="datetime-local"
-                                      className="h-11 rounded-md pl-9 text-[16px]!"
-                                      {...field}
-                                    />
-                                  </div>
-                                </FormControl>
-                                <FormMessage className="text-[16px]" />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="availableUntil"
-                            render={({ field }) => (
-                              <FormItem className="space-y-1">
-                                <FormLabel className="text-[16px] font-medium text-foreground">
-                                  Tugash vaqti
-                                </FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <CalendarClock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                      type="datetime-local"
-                                      className="h-11 rounded-md pl-9 text-[16px]!"
-                                      {...field}
-                                    />
-                                  </div>
-                                </FormControl>
-                                <FormMessage className="text-[16px]" />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Vaqtlar Toshkent vaqti (GMT+5) bo&apos;yicha kiritiladi
-                        </p>
-                      </div>
-                    )}
-                    {!limitAvailability && (
-                      <p className="text-sm text-muted-foreground">
-                        Belgilanmasa, test istalgan vaqtda boshlanishi mumkin
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                size="lg"
-                className="h-12 w-full rounded-md text-[16px]! font-semibold shadow-md shadow-primary/20 transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
-                disabled={createQuiz.isPending}
-              >
-                {createQuiz.isPending && <Loader2 className="size-4 animate-spin" />}
-                Testni yaratish
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+          <p className="text-sm text-muted-foreground">
+            Savollarni test yaratilgandan keyin qo&apos;shasiz — qo&apos;lda yoki Word fayldan.
+          </p>
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 w-full text-base sm:w-auto sm:self-end"
+            disabled={createQuiz.isPending}
+          >
+            {createQuiz.isPending && <Loader2 className="size-4 animate-spin" />}
+            Saqlash va savollarga o&apos;tish
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 }

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Kategoriyalar — Edu Platform UZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F6FA}
+a{color:#2B44D6}a:hover{color:#1E32A8}
+input{font:inherit}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+
+</head>
+<body>
+
+
+<div style="font-family: Onest, system-ui, sans-serif; color: #111827; background: #F5F6FA; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<div style="flex: 1 1 240px; max-width: 100%; background: #111827">
+
+<nav aria-label="Admin menyusi" style="font-family: Onest, system-ui, sans-serif; color: #FFFFFF; background: #111827; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; width: 100%; min-height: 900px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 10px 20px"><span style="width: 34px; height: 34px; border-radius: 10px; background: #F2A516; color: #111827; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700">E</span><span style="font-family: Unbounded, sans-serif; font-weight: 600">Admin</span></div>
+
+<a href="AdminDash.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Dashboard</span></a>
+
+<a href="AdminUsers.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Foydalanuvchilar</span><span style="padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #F2A516; color: #111827">12</span></a>
+
+<a href="AdminRewards.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Mukofotlar katalogi</span></a>
+
+<a href="AdminRequests.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Mukofot so'rovlari</span><span style="padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #C2362B; color: #FFFFFF">5</span></a>
+
+<a href="AdminCategories.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; background: #1F2937; color: #FFFFFF; font-weight: 700"><span>Kategoriyalar</span></a>
+
+<a href="AdminPayments.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>To'lovlar</span></a>
+
+<a href="AdminPromo.html" style="padding: 12px; border-radius: 12px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; color: #D1D5DB; font-weight: 500"><span>Promokodlar</span></a>
+
+<div style="margin-top: 20px; padding: 12px; border-radius: 12px; background: #1F2937; font-size: 13px; color: #D1D5DB; line-height: 1.5">Rol: <strong style="color: #F2A516">superadmin</strong><br>Nodira Yusupova</div>
+</nav>
+</div>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-family: Unbounded, sans-serif; font-size: 26px; font-weight: 600">Kategoriyalar</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section style="flex: 1 1 380px; min-width: 0; background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; overflow: hidden">
+<div style="padding: 16px 20px; border-bottom: 1px solid #E4E7EE; display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 17px; font-weight: 700">Kurs kategoriyalari</h2><button type="button" style="padding: 8px 12px; border-radius: 10px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">+ Qo'shish</button></div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #2B44D6">x²</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Matematika</span><span style="display: block; font-size: 13px; color: #5B6474">6 kurs</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #B45309">Aa</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Ingliz tili</span><span style="display: block; font-size: 13px; color: #5B6474">4 kurs</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #13795B">H₂O</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Kimyo</span><span style="display: block; font-size: 13px; color: #5B6474">2 kurs</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #1E32A8">F</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Fizika</span><span style="display: block; font-size: 13px; color: #5B6474">3 kurs</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #111827">{ }</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Informatika</span><span style="display: block; font-size: 13px; color: #5B6474">3 kurs</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #EEF0F5; color: #374151">Nofaol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+</section>
+<section style="flex: 1 1 380px; min-width: 0; background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; overflow: hidden">
+<div style="padding: 16px 20px; border-bottom: 1px solid #E4E7EE; display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 17px; font-weight: 700">Kitob kategoriyalari</h2><button type="button" style="padding: 8px 12px; border-radius: 10px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">+ Qo'shish</button></div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #1E32A8">D</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Darsliklar</span><span style="display: block; font-size: 13px; color: #5B6474">42 kitob</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #7A4B00">B</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Badiiy adabiyot</span><span style="display: block; font-size: 13px; color: #5B6474">18 kitob</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #0E6E5A">M</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Masalalar to'plami</span><span style="display: block; font-size: 13px; color: #5B6474">11 kitob</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #E3F5EE; color: #0E5E46">Faol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="display: flex; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid #EEF0F5">
+<span style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700; font-size: 13px; color: #FFFFFF; background: #3A3F4B">L</span>
+<span style="flex: 1; min-width: 0"><span style="display: block; font-weight: 600">Lug'atlar</span><span style="display: block; font-size: 13px; color: #5B6474">5 kitob</span></span>
+<span style="padding: 3px 9px; border-radius: 6px; font-weight: 700; font-size: 12px; background: #EEF0F5; color: #374151">Nofaol</span>
+<button type="button" style="padding: 7px 12px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer">Tahrir</button>
+</div>
+
+<div style="padding: 16px 20px; background: #F5F6FA; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 700; font-size: 14px">Yangi kitob kategoriyasi</span>
+<div style="display: flex; gap: 8px; flex-wrap: wrap"><input aria-label="Belgi" value="Q" style="width: 52px; text-align: center; padding: 11px; border-radius: 10px; border: 1px solid #D5D9E4; font-size: 16px"><input aria-label="Nomi" placeholder="Nomi" style="flex: 1 1 160px; padding: 11px 12px; border-radius: 10px; border: 1px solid #D5D9E4; font-size: 15px"><button type="button" style="padding: 11px 16px; border-radius: 10px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Saqlash</button></div>
+<input aria-label="Tavsif" placeholder="Tavsif (ixtiyoriy)" style="padding: 11px 12px; border-radius: 10px; border: 1px solid #D5D9E4; font-size: 15px">
+</div>
+</section>
+</div>
+</main>
+</div>
+
+<a href="index.html" style="position:fixed;right:16px;bottom:16px;z-index:9999;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;font:600 13px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.25)">← Barcha sahifalar</a>
+</body>
+</html>

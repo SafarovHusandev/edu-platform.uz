@@ -11,11 +11,15 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+export type CourseSort = "popular" | "rating" | "newest" | "price_asc" | "price_desc"
+
 export interface CourseFilters {
   page?: number
   limit?: number
   search?: string
   category?: string
+  sort?: CourseSort
+  isFree?: boolean
 }
 
 // Backend /courses va /courses/:id "authenticate.optional" bilan himoyalangan:
@@ -35,6 +39,7 @@ export interface CourseDetail {
   course: Course
   lessons: Lesson[]
   hasAccess: boolean
+  quizzesCount?: number
 }
 
 // Backend bitta so'rovda kurs + uning darslari + hasAccess flagini birga qaytaradi,

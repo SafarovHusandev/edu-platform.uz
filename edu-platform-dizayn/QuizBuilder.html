@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web · Test yaratish — Edu Platform UZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&amp;family=Unbounded:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F6FA}
+a{color:#2B44D6}a:hover{color:#1E32A8}
+input,select{font:inherit}
+</style>
+
+</head>
+<body>
+
+
+<div style="font-family: Onest, system-ui, sans-serif; color: #111827; background: #F5F6FA; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<aside style="flex: 1 1 240px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E4E7EE; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 10px 20px"><span style="width: 34px; height: 34px; border-radius: 10px; background: #2B44D6; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: Unbounded, sans-serif; font-weight: 700">E</span><span style="font-family: Unbounded, sans-serif; font-weight: 600">O'qituvchi</span></div>
+<a href="TeacherDash.html" style="padding: 12px; border-radius: 12px; color: #374151; text-decoration: none; font-weight: 500">Dashboard</a>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #374151; text-decoration: none; font-weight: 500">Kurslarim</a>
+<a href="QuizBuilder.html" style="padding: 12px; border-radius: 12px; background: #E9ECFF; color: #1E32A8; text-decoration: none; font-weight: 700">Testlarim</a>
+<a href="Grading.html" style="padding: 12px; border-radius: 12px; color: #374151; text-decoration: none; font-weight: 500">Baholash</a>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #374151; text-decoration: none; font-weight: 500">Kitoblarim</a>
+<a href="#" style="padding: 12px; border-radius: 12px; color: #374151; text-decoration: none; font-weight: 500">Profil</a>
+</aside>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; max-width: 1100px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+<div><div style="font-size: 14px; color: #5B6474"><a href="#" style="color: #5B6474">Testlarim</a> / Yangi test</div><h1 style="margin: 4px 0 0; font-family: Unbounded, sans-serif; font-size: 26px; font-weight: 600">Algebra: 1-bob yakuniy testi</h1></div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<button type="button" style="padding: 12px 18px; border-radius: 12px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Qoralama saqlash</button>
+<button type="button" disabled style="padding: 12px 18px; border-radius: 12px; border: 0; background: #E4E7EE; color: #4B5466; font: inherit; font-weight: 600">Faollashtirish</button>
+</div>
+</div>
+
+<div role="alert" style="background: #FFF4D9; border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; align-items: center; color: #5C3B00">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"></path><path d="M12 10v4M12 17h.01"></path></svg>
+<span style="font-size: 15px"><strong>Faollashtirish uchun kamida 20 ta savol kerak</strong> (8-sinf uchun). Hozir: 12 ta — yana 8 ta qo'shing.</span>
+</div>
+
+<section style="background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700">1. Asosiy sozlamalar</h2>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="qt" style="font-weight: 600; font-size: 14px">Test nomi</label><input id="qt" value="Algebra: 1-bob yakuniy testi" style="padding: 13px 14px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-weight: 600; font-size: 14px">Biriktirish</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="true" style="padding: 10px 16px; border-radius: 10px; border: 1.5px solid #2B44D6; background: #E9ECFF; color: #1E32A8; font: inherit; font-weight: 600">Kursga</button>
+<button type="button" aria-pressed="false" style="padding: 10px 16px; border-radius: 10px; border: 1.5px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600">Darsga</button>
+<button type="button" aria-pressed="false" style="padding: 10px 16px; border-radius: 10px; border: 1.5px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600">Mustaqil</button>
+<select aria-label="Kurs" style="flex: 1 1 240px; padding: 10px 12px; border-radius: 10px; border: 1px solid #D5D9E4; font-size: 15px; background: #FFFFFF"><option>Algebra: 8-sinf to'liq kursi</option></select>
+</div></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="ps" style="font-weight: 600; font-size: 14px">O'tish balli (%)</label><input id="ps" value="60" style="padding: 13px 14px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="ma" style="font-weight: 600; font-size: 14px">Urinishlar soni</label><input id="ma" value="3" style="padding: 13px 14px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="tl" style="font-weight: 600; font-size: 14px">Vaqt limiti (daq)</label><input id="tl" value="30" style="padding: 13px 14px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="af" style="font-weight: 600; font-size: 14px">Boshlanish</label><input id="af" value="25.10.2026 · 09:00" style="padding: 13px 14px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="au" style="font-weight: 600; font-size: 14px">Tugash</label><input id="au" value="27.10.2026 · 18:00" style="padding: 13px 14px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+</div>
+<span style="font-size: 13px; color: #5B6474">Barcha vaqtlar Toshkent vaqti (UTC+5) bo'yicha.</span>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 18px; font-weight: 700">2. Sinflar</h2><button type="button" style="padding: 10px 14px; border-radius: 10px; border: 1px dashed #9CA3AF; background: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">+ Sinf qo'shish</button></div>
+<p style="margin: 0; color: #4B5466; font-size: 14px">Bo'sh maydonlar umumiy sozlamani oladi. Test faqat tanlangan sinflarga ko'rinadi.</p>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 680px">
+<thead><tr style="text-align: left; color: #5B6474; font-size: 13px"><th style="padding: 10px 12px; font-weight: 600">Sinf</th><th style="padding: 10px 12px; font-weight: 600">Boshlanish</th><th style="padding: 10px 12px; font-weight: 600">Tugash</th><th style="padding: 10px 12px; font-weight: 600">Urinish</th><th style="padding: 10px 12px; font-weight: 600">Vaqt</th><th style="padding: 10px 12px"></th></tr></thead>
+<tbody>
+<tr style="border-top: 1px solid #EEF0F5"><td style="padding: 10px 12px"><span style="padding: 6px 12px; border-radius: 8px; background: #E9ECFF; color: #1E32A8; font-weight: 700">8-A</span></td><td style="padding: 10px 12px"><input aria-label="8-A boshlanish" placeholder="umumiy" style="width: 140px; padding: 9px 10px; border-radius: 8px; border: 1px solid #D5D9E4"></td><td style="padding: 10px 12px"><input aria-label="8-A tugash" placeholder="umumiy" style="width: 140px; padding: 9px 10px; border-radius: 8px; border: 1px solid #D5D9E4"></td><td style="padding: 10px 12px"><input aria-label="8-A urinish" placeholder="3" style="width: 60px; padding: 9px 10px; border-radius: 8px; border: 1px solid #D5D9E4"></td><td style="padding: 10px 12px"><input aria-label="8-A vaqt" placeholder="30" style="width: 60px; padding: 9px 10px; border-radius: 8px; border: 1px solid #D5D9E4"></td><td style="padding: 10px 12px"><button type="button" aria-label="8-A ni olib tashlash" style="border: 0; background: none; color: #9B2C22; font: inherit; font-weight: 600; cursor: pointer">O'chirish</button></td></tr>
+<tr style="border-top: 1px solid #EEF0F5"><td style="padding: 10px 12px"><span style="padding: 6px 12px; border-radius: 8px; background: #E9ECFF; color: #1E32A8; font-weight: 700">8-B</span></td><td style="padding: 10px 12px"><input aria-label="8-B boshlanish" value="26.10 · 10:00" style="width: 140px; padding: 9px 10px; border-radius: 8px; border: 1px solid #2B44D6"></td><td style="padding: 10px 12px"><input aria-label="8-B tugash" placeholder="umumiy" style="width: 140px; padding: 9px 10px; border-radius: 8px; border: 1px solid #D5D9E4"></td><td style="padding: 10px 12px"><input aria-label="8-B urinish" value="2" style="width: 60px; padding: 9px 10px; border-radius: 8px; border: 1px solid #2B44D6"></td><td style="padding: 10px 12px"><input aria-label="8-B vaqt" value="40" style="width: 60px; padding: 9px 10px; border-radius: 8px; border: 1px solid #2B44D6"></td><td style="padding: 10px 12px"><button type="button" aria-label="8-B ni olib tashlash" style="border: 0; background: none; color: #9B2C22; font: inherit; font-weight: 600; cursor: pointer">O'chirish</button></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #E4E7EE; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 18px; font-weight: 700">3. Savollar · 12 / 20</h2><span style="font-size: 14px; color: #5B6474">Jami: 70 ball</span></div>
+
+<div style="border: 1px solid #E4E7EE; border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; align-items: center"><span style="font-family: Unbounded, sans-serif; font-weight: 600; color: #5B6474; font-size: 14px">01</span><span style="flex: 1; min-width: 0; font-weight: 500">2x + 6 = 18 tenglamaning ildizi nechaga teng?</span><span style="font-size: 12px; padding: 3px 8px; border-radius: 6px; background: #EEF0F5; color: #374151; font-weight: 600">Bir javobli · 5</span></div>
+<div style="border: 1px solid #E4E7EE; border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; align-items: center"><span style="font-family: Unbounded, sans-serif; font-weight: 600; color: #5B6474; font-size: 14px">02</span><span style="flex: 1; min-width: 0; font-weight: 500">Har qanday son nolga bo'linadi.</span><span style="font-size: 12px; padding: 3px 8px; border-radius: 6px; background: #EEF0F5; color: #374151; font-weight: 600">To'g'ri/Noto'g'ri · 3</span></div>
+
+<div style="border: 2px solid #2B44D6; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button type="button" aria-pressed="true" style="padding: 8px 14px; border-radius: 999px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; font-size: 14px">Bir javobli</button>
+<button type="button" aria-pressed="false" style="padding: 8px 14px; border-radius: 999px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 14px">To'g'ri / Noto'g'ri</button>
+<button type="button" aria-pressed="false" style="padding: 8px 14px; border-radius: 999px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; font-size: 14px">Ochiq savol</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px"><label for="qtext" style="font-weight: 600; font-size: 14px">Savol matni</label><input id="qtext" value="√49 + √16 nechaga teng?" style="padding: 13px 14px; border-radius: 12px; border: 1px solid #D5D9E4; font-size: 15px"></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px">
+<label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid #D5D9E4"><input type="radio" name="c" style="width: 18px; height: 18px"><input aria-label="Variant A" value="13" style="flex: 1; min-width: 0; border: 0; font-size: 15px"></label>
+<label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #13795B; background: #E3F5EE"><input type="radio" name="c" checked style="width: 18px; height: 18px"><input aria-label="Variant B" value="11" style="flex: 1; min-width: 0; border: 0; background: transparent; font-size: 15px"><span style="font-size: 12px; font-weight: 700; color: #0E5E46">To'g'ri</span></label>
+<label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid #D5D9E4"><input type="radio" name="c" style="width: 18px; height: 18px"><input aria-label="Variant C" value="9" style="flex: 1; min-width: 0; border: 0; font-size: 15px"></label>
+<label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid #D5D9E4"><input type="radio" name="c" style="width: 18px; height: 18px"><input aria-label="Variant D" value="65" style="flex: 1; min-width: 0; border: 0; font-size: 15px"></label>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 10px"><label for="pts" style="font-weight: 600; font-size: 14px">Ball</label><input id="pts" value="5" style="width: 70px; padding: 10px 12px; border-radius: 10px; border: 1px solid #D5D9E4"></div>
+<div style="display: flex; gap: 10px"><button type="button" style="padding: 11px 16px; border-radius: 10px; border: 1px solid #D5D9E4; background: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Bekor qilish</button><button type="button" style="padding: 11px 16px; border-radius: 10px; border: 0; background: #2B44D6; color: #FFFFFF; font: inherit; font-weight: 600; cursor: pointer">Savolni saqlash</button></div>
+</div>
+</div>
+<button type="button" style="padding: 16px; border-radius: 14px; border: 1.5px dashed #9CA3AF; background: #FAFBFC; font: inherit; font-weight: 600; color: #374151; cursor: pointer">+ Yangi savol</button>
+</section>
+</main>
+</div>
+
+<a href="index.html" style="position:fixed;right:16px;bottom:16px;z-index:9999;padding:10px 14px;border-radius:999px;background:#111827;color:#fff;font:600 13px/1 system-ui,sans-serif;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.25)">← Barcha sahifalar</a>
+</body>
+</html>

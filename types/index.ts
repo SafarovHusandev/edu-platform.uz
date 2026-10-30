@@ -82,6 +82,8 @@ export interface Book {
   file?: string | null
   isPublished?: boolean
   downloadsCount?: number
+  // Baytda, fayl yuklanganda backend saqlaydi
+  fileSize?: number | null
   createdAt?: string
   updatedAt?: string
 }
@@ -95,6 +97,7 @@ export interface Lesson {
   order: number
   videoUrl?: string | null
   attachments?: string[]
+  durationMinutes?: number | null
   isCompleted?: boolean
   createdAt?: string
 }
@@ -177,8 +180,28 @@ export interface Quiz {
   isActive?: boolean
   questions?: Question[]
   questionsCount?: number
+  // GET /quizzes — faqat login qilgan student uchun
+  myAttempts?: QuizMyAttempts
+  // GET /quizzes/my — o'qituvchi uchun
+  stats?: QuizItemStats
   createdAt?: string
   updatedAt?: string
+}
+
+export interface QuizMyAttempts {
+  attemptsUsed: number
+  attemptsRemaining: number
+  maxAttempts: number
+  bestScorePercent: number | null
+  hasInProgress: boolean
+  lastStatus: AttemptStatus | null
+}
+
+export interface QuizItemStats {
+  attemptsCount: number
+  avgScorePercent: number | null
+  passRate: number | null
+  pendingReviews: number
 }
 
 export interface AttemptAnswer {
@@ -235,7 +258,9 @@ export interface Invoice {
   purpose: PaymentPurpose
   amount: number
   status: PaymentStatus
-  checkoutUrl?: string
+  checkoutUrl?: string | null
+  // useBalance=true bilan to'langanda — to'lov darhol yakunlangan
+  paidWithBalance?: boolean
   courseId?: string
   plan?: PremiumPlanKey
   createdAt?: string
@@ -260,6 +285,7 @@ export interface PaymentRecord {
   course?: { _id: string; title?: string } | string | null
   status: PaymentStatus
   cardPan?: string | null
+  paymentMethod?: 'card' | 'balance'
   paymentTime?: string | null
   createdAt: string
   // Faqat GET /payment (admin) javobida keladi

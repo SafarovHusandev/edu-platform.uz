@@ -143,7 +143,7 @@ const STEPS = [
   },
   {
     title: "Olmos to'plang",
-    text: "Har kuni barabonni aylantiring, testlardan olmos oling, reytingda ko'tariling.",
+    text: "Har kuni barabanni aylantiring, testlardan olmos oling, reytingda ko'tariling.",
   },
   {
     title: 'Mukofotga almashtiring',

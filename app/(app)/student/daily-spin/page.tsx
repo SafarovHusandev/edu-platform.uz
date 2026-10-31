@@ -24,7 +24,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
 
 const SPIN_DURATION_MS = 3000;
-// Dizayndagi barabon: ko'k / och / yashil / och / ko'k / och / oltin / och
+// Dizayndagi baraban: ko'k / och / yashil / och / ko'k / och / oltin / och
 const WHEEL_GRADIENT = [
   'var(--accent-foreground) 0deg 45deg',
   'var(--background) 45deg 90deg',
@@ -101,7 +101,7 @@ export default function DailySpinPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <PageHeader title="Kunlik barabon" />
+      <PageHeader title="Kunlik baraban" />
 
       {isLoading ? (
         <div className="h-[480px] animate-pulse rounded-3xl bg-muted" />

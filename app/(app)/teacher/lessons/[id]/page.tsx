@@ -1,12 +1,13 @@
 'use client';
 
-import { Suspense, use, useRef } from 'react';
+import { Suspense, use, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, FileUp, Loader2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Clapperboard, FileUp, Loader2, Trash2, Upload, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,8 +38,13 @@ import {
   useUpdateLesson,
   useDeleteLesson,
   useUploadMaterial,
+  useUploadLessonVideo,
+  LESSON_VIDEO_ACCEPT,
+  LESSON_VIDEO_MAX_BYTES,
 } from '@/hooks/use-lessons';
 import { resolveAssetUrl } from '@/lib/config';
+import { formatFileSize } from '@/lib/format';
+import { LessonVideo } from '@/components/courses/lesson-video';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -58,6 +64,148 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+// Video faylning davomiyligini (daqiqa, yuqoriga yaxlitlangan) brauzerda aniqlaydi
+function readVideoMinutes(file: File) {
+  return new Promise<number | undefined>((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(
+        Number.isFinite(video.duration) ? Math.max(1, Math.ceil(video.duration / 60)) : undefined
+      );
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(undefined);
+    };
+    video.src = url;
+  });
+}
+
+function LessonVideoSection({
+  lesson,
+  courseId,
+}: {
+  lesson: { _id: string; videoUrl?: string | null; durationMinutes?: number | null };
+  courseId?: string;
+}) {
+  const uploadVideo = useUploadLessonVideo(courseId);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [fileName, setFileName] = useState('');
+
+  async function handleFile(file: File) {
+    if (!/^video\/(mp4|webm|quicktime)$/.test(file.type)) {
+      toast.error('Faqat MP4, WebM yoki MOV video yuklash mumkin');
+      return;
+    }
+    if (file.size > LESSON_VIDEO_MAX_BYTES) {
+      toast.error(`Video hajmi ${formatFileSize(file.size)} — ruxsat etilgan maksimum 300 MB`);
+      return;
+    }
+    // Davomiylik kiritilmagan bo'lsa, fayldan avtomatik olinadi
+    const durationMinutes = lesson.durationMinutes ? undefined : await readVideoMinutes(file);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setFileName(file.name);
+    setProgress(0);
+    uploadVideo.mutate(
+      {
+        id: lesson._id,
+        file,
+        durationMinutes,
+        onProgress: setProgress,
+        signal: controller.signal,
+      },
+      {
+        onSettled: () => {
+          setProgress(null);
+          abortRef.current = null;
+        },
+      }
+    );
+  }
+
+  const uploading = progress !== null;
+  const percent = Math.round((progress ?? 0) * 100);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Asosiy video</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {uploading ? (
+          <div className="space-y-2.5 rounded-[14px] border border-border p-4">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate font-medium">{fileName}</span>
+              <span className="shrink-0 font-heading font-semibold text-primary">
+                {percent < 100 ? `${percent}%` : 'Qayta ishlanmoqda...'}
+              </span>
+            </div>
+            <div
+              role="progressbar"
+              aria-valuenow={percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-2 overflow-hidden rounded-full bg-muted"
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+            {percent < 100 && (
+              <Button variant="ghost" size="sm" onClick={() => abortRef.current?.abort()}>
+                <X className="size-4" /> Bekor qilish
+              </Button>
+            )}
+          </div>
+        ) : lesson.videoUrl ? (
+          <LessonVideo url={lesson.videoUrl} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex w-full flex-col items-center gap-2 rounded-[14px] border-2 border-dashed border-border px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary-soft/40"
+          >
+            <span className="flex size-12 items-center justify-center rounded-full bg-primary-soft text-primary">
+              <Clapperboard className="size-6" />
+            </span>
+            <span className="font-semibold">Darsning asosiy videosini yuklang</span>
+            <span className="text-sm text-muted-foreground">MP4, WebM yoki MOV · 300 MB gacha</span>
+          </button>
+        )}
+
+        {!uploading && (
+          <Button
+            variant={lesson.videoUrl ? 'outline' : 'default'}
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+          >
+            <Upload className="size-4" />
+            {lesson.videoUrl ? 'Videoni almashtirish' : 'Asosiy videoni yuklash'}
+          </Button>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept={LESSON_VIDEO_ACCEPT}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+            e.target.value = '';
+          }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
 
 function LessonEditContent({ id }: { id: string }) {
   const router = useRouter();
@@ -232,9 +380,15 @@ function LessonEditContent({ id }: { id: string }) {
         </CardContent>
       </Card>
 
+      <LessonVideoSection lesson={lesson} courseId={courseId} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Qo&apos;shimcha materiallar</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            PDF, taqdimot, mashq fayllari. Darsning asosiy videosini bu yerga emas, yuqoridagi
+            &quot;Asosiy video&quot; bo&apos;limiga yuklang.
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           {attachments.length > 0 ? (
@@ -269,7 +423,7 @@ function LessonEditContent({ id }: { id: string }) {
             ) : (
               <FileUp className="size-4" />
             )}
-            Fayl qo&apos;shish
+            Material qo&apos;shish
           </Button>
           <input
             ref={fileInputRef}

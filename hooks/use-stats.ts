@@ -25,6 +25,11 @@ export type TopTeachersResult = Paginated<TeacherRanking> & {
   me?: { rank: number; activityScore: number } | null
 }
 
+// Backend javobi `{ stats: {...} }` (teacher kabi) yoki to'g'ridan-to'g'ri obyekt bo'lishi mumkin
+function unwrapStats<T extends object>(res: T | { stats: T }): T {
+  return "stats" in res && res.stats && typeof res.stats === "object" ? (res.stats as T) : (res as T)
+}
+
 export function useTeacherStats() {
   return useQuery({
     queryKey: ["teacher-stats"],
@@ -49,7 +54,7 @@ export function useTopTeachers(page = 1, limit = 10, options: { enabled?: boolea
 export function useAdminStats(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["admin-stats"],
-    queryFn: () => api.get<AdminStats>("/stats/admin"),
+    queryFn: async () => unwrapStats(await api.get<AdminStats | { stats: AdminStats }>("/stats/admin")),
     enabled: options.enabled ?? true,
   })
 }
@@ -57,6 +62,7 @@ export function useAdminStats(options: { enabled?: boolean } = {}) {
 export function useStudentStats() {
   return useQuery({
     queryKey: ["student-stats"],
-    queryFn: () => api.get<StudentStats>("/stats/student"),
+    queryFn: async () =>
+      unwrapStats(await api.get<StudentStats | { stats: StudentStats }>("/stats/student")),
   })
 }

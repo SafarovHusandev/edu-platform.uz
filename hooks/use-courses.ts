@@ -20,6 +20,8 @@ export interface CourseFilters {
   category?: string
   sort?: CourseSort
   isFree?: boolean
+  // Faqat login qilgan student uchun: yozilgan kurslar serverda chiqarib tashlanadi
+  excludeEnrolled?: boolean
 }
 
 // Backend /courses va /courses/:id "authenticate.optional" bilan himoyalangan:

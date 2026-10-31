@@ -44,11 +44,7 @@ export const ROLE_HOME: Record<Role, string> = {
 // Menyu bandi yonidagi son belgisi qaysi ma'lumotdan olinadi
 // (components/layout/use-nav-badges.ts'da hisoblanadi).
 export type NavBadgeKey =
-  | 'notifications'
-  | 'incomingShares'
-  | 'pendingReviews'
-  | 'pendingUsers'
-  | 'pendingRedemptions';
+  'notifications' | 'incomingShares' | 'pendingReviews' | 'pendingUsers' | 'pendingRedemptions';
 
 export interface NavItem {
   label: string;
@@ -101,22 +97,25 @@ export const NAV_GROUPS: Record<Role, NavGroup[]> = {
         { label: 'Asosiy', href: '/student', icon: House, exact: true },
         { label: 'Kurslarim', href: '/student/courses', icon: GraduationCap },
         { label: 'Testlar', href: '/student/quizzes', icon: ClipboardList },
-        { label: 'Kutubxona', href: '/books', icon: Library },
+        { label: 'Kutubxona', href: '/library', icon: Library },
+        { label: 'Sertifikatlar', href: '/student/certificates', icon: ScrollText },
+      ],
+    },
+    {
+      label: 'Olmos va mukofotlar',
+      items: [
+        { label: 'Kunlik baraban', href: '/student/daily-spin', icon: RotateCw },
+        // /student/rewards/redemptions (so'rovlarim) ham shu band ostida
+        { label: 'Mukofotlar', href: '/student/rewards', icon: Gift },
         { label: 'Reyting', href: '/leaderboard', icon: Trophy },
-        { label: 'Kunlik barabon', href: '/student/daily-spin', icon: RotateCw },
-        { label: 'Mukofotlar', href: '/student/rewards', icon: Gift, exact: true },
-        { label: "So'rovlarim", href: '/student/rewards/redemptions', icon: Inbox },
       ],
     },
     {
       label: 'Hisob',
       items: [
-        { label: 'Premium', href: '/premium', icon: Crown },
+        // To'lovlar tarixi hamyon sahifasida
         { label: 'Hamyon', href: '/student/wallet', icon: Wallet },
-        { label: 'Sertifikatlar', href: '/student/certificates', icon: ScrollText },
-        { label: "To'lovlar tarixi", href: '/payments', icon: Receipt },
-        { label: 'Bildirishnomalar', href: '/notifications', icon: Bell, badge: 'notifications' },
-        { label: 'Profil', href: '/profile', icon: CircleUserRound },
+        { label: 'Premium', href: '/premium', icon: Crown },
       ],
     },
   ],
@@ -144,8 +143,6 @@ export const NAV_GROUPS: Record<Role, NavGroup[]> = {
       items: [
         { label: 'Premium', href: '/premium', icon: Crown },
         { label: "To'lovlar tarixi", href: '/payments', icon: Receipt },
-        { label: 'Bildirishnomalar', href: '/notifications', icon: Bell, badge: 'notifications' },
-        { label: 'Profil', href: '/profile', icon: CircleUserRound },
       ],
     },
   ],
@@ -159,7 +156,7 @@ export const MOBILE_NAV: Partial<Record<Role, NavItem[]>> = {
     { label: 'Asosiy', href: '/student', icon: House, exact: true },
     { label: 'Kurslar', href: '/student/courses', icon: GraduationCap },
     { label: 'Testlar', href: '/student/quizzes', icon: ClipboardList },
-    { label: 'Mukofot', href: '/student/rewards', icon: Gift, exact: true },
+    { label: 'Mukofot', href: '/student/rewards', icon: Gift },
     { label: 'Profil', href: '/profile', icon: CircleUserRound },
   ],
   teacher: [
@@ -176,9 +173,18 @@ export function isNavItemActive(item: NavItem, pathname: string) {
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
+// Yon menyuda yo'q, lekin header'da sarlavhasi ko'rinishi kerak bo'lgan sahifalar
+// (bildirishnoma va profil — header'dagi qo'ng'iroq va foydalanuvchi menyusida).
+const HEADER_ONLY_ITEMS: NavItem[] = [
+  { label: 'Bildirishnomalar', href: '/notifications', icon: Bell },
+  { label: 'Profil', href: '/profile', icon: CircleUserRound },
+  { label: "To'lovlar tarixi", href: '/payments', icon: Receipt },
+  { label: "So'rovlarim", href: '/student/rewards/redemptions', icon: Inbox },
+];
+
 // Header'da joriy bo'lim nomini ko'rsatish uchun: eng uzun mos keladigan band
 export function findActiveNavItem(role: Role, pathname: string) {
-  const items = NAV_GROUPS[role].flatMap((group) => group.items);
+  const items = [...NAV_GROUPS[role].flatMap((group) => group.items), ...HEADER_ONLY_ITEMS];
   return items
     .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0];

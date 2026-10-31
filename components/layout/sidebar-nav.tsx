@@ -89,8 +89,6 @@ export function SidebarNav({
         className="px-2.5 pb-4"
       />
 
-      {role === 'student' && <DiamondBalanceCard />}
-
       <div className="scrollbar-blue -mx-1 flex-1 overflow-y-auto px-1">
         {NAV_GROUPS[role].map((group, groupIndex) => (
           <div key={groupIndex} className={cn('flex flex-col gap-0.5', groupIndex > 0 && 'mt-4')}>

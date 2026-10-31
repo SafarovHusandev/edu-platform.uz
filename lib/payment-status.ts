@@ -69,6 +69,20 @@ export const PAYMENT_PURPOSE_ICONS: Record<PaymentPurpose, LucideIcon> = {
   donation: Heart,
 }
 
+// Multicard minimal to'lov summasi: 100 so'm (tiyinda). Promokoddan keyin summa 0 bo'lsa
+// server to'lovni darhol yakunlaydi (paidWithBalance), 0 < summa < minimal bo'lsa 400 qaytaradi.
+export const MIN_PAYMENT_TIYIN = 10000
+
+export function promoAmountState(finalAmount: number | null | undefined) {
+  if (finalAmount == null) return "none" as const
+  if (finalAmount === 0) return "free" as const
+  if (finalAmount < MIN_PAYMENT_TIYIN) return "too-small" as const
+  return "ok" as const
+}
+
+export const PROMO_TOO_SMALL_MESSAGE =
+  "Chegirmadan keyingi summa 100 so'mdan kam — bu promokodni bu xaridda ishlatib bo'lmaydi"
+
 export function getPaymentStatusConfig(status: PaymentStatus): PaymentStatusConfig {
   return PAYMENT_STATUS_CONFIG[status] ?? PAYMENT_STATUS_CONFIG.draft
 }

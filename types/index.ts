@@ -99,6 +99,8 @@ export interface Lesson {
   attachments?: string[]
   durationMinutes?: number | null
   isCompleted?: boolean
+  // Kursga yozilmagan / kirish huquqi yo'q: backend faqat _id, title, order qaytaradi
+  locked?: boolean
   createdAt?: string
 }
 
@@ -109,6 +111,8 @@ export interface Enrollment {
   progress?: number
   completedLessons?: string[]
   isCompleted?: boolean
+  // "completed" — barcha darslar tugatilgan, sertifikat avtomatik yaratiladi
+  status?: "active" | "completed" | string
   createdAt?: string
 }
 

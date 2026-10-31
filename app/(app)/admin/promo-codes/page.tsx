@@ -83,7 +83,7 @@ export default function AdminPromoCodesPage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <PageHeader
         title="Promokodlar"
-        description="Faqat Premium xaridlarida ishlaydi."
+        description="Premium va kurs xaridlarida ishlaydi."
         className="mb-0"
       />
 

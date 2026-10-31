@@ -7,12 +7,7 @@ export class ApiError extends Error {
   // Mashina o'qiydigan xato kodi (masalan "ATTEMPT_EXPIRED"), backend yuborsa
   code?: string;
 
-  constructor(
-    message: string,
-    status: number,
-    errors?: Record<string, string[]>,
-    code?: string
-  ) {
+  constructor(message: string, status: number, errors?: Record<string, string[]>, code?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
@@ -164,3 +159,55 @@ export const api = {
   delete: <T>(path: string, options?: RequestOptions) =>
     request<T>(path, { ...options, method: 'DELETE' }),
 };
+
+function errorFromJson(json: unknown, status: number, fallback: string) {
+  const obj = json && typeof json === 'object' ? (json as Record<string, unknown>) : null;
+  return new ApiError(
+    obj && 'message' in obj ? String(obj.message) : fallback,
+    status,
+    obj && 'errors' in obj ? (obj.errors as Record<string, string[]>) : undefined,
+    obj && typeof obj.code === 'string' ? obj.code : undefined
+  );
+}
+
+// Katta fayllar (video) uchun: fetch yuklash jarayonini bermaydi, shuning uchun XHR.
+// onProgress 0..1 qiymat oladi. signal bilan yuklashni bekor qilish mumkin.
+export function uploadWithProgress<T>(
+  path: string,
+  formData: FormData,
+  options: { onProgress?: (fraction: number) => void; signal?: AbortSignal } = {}
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}${path}`);
+    const token = getTokenCookie();
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) options.onProgress?.(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      let json: unknown = null;
+      try {
+        json = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        json = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(unwrap(json) as T);
+        return;
+      }
+      if (xhr.status === 401) unauthorizedHandler?.();
+      if (xhr.status === 413) {
+        reject(new ApiError('Fayl hajmi juda katta', 413));
+        return;
+      }
+      reject(errorFromJson(json, xhr.status, "Faylni yuklab bo'lmadi"));
+    };
+    xhr.onerror = () => reject(new ApiError('Tarmoq xatosi — internetni tekshiring', 0));
+    xhr.onabort = () => reject(new ApiError('Yuklash bekor qilindi', 0, undefined, 'ABORTED'));
+    options.signal?.addEventListener('abort', () => xhr.abort());
+
+    xhr.send(formData);
+  });
+}

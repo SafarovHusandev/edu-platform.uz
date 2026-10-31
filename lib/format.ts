@@ -11,11 +11,17 @@ export function fromTiyin(tiyin: number) {
 
 export function formatPrice(tiyinValue: number) {
   if (!tiyinValue) return 'Bepul';
-  return `${new Intl.NumberFormat('uz-UZ').format(fromTiyin(tiyinValue))} so'm`;
+  return `${formatNumber(fromTiyin(tiyinValue))} so'm`;
 }
 
+// "1 000 000" (bo'sh joy — NBSP). Intl.NumberFormat('uz-UZ') ISHLATILMAYDI: Node (SSR)
+// va brauzerdagi ICU ma'lumotlari farq qiladi ("1,000" vs "1 000") va hydration xatosi beradi.
 export function formatNumber(value: number) {
-  return new Intl.NumberFormat('uz-UZ').format(value);
+  if (!Number.isFinite(value)) return '0';
+  const rounded = Math.round(value * 100) / 100;
+  const [int, frac] = Math.abs(rounded).toString().split('.');
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${rounded < 0 ? '-' : ''}${grouped}${frac ? `,${frac}` : ''}`;
 }
 
 function pad(n: number) {

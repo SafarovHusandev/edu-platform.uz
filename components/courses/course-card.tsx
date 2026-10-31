@@ -22,12 +22,12 @@ export function CourseCard({ course, index = 0 }: { course: Course; index?: numb
         <img
           src={thumbnail}
           alt=""
-          className="h-40 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
       ) : (
         <div
           className={cn(
-            'flex h-40 items-end p-[18px] font-heading text-[40px] font-bold',
+            'flex aspect-video items-end p-[18px] font-heading text-[40px] font-bold',
             coverTone(index)
           )}
         >

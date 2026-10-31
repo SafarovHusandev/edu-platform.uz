@@ -41,6 +41,7 @@ export function useEnroll() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-enrollments"] })
+      queryClient.invalidateQueries({ queryKey: ["courses"] })
       toast.success("Kursga muvaffaqiyatli yozildingiz")
     },
     onError: (error) => toast.error(errorMessage(error, "Kursga yozilishda xatolik")),

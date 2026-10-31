@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, CircleAlert, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CourseCover } from '@/components/courses/enrollment-card';
@@ -14,6 +14,9 @@ import { useCreatePayment } from '@/hooks/use-payment';
 import { usePromoPreview } from '@/hooks/use-promo-codes';
 import { refreshCurrentUser } from '@/hooks/use-auth';
 import { formatPrice } from '@/lib/format';
+import { ApiError } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
+import { PROMO_TOO_SMALL_MESSAGE, promoAmountState } from '@/lib/payment-status';
 import { ROLE_HOME } from '@/lib/roles';
 import type { Course } from '@/types';
 
@@ -32,17 +35,29 @@ export function EnrollCard({
   const enroll = useEnroll();
   const createPayment = useCreatePayment();
   const [promoCode, setPromoCode] = useState('');
+  const [appliedCode, setAppliedCode] = useState<string>();
   const [useBalance, setUseBalance] = useState(false);
   const isPaid = course.price > 0;
   const canBuy = !user || user.role === 'student';
+  // Promokod faqat "Qo'llash" bosilganda tekshiriladi; chegirma serverda course.price dan hisoblanadi
   const promoPreview = usePromoPreview({
-    code: isPaid ? promoCode.trim() : undefined,
+    code: isPaid ? appliedCode : undefined,
     purpose: 'course',
     courseId: course._id,
   });
+  const codeMatchesApplied = !!appliedCode && appliedCode === promoCode.trim();
+  const promoApplied = codeMatchesApplied && !!promoPreview.data;
+  const promoError =
+    codeMatchesApplied && promoPreview.isError
+      ? promoPreview.error instanceof ApiError
+        ? promoPreview.error.message
+        : 'Promokod topilmadi yoki amal qilmaydi'
+      : null;
 
-  const price = promoPreview.data?.finalAmount ?? course.price;
+  const price = (promoApplied ? promoPreview.data?.finalAmount : undefined) ?? course.price;
   const balanceEnough = (user?.balance ?? 0) >= price;
+  const promoState = promoApplied ? promoAmountState(promoPreview.data?.finalAmount) : 'none';
+  const freeByPromo = promoState === 'free';
 
   function handleEnroll() {
     if (!user) {
@@ -53,14 +68,16 @@ export function EnrollCard({
       enroll.mutate(course._id, { onSuccess: () => router.push('/student/courses') });
       return;
     }
-    const payWithBalance = useBalance && balanceEnough;
+    // 100% promokod: server to'lovni darhol yakunlaydi (paidWithBalance), checkout kerak emas
+    const payWithBalance = !freeByPromo && useBalance && balanceEnough;
     createPayment.mutate(
       {
         purpose: 'course',
         courseId: course._id,
-        promoCode: promoCode.trim() || undefined,
+        promoCode: promoApplied ? appliedCode : undefined,
         useBalance: payWithBalance,
-        returnUrl: payWithBalance ? undefined : `${window.location.origin}/student/courses`,
+        returnUrl:
+          payWithBalance || freeByPromo ? undefined : `${window.location.origin}/student/courses`,
       },
       {
         onSuccess: async (invoice) => {
@@ -85,7 +102,7 @@ export function EnrollCard({
       <CourseCover
         course={course}
         index={0}
-        className="h-44 items-center justify-center text-6xl"
+        className="aspect-video items-center justify-center text-6xl"
       />
       <div className="flex flex-col gap-4 p-6">
         <div className="flex flex-wrap items-baseline gap-2">
@@ -96,9 +113,9 @@ export function EnrollCard({
                 : 'font-heading text-3xl font-bold text-success'
             }
           >
-            {isPaid ? formatPrice(price) : 'Bepul'}
+            {isPaid && !freeByPromo ? formatPrice(price) : 'Bepul'}
           </span>
-          {promoPreview.data?.discountPercent ? (
+          {promoApplied && price !== course.price ? (
             <span className="text-sm text-muted-foreground line-through">
               {formatPrice(course.price)}
             </span>
@@ -107,22 +124,57 @@ export function EnrollCard({
 
         {isPaid && canBuy && (
           <div className="flex flex-col gap-1.5">
-            <Input
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="Promokod (ixtiyoriy)"
-              aria-label="Promokod"
-              className="h-11"
-            />
-            {promoPreview.data?.discountPercent ? (
-              <span className="text-[13px] font-semibold text-success">
-                −{promoPreview.data.discountPercent}% chegirma qo&apos;llandi
+            <label htmlFor="course-promo" className="text-sm font-semibold">
+              Promokod bormi?
+            </label>
+            <div className="flex gap-2">
+              <Input
+                id="course-promo"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setAppliedCode(promoCode.trim() || undefined);
+                }}
+                placeholder="Masalan: YOZGI30"
+                className={cn('h-11', promoApplied && 'border-success')}
+              />
+              <Button
+                type="button"
+                variant={promoApplied ? 'secondary' : 'outline'}
+                className={cn('h-11 shrink-0', promoApplied && 'bg-success-soft text-success')}
+                onClick={() => setAppliedCode(promoCode.trim() || undefined)}
+                disabled={!promoCode.trim() || promoPreview.isFetching}
+              >
+                {promoPreview.isFetching ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : promoApplied ? (
+                  <Check className="size-4" />
+                ) : null}
+                {promoApplied ? "Qo'llandi" : "Qo'llash"}
+              </Button>
+            </div>
+            {promoError && (
+              <span className="flex items-center gap-1.5 text-[13px] text-destructive">
+                <CircleAlert className="size-3.5 shrink-0" /> {promoError}
               </span>
-            ) : null}
+            )}
+            {promoState === 'too-small' && (
+              <span className="flex items-center gap-1.5 text-[13px] text-destructive">
+                <CircleAlert className="size-3.5 shrink-0" /> {PROMO_TOO_SMALL_MESSAGE}
+              </span>
+            )}
+            {promoApplied && promoState !== 'too-small' && (
+              <span className="text-[13px] font-semibold text-success">
+                −{promoPreview.data!.discountPercent}% chegirma qo&apos;llandi
+                {!freeByPromo &&
+                  promoPreview.data!.finalAmount != null &&
+                  ` · ${formatPrice(promoPreview.data!.finalAmount)} to'laysiz`}
+              </span>
+            )}
           </div>
         )}
 
-        {isPaid && user?.role === 'student' && (
+        {isPaid && !freeByPromo && user?.role === 'student' && (
           <label
             className={
               balanceEnough
@@ -146,10 +198,10 @@ export function EnrollCard({
             size="lg"
             className="h-[52px] text-base"
             onClick={handleEnroll}
-            disabled={isPending}
+            disabled={isPending || promoState === 'too-small'}
           >
             {isPending && <Loader2 className="size-4 animate-spin" />}
-            {isPaid ? 'Sotib olish' : 'Yozilish'}
+            {!isPaid ? 'Yozilish' : freeByPromo ? 'Bepul olish' : 'Sotib olish'}
           </Button>
         ) : (
           <Button

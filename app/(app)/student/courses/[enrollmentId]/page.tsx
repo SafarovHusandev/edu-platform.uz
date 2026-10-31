@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { CourseLessonsList, sortLessons } from '@/components/courses/course-lessons-list';
-import { CourseCover, enrollmentProgress } from '@/components/courses/enrollment-card';
+import {
+  CourseCover,
+  enrollmentProgress,
+  isEnrollmentCompleted,
+} from '@/components/courses/enrollment-card';
 import { useEnrollment } from '@/hooks/use-enrollment';
 import { useCourseLessons } from '@/hooks/use-lessons';
 
@@ -76,7 +80,7 @@ export default function EnrollmentDetailPage({ params }: PageProps) {
           <div className="h-2 rounded-full bg-muted">
             <div
               className={
-                enrollment.isCompleted
+                isEnrollmentCompleted(enrollment)
                   ? 'h-2 rounded-full bg-success'
                   : 'h-2 rounded-full bg-primary'
               }

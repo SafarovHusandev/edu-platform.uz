@@ -47,11 +47,19 @@ export function BookCover({
   );
 }
 
-export function BookCard({ book, index = 0 }: { book: Book; index?: number }) {
+export function BookCard({
+  book,
+  index = 0,
+  basePath = '/books',
+}: {
+  book: Book;
+  index?: number;
+  basePath?: string;
+}) {
   const category = typeof book.category === 'object' ? book.category?.name : undefined;
 
   return (
-    <Link href={`/books/${book._id}`} className="group flex h-full flex-col gap-2.5">
+    <Link href={`${basePath}/${book._id}`} className="group flex h-full flex-col gap-2.5">
       <div className="overflow-hidden rounded-[14px]">
         <BookCover
           book={book}

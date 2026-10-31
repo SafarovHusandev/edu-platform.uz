@@ -48,7 +48,7 @@ export default function PublicRewardsPage() {
               Olmoslarni sovg&apos;aga almashtiring
             </h1>
             <p className="text-[17px] leading-relaxed text-primary-foreground/80">
-              Testlar, darslar va kunlik barabondan olmos to&apos;plang. So&apos;rovni admin
+              Testlar, darslar va kunlik barabandan olmos to&apos;plang. So&apos;rovni admin
               tasdiqlaydi va mukofot sizga topshiriladi.
             </p>
           </div>

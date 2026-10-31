@@ -13,7 +13,7 @@ import {
   StatusPill,
 } from '@/components/dashboard/dashboard-ui';
 import { RecentNotifications } from '@/components/dashboard/recent-notifications';
-import { EnrollmentCard } from '@/components/courses/enrollment-card';
+import { EnrollmentCard, isEnrollmentCompleted } from '@/components/courses/enrollment-card';
 import { useNavBadges } from '@/components/layout/use-nav-badges';
 import { useAuthStore } from '@/store/auth-store';
 import { useMyEnrollments } from '@/hooks/use-enrollment';
@@ -71,7 +71,7 @@ export default function StudentDashboardPage() {
     ? `${user.grade.number}-"${user.grade.letter ?? ''}" sinf`
     : null;
 
-  const inProgress = enrollments.data?.items.filter((e) => !e.isCompleted) ?? [];
+  const inProgress = enrollments.data?.items.filter((e) => !isEnrollmentCompleted(e)) ?? [];
   const activeQuiz = pickActiveQuiz(quizzes?.items ?? [], user);
   const activeQuizCount = stats?.activeQuizzesCount ?? 0;
 
@@ -211,7 +211,7 @@ export default function StudentDashboardPage() {
               <RotateCw className="size-6" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-bold">Kunlik barabon</span>
+              <span className="block font-bold">Kunlik baraban</span>
               <span className="block text-sm text-gold-foreground">
                 {spin
                   ? spin.canSpin

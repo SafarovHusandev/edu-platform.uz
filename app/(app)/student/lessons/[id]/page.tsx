@@ -2,7 +2,15 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Check, ClipboardList, FileText, Loader2, Video } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  ClipboardList,
+  FileText,
+  Loader2,
+  Lock,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -12,55 +20,10 @@ import { useLesson, useCompleteLesson, useCourseLessons } from '@/hooks/use-less
 import { useMyEnrollments } from '@/hooks/use-enrollment';
 import { useQuizzes } from '@/hooks/use-quizzes';
 import { resolveAssetUrl } from '@/lib/config';
+import { LessonVideo, isVideoFile } from '@/components/courses/lesson-video';
 
 interface PageProps {
   params: Promise<{ id: string }>;
-}
-
-// YouTube havolasini embed ko'rinishiga o'giradi; boshqa manbalar uchun null
-function youtubeEmbedUrl(url: string) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname === 'youtu.be') return `https://www.youtube.com/embed${parsed.pathname}`;
-    if (parsed.hostname.endsWith('youtube.com')) {
-      const id = parsed.searchParams.get('v') ?? parsed.pathname.split('/').pop();
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function LessonVideo({ url }: { url: string }) {
-  const embed = youtubeEmbedUrl(url);
-  if (embed) {
-    return (
-      <iframe
-        src={embed}
-        title="Video dars"
-        className="aspect-video w-full rounded-2xl bg-admin"
-        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    );
-  }
-  if (/\.(mp4|webm|ogg)(\?|$)/i.test(url)) {
-    return <video src={url} controls className="aspect-video w-full rounded-2xl bg-admin" />;
-  }
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-2xl bg-admin text-admin-foreground"
-    >
-      <span className="flex size-16 items-center justify-center rounded-full bg-primary">
-        <Video className="size-7" />
-      </span>
-      <span className="font-semibold">Videoni ochish</span>
-    </a>
-  );
 }
 
 export default function LessonViewerPage({ params }: PageProps) {
@@ -93,6 +56,28 @@ export default function LessonViewerPage({ params }: PageProps) {
     );
   }
 
+  if (lesson.locked) {
+    return (
+      <EmptyState
+        icon={Lock}
+        title={lesson.title}
+        description="Bu dars yopiq. Darsni ko'rish uchun avval kursga yoziling yoki kursni sotib oling."
+        action={
+          <div className="flex flex-wrap justify-center gap-2.5">
+            <Button
+              render={<Link href={lesson.course ? `/courses/${lesson.course}` : '/courses'} />}
+            >
+              {lesson.course ? 'Kursni sotib olish' : "Kurslarni ko'rish"}
+            </Button>
+            <Button variant="outline" render={<Link href="/student/courses" />}>
+              Kurslarim
+            </Button>
+          </div>
+        }
+      />
+    );
+  }
+
   const lessons = sortLessons(courseLessons);
   const enrollment = enrollments?.items.find(
     (e) => (typeof e.course === 'object' ? e.course._id : e.course) === lesson.course
@@ -107,12 +92,15 @@ export default function LessonViewerPage({ params }: PageProps) {
     (q) => q.targetType === 'lesson' && q.targetId === lesson._id && q.isActive !== false
   );
 
-  const attachments = (lesson.attachments ?? []).map((path) => ({
-    path,
-    url: resolveAssetUrl(path),
-    name: decodeURIComponent(path.split('/').pop() ?? path),
-    ext: (path.split('.').pop() ?? '').toUpperCase().slice(0, 4),
-  }));
+  const videoAttachments = (lesson.attachments ?? []).filter((path) => isVideoFile(path));
+  const attachments = (lesson.attachments ?? [])
+    .filter((path) => !isVideoFile(path))
+    .map((path) => ({
+      path,
+      url: resolveAssetUrl(path),
+      name: decodeURIComponent(path.split('/').pop() ?? path),
+      ext: (path.split('.').pop() ?? '').toUpperCase().slice(0, 4),
+    }));
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -134,6 +122,9 @@ export default function LessonViewerPage({ params }: PageProps) {
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-w-0 flex-col gap-5">
           {lesson.videoUrl && <LessonVideo url={lesson.videoUrl} />}
+          {videoAttachments.map((path) => (
+            <LessonVideo key={path} url={path} />
+          ))}
 
           <div>
             <h1 className="font-heading text-2xl font-semibold wrap-break-word sm:text-[26px]">

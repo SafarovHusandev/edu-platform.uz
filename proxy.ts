@@ -7,6 +7,7 @@ const PROTECTED_PREFIXES = [
   "/profile",
   "/notifications",
   "/payment",
+  "/library",
   "/student",
   "/teacher",
   "/admin",

@@ -13,13 +13,15 @@ import { refreshCurrentUser } from '@/hooks/use-auth';
 import { useAuthStore } from '@/store/auth-store';
 import { daysUntil, formatDate, formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { ApiError } from '@/lib/api-client';
+import { PROMO_TOO_SMALL_MESSAGE, promoAmountState } from '@/lib/payment-status';
 import type { PremiumPlanKey } from '@/types';
 
 const PLAN_ORDER: PremiumPlanKey[] = ['30d', '90d', '180d', '365d'];
 const POPULAR_PLAN: PremiumPlanKey = '180d';
 
 const BENEFITS: Record<string, string[]> = {
-  student: ['1.5x olmos', 'Premium mukofotlar', '3x barabon'],
+  student: ['1.5x olmos', 'Premium mukofotlar', '3x baraban'],
   teacher: ["Testlarda to'liq urinishlar soni", "Testlarda to'liq vaqt limiti"],
 };
 
@@ -51,17 +53,20 @@ export default function PremiumPage() {
   const total = (promoApplied ? promoPreview.data?.finalAmount : undefined) ?? selected?.price ?? 0;
   const balance = user?.balance ?? 0;
   const balanceEnough = balance >= total;
+  const promoState = promoApplied ? promoAmountState(promoPreview.data?.finalAmount) : 'none';
+  const freeByPromo = promoState === 'free';
   const benefits = BENEFITS[user?.role ?? ''] ?? [];
 
   function handleCheckout() {
-    const useBalance = method === 'balance';
+    // 100% promokod: server to'lovni darhol yakunlaydi, checkout kerak emas
+    const useBalance = !freeByPromo && method === 'balance';
     createPayment.mutate(
       {
         purpose: 'premium',
         plan: selectedPlan,
         promoCode: promoApplied ? promoCode.trim() : undefined,
         useBalance,
-        returnUrl: useBalance ? undefined : `${window.location.origin}/premium`,
+        returnUrl: useBalance || freeByPromo ? undefined : `${window.location.origin}/premium`,
       },
       {
         onSuccess: async (invoice) => {
@@ -210,58 +215,72 @@ export default function PremiumPage() {
               </div>
               {codeMatchesApplied && promoPreview.isError && (
                 <span className="flex items-center gap-1.5 text-[13px] font-semibold text-destructive">
-                  <CircleAlert className="size-3.5" /> Promokod topilmadi yoki amal qilmaydi
+                  <CircleAlert className="size-3.5 shrink-0" />{' '}
+                  {promoPreview.error instanceof ApiError
+                    ? promoPreview.error.message
+                    : 'Promokod topilmadi yoki amal qilmaydi'}
                 </span>
               )}
-              {promoApplied && (
+              {promoState === 'too-small' && (
+                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-destructive">
+                  <CircleAlert className="size-3.5 shrink-0" /> {PROMO_TOO_SMALL_MESSAGE}
+                </span>
+              )}
+              {promoApplied && promoState !== 'too-small' && (
                 <span className="text-[13px] font-semibold text-success">
                   −{promoPreview.data!.discountPercent}% chegirma qo&apos;llandi
                 </span>
               )}
             </div>
 
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 text-sm font-semibold">To&apos;lov usuli</legend>
-              {(
-                [
-                  {
-                    value: 'card',
-                    title: 'Multicard',
-                    note: "Karta orqali — to'lov sahifasiga o'tasiz",
-                    disabled: false,
-                  },
-                  {
-                    value: 'balance',
-                    title: 'Hamyon balansidan',
-                    note: `Balans: ${formatPrice(balance)}${balanceEnough ? ' · darhol faollashadi' : ' · yetarli emas'}`,
-                    disabled: !balanceEnough,
-                  },
-                ] as const
-              ).map((option) => (
-                <label
-                  key={option.value}
-                  className={cn(
-                    'flex cursor-pointer items-center gap-3 rounded-[14px] border-2 p-3.5 transition-colors',
-                    method === option.value ? 'border-primary' : 'border-border',
-                    option.disabled && 'cursor-not-allowed opacity-60'
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="pay-method"
-                    value={option.value}
-                    checked={method === option.value}
-                    disabled={option.disabled}
-                    onChange={() => setMethod(option.value)}
-                    className="size-[18px] accent-primary"
-                  />
-                  <span>
-                    <span className="block font-bold">{option.title}</span>
-                    <span className="block text-[13px] text-muted-foreground">{option.note}</span>
-                  </span>
-                </label>
-              ))}
-            </fieldset>
+            {freeByPromo ? (
+              <p className="rounded-[14px] bg-success-soft p-3.5 text-sm font-semibold text-success">
+                Promokod to&apos;liq qopladi — Premium to&apos;lovsiz darhol faollashadi.
+              </p>
+            ) : (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-sm font-semibold">To&apos;lov usuli</legend>
+                {(
+                  [
+                    {
+                      value: 'card',
+                      title: 'Multicard',
+                      note: "Karta orqali — to'lov sahifasiga o'tasiz",
+                      disabled: false,
+                    },
+                    {
+                      value: 'balance',
+                      title: 'Hamyon balansidan',
+                      note: `Balans: ${formatPrice(balance)}${balanceEnough ? ' · darhol faollashadi' : ' · yetarli emas'}`,
+                      disabled: !balanceEnough,
+                    },
+                  ] as const
+                ).map((option) => (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 rounded-[14px] border-2 p-3.5 transition-colors',
+                      method === option.value ? 'border-primary' : 'border-border',
+                      option.disabled && 'cursor-not-allowed opacity-60'
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="pay-method"
+                      value={option.value}
+                      checked={method === option.value}
+                      disabled={option.disabled}
+                      onChange={() => setMethod(option.value)}
+                      className="size-[18px] accent-primary"
+                    />
+                    <span>
+                      <span className="block font-bold">{option.title}</span>
+                      <span className="block text-[13px] text-muted-foreground">{option.note}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
 
             <div className="flex items-baseline justify-between border-t border-border pt-2">
               <span className="text-muted-foreground">Jami</span>
@@ -273,11 +292,14 @@ export default function PremiumPage() {
               className="h-[52px] w-full text-base font-bold"
               onClick={handleCheckout}
               disabled={
-                createPayment.isPending || !selected || (method === 'balance' && !balanceEnough)
+                createPayment.isPending ||
+                !selected ||
+                promoState === 'too-small' ||
+                (!freeByPromo && method === 'balance' && !balanceEnough)
               }
             >
               {createPayment.isPending && <Loader2 className="size-4 animate-spin" />}
-              To&apos;lash
+              {freeByPromo ? 'Bepul faollashtirish' : "To'lash"}
             </Button>
           </aside>
         </div>

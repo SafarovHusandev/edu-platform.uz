@@ -83,9 +83,9 @@ export default function AdminDashboardPage() {
             loading={stats.isLoading}
           />
           <StatTile
-            label={`To'lovlar · bu oy${s ? ` (${formatNumber(s.paymentsThisMonth.count)} ta)` : ''}`}
+            label={`To'lovlar · bu oy${s?.paymentsThisMonth ? ` (${formatNumber(s.paymentsThisMonth.count)} ta)` : ''}`}
             value={
-              <span className="text-[22px]">{formatPrice(s?.paymentsThisMonth.total ?? 0)}</span>
+              <span className="text-[22px]">{formatPrice(s?.paymentsThisMonth?.total ?? 0)}</span>
             }
             href="/admin/payments"
             loading={stats.isLoading}

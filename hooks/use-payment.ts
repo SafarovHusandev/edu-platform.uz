@@ -31,8 +31,18 @@ export interface CreatePaymentPayload {
 }
 
 export function useCreatePayment() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreatePaymentPayload) => api.post<Invoice>("/payment/create", payload),
+    onSuccess: (invoice) => {
+      // Balans / 100% promokod bilan darhol yakunlangan xarid: kurs va darslar
+      // keshda "locked" bo'lib qolmasin
+      if (invoice.paidWithBalance || invoice.status === "success") {
+        for (const key of ["my-enrollments", "courses", "lesson", "course-lessons", "course", "payments-my"]) {
+          queryClient.invalidateQueries({ queryKey: [key] })
+        }
+      }
+    },
     onError: (error) => toast.error(errorMessage(error, "To'lovni yaratishda xatolik")),
   })
 }

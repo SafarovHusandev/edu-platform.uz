@@ -2,15 +2,7 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import {
-  ArrowRight,
-  BookOpen,
-  Check,
-  ClipboardList,
-  FileText,
-  Loader2,
-  Lock,
-} from 'lucide-react';
+import { ArrowRight, BookOpen, Check, ClipboardList, FileText, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -20,7 +12,13 @@ import { useLesson, useCompleteLesson, useCourseLessons } from '@/hooks/use-less
 import { useMyEnrollments } from '@/hooks/use-enrollment';
 import { useQuizzes } from '@/hooks/use-quizzes';
 import { resolveAssetUrl } from '@/lib/config';
-import { LessonVideo, isVideoFile } from '@/components/courses/lesson-video';
+import {
+  LessonVideo,
+  isVideoFile,
+  mediaExtension,
+  mediaFileName,
+  mediaKey,
+} from '@/components/courses/lesson-video';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -96,10 +94,11 @@ export default function LessonViewerPage({ params }: PageProps) {
   const attachments = (lesson.attachments ?? [])
     .filter((path) => !isVideoFile(path))
     .map((path) => ({
-      path,
+      // Imzo har yangilanishda o'zgaradi — kalit imzosiz yo'l bo'yicha
+      path: mediaKey(path),
       url: resolveAssetUrl(path),
-      name: decodeURIComponent(path.split('/').pop() ?? path),
-      ext: (path.split('.').pop() ?? '').toUpperCase().slice(0, 4),
+      name: mediaFileName(path),
+      ext: mediaExtension(path),
     }));
 
   return (
@@ -121,9 +120,11 @@ export default function LessonViewerPage({ params }: PageProps) {
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-w-0 flex-col gap-5">
-          {lesson.videoUrl && <LessonVideo url={lesson.videoUrl} />}
+          {lesson.videoUrl && (
+            <LessonVideo url={lesson.videoUrl} watermark onExpired={() => refetch()} />
+          )}
           {videoAttachments.map((path) => (
-            <LessonVideo key={path} url={path} />
+            <LessonVideo key={mediaKey(path)} url={path} watermark onExpired={() => refetch()} />
           ))}
 
           <div>
@@ -148,7 +149,7 @@ export default function LessonViewerPage({ params }: PageProps) {
                   key={path}
                   href={url}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener"
                   className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 transition-colors hover:border-primary/40"
                 >
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive-soft text-xs font-bold text-destructive">

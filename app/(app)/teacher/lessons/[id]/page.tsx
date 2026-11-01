@@ -44,7 +44,7 @@ import {
 } from '@/hooks/use-lessons';
 import { resolveAssetUrl } from '@/lib/config';
 import { formatFileSize } from '@/lib/format';
-import { LessonVideo } from '@/components/courses/lesson-video';
+import { LessonVideo, mediaFileName, mediaKey } from '@/components/courses/lesson-video';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -256,9 +256,9 @@ function LessonEditContent({ id }: { id: string }) {
   }
 
   const attachments = (lesson.attachments ?? []).map((path) => ({
-    path,
+    path: mediaKey(path),
     url: resolveAssetUrl(path),
-    name: path.split('/').pop() ?? path,
+    name: mediaFileName(path),
   }));
 
   return (
@@ -401,7 +401,7 @@ function LessonEditContent({ id }: { id: string }) {
                   <a
                     href={url}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener"
                     className="truncate text-sm text-primary hover:underline"
                   >
                     {name}

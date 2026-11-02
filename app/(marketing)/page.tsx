@@ -9,6 +9,10 @@ import {
 import { api } from '@/lib/api-client';
 import type { Book, Course, Paginated, Reward } from '@/types';
 
+// Sahifa build paytida bir marta yig'ilib qolmasin: kurs/kitob/mukofotlar
+// (narx, yangi kurslar) har 60 soniyada fonda yangilanadi
+export const revalidate = 60;
+
 async function getLandingData() {
   // Barchasi ochiq (skipAuth) endpoint'lar — mehmon uchun ham ishlaydi.
   const [coursesRes, booksRes, rewardsRes] = await Promise.all([

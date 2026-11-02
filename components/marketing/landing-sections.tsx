@@ -49,7 +49,7 @@ export function LandingHero() {
           1–11-sinf o&apos;quvchilari uchun
         </span>
         <h1 className="font-heading text-4xl leading-[1.1] font-bold tracking-tight sm:text-[52px]">
-          O&apos;qi, test yech, olmos to&apos;pla — mukofot ol
+          O&apos;qing, test yeching, olmos to&apos;plang — mukofot oling
         </h1>
         <p className="max-w-[520px] text-lg leading-relaxed text-muted-foreground sm:text-[19px]">
           Kurslar, bepul kitoblar va sinfingizga moslangan testlar bir joyda. Har bir muvaffaqiyat

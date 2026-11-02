@@ -13,6 +13,7 @@ import { useMyEnrollments } from '@/hooks/use-enrollment';
 import { useQuizzes } from '@/hooks/use-quizzes';
 import { resolveAssetUrl } from '@/lib/config';
 import {
+  LessonMainVideo,
   LessonVideo,
   isVideoFile,
   mediaExtension,
@@ -120,9 +121,7 @@ export default function LessonViewerPage({ params }: PageProps) {
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-w-0 flex-col gap-5">
-          {lesson.videoUrl && (
-            <LessonVideo url={lesson.videoUrl} watermark onExpired={() => refetch()} />
-          )}
+          <LessonMainVideo lesson={lesson} watermark onExpired={() => refetch()} />
           {videoAttachments.map((path) => (
             <LessonVideo key={mediaKey(path)} url={path} watermark onExpired={() => refetch()} />
           ))}

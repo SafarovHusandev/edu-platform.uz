@@ -32,9 +32,11 @@ export function useLesson(id: string | undefined) {
       return res.lesson
     },
     enabled: !!id,
-    // videoUrl/attachments imzolangan havolalar 10 daqiqada eskiradi — undan oldin
-    // yangilab turamiz (pleyer ko'rishni uzmasdan faqat xato bo'lganda yangisiga o'tadi)
-    refetchInterval: 7 * 60 * 1000,
+    // Video tayyorlanayotganda (HLS konvertatsiya) har 20 soniyada tekshiramiz.
+    // Aks holda imzolangan havolalar 10 daqiqada eskiradi — undan oldin yangilab
+    // turamiz (pleyer ko'rishni uzmasdan faqat xato bo'lganda yangisiga o'tadi).
+    refetchInterval: (query) =>
+      query.state.data?.videoStatus === "processing" ? 20 * 1000 : 7 * 60 * 1000,
   })
 }
 

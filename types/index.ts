@@ -96,6 +96,12 @@ export interface Lesson {
   content?: string
   order: number
   videoUrl?: string | null
+  // Yuklangan video HLS'ga konvertatsiya qilinadi: ready bo'lsa `video.url` (imzolangan
+  // master.m3u8), processing/failed — hali yo'q. "none" — tashqi havola (YouTube)
+  videoStatus?: "none" | "processing" | "ready" | "failed"
+  video?: { type: "hls"; url: string } | null
+  // Backend bergan suv belgisi matni (ism); frontend ism + ID ni o'zi ko'rsatadi
+  watermark?: string
   attachments?: string[]
   durationMinutes?: number | null
   isCompleted?: boolean

@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "exceljs": "^4.4.0",
+    "hls.js": "^1.7.4",
     "js-cookie": "^3.0.8",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",

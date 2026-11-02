@@ -53,6 +53,8 @@ export interface NavItem {
   badge?: NavBadgeKey;
   // Faqat shu manzilning o'zida faol bo'ladi (ichki sahifalarda emas)
   exact?: boolean;
+  // Shu yo'llarda ham faol (masalan, Testlarim -> ulashilgan testlar sahifasi)
+  alsoActive?: string[];
 }
 
 export interface NavGroup {
@@ -124,15 +126,21 @@ export const NAV_GROUPS: Record<Role, NavGroup[]> = {
       items: [
         { label: 'Dashboard', href: '/teacher', icon: LayoutDashboard, exact: true },
         { label: 'Kurslarim', href: '/teacher/courses', icon: GraduationCap },
-        { label: 'Testlarim', href: '/teacher/quizzes', icon: ClipboardList },
+        // Ulashilgan testlar shu bo'lim ichida; belgi — qabul qilinmagan ulashishlar soni
         {
-          label: 'Ulashilgan testlar',
-          href: '/teacher/quiz-shares',
-          icon: Share2,
+          label: 'Testlarim',
+          href: '/teacher/quizzes',
+          icon: ClipboardList,
           badge: 'incomingShares',
+          alsoActive: ['/teacher/quiz-shares'],
         },
         { label: 'Baholash', href: '/teacher/grading', icon: PenLine, badge: 'pendingReviews' },
         { label: 'Kitoblarim', href: '/teacher/books', icon: BookOpen },
+      ],
+    },
+    {
+      label: 'Natijalar',
+      items: [
         { label: 'Statistika', href: '/teacher/stats', icon: BarChart3 },
         { label: 'Reyting', href: '/leaderboard', icon: Trophy },
         { label: 'Mukofotlar', href: '/student/rewards', icon: Gift },
@@ -161,16 +169,27 @@ export const MOBILE_NAV: Partial<Record<Role, NavItem[]>> = {
   ],
   teacher: [
     { label: 'Asosiy', href: '/teacher', icon: LayoutDashboard, exact: true },
-    { label: 'Testlar', href: '/teacher/quizzes', icon: ClipboardList, badge: 'incomingShares' },
+    {
+      label: 'Testlar',
+      href: '/teacher/quizzes',
+      icon: ClipboardList,
+      badge: 'incomingShares',
+      alsoActive: ['/teacher/quiz-shares'],
+    },
     { label: 'Baholash', href: '/teacher/grading', icon: PenLine, badge: 'pendingReviews' },
     { label: 'Kurslar', href: '/teacher/courses', icon: GraduationCap },
     { label: 'Profil', href: '/profile', icon: CircleUserRound },
   ],
 };
 
+function matchesPath(href: string, pathname: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function isNavItemActive(item: NavItem, pathname: string) {
+  if (item.alsoActive?.some((href) => matchesPath(href, pathname))) return true;
   if (item.exact) return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  return matchesPath(item.href, pathname);
 }
 
 // Yon menyuda yo'q, lekin header'da sarlavhasi ko'rinishi kerak bo'lgan sahifalar
@@ -180,6 +199,7 @@ const HEADER_ONLY_ITEMS: NavItem[] = [
   { label: 'Profil', href: '/profile', icon: CircleUserRound },
   { label: "To'lovlar tarixi", href: '/payments', icon: Receipt },
   { label: "So'rovlarim", href: '/student/rewards/redemptions', icon: Inbox },
+  { label: 'Ulashilgan testlar', href: '/teacher/quiz-shares', icon: Share2 },
 ];
 
 // Header'da joriy bo'lim nomini ko'rsatish uchun: eng uzun mos keladigan band

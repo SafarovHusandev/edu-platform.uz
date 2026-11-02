@@ -44,7 +44,13 @@ import {
 } from '@/hooks/use-lessons';
 import { resolveAssetUrl } from '@/lib/config';
 import { formatFileSize } from '@/lib/format';
-import { LessonVideo, mediaFileName, mediaKey } from '@/components/courses/lesson-video';
+import {
+  LessonMainVideo,
+  hasMainVideo,
+  mediaFileName,
+  mediaKey,
+} from '@/components/courses/lesson-video';
+import type { Lesson } from '@/types';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -85,13 +91,7 @@ function readVideoMinutes(file: File) {
   });
 }
 
-function LessonVideoSection({
-  lesson,
-  courseId,
-}: {
-  lesson: { _id: string; videoUrl?: string | null; durationMinutes?: number | null };
-  courseId?: string;
-}) {
+function LessonVideoSection({ lesson, courseId }: { lesson: Lesson; courseId?: string }) {
   const uploadVideo = useUploadLessonVideo(courseId);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -165,8 +165,8 @@ function LessonVideoSection({
               </Button>
             )}
           </div>
-        ) : lesson.videoUrl ? (
-          <LessonVideo url={lesson.videoUrl} />
+        ) : hasMainVideo(lesson) ? (
+          <LessonMainVideo lesson={lesson} />
         ) : (
           <button
             type="button"
@@ -183,12 +183,12 @@ function LessonVideoSection({
 
         {!uploading && (
           <Button
-            variant={lesson.videoUrl ? 'outline' : 'default'}
+            variant={hasMainVideo(lesson) ? 'outline' : 'default'}
             size="sm"
             onClick={() => inputRef.current?.click()}
           >
             <Upload className="size-4" />
-            {lesson.videoUrl ? 'Videoni almashtirish' : 'Asosiy videoni yuklash'}
+            {hasMainVideo(lesson) ? 'Videoni almashtirish' : 'Asosiy videoni yuklash'}
           </Button>
         )}
         <input

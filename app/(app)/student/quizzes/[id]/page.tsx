@@ -12,6 +12,16 @@ import {
   TimerOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { StatusPill, type StatusPillTone } from '@/components/dashboard/dashboard-ui';
@@ -29,6 +39,55 @@ import { cn } from '@/lib/utils';
 import { formatDuration, formatTashkentDateTime } from '@/lib/format';
 import { QUIZ_MAX_REWARD, PREMIUM_DIAMOND_MULTIPLIER } from '@/lib/gamification';
 import type { Attempt, AttemptAnswer } from '@/types';
+
+// Belgilangan javoblar tab sessiyasida saqlanadi (sessionStorage): sahifa yangilansa
+// yo'qolmaydi, brauzer/tab yopilganda esa avtomatik tozalanadi
+const draftKey = (attemptId: string) => `quiz-draft:${attemptId}`;
+
+interface QuizDraft {
+  answers: Record<string, number | string>;
+  currentIndex: number;
+}
+
+function readDraft(attemptId: string): QuizDraft | null {
+  try {
+    const raw = window.sessionStorage.getItem(draftKey(attemptId));
+    return raw ? (JSON.parse(raw) as QuizDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft(attemptId: string) {
+  try {
+    window.sessionStorage.removeItem(draftKey(attemptId));
+  } catch {
+    // saqlash imkoni yo'q (maxfiy rejim) — e'tiborsiz
+  }
+}
+
+// Urinishga bog'liq barqaror aralashtirish: har bir o'quvchida (urinishda) tartib
+// har xil, lekin sahifa yangilansa o'zgarmaydi
+function seededShuffle<T>(items: T[], seed: string): T[] {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  const random = () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+const OPTION_LETTERS = 'ABCDEFGHIJ';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -81,6 +140,39 @@ export default function TakeQuizPage({ params }: PageProps) {
   const inProgressFromServer = attempts?.find((a) => a.status === 'in_progress') ?? null;
   const effectiveAttempt =
     finished || expiredMessage ? null : (activeAttempt ?? inProgressFromServer);
+  const attemptId = effectiveAttempt?._id ?? null;
+
+  // Urinish ochilganda saqlangan javoblarni bir marta tiklaymiz
+  const [restoredFor, setRestoredFor] = useState<string | null>(null);
+  if (attemptId && restoredFor !== attemptId) {
+    setRestoredFor(attemptId);
+    const draft = readDraft(attemptId);
+    if (draft) {
+      setAnswers(draft.answers ?? {});
+      setCurrentIndex(draft.currentIndex ?? 0);
+    }
+  }
+
+  // Tugagan (topshirilgan / vaqti o'tgan) urinishlarning qolib ketgan yozuvlarini
+  // tozalaymiz — masalan, test boshqa qurilmada yakunlangan bo'lsa
+  useEffect(() => {
+    attempts?.forEach((attempt) => {
+      if (attempt.status !== 'in_progress') clearDraft(attempt._id);
+    });
+  }, [attempts]);
+
+  // Har bir o'zgarishda saqlaymiz
+  useEffect(() => {
+    if (!attemptId || restoredFor !== attemptId) return;
+    try {
+      window.sessionStorage.setItem(
+        draftKey(attemptId),
+        JSON.stringify({ answers, currentIndex } satisfies QuizDraft)
+      );
+    } catch {
+      // saqlash imkoni yo'q — test baribir ishlayveradi
+    }
+  }, [attemptId, restoredFor, answers, currentIndex]);
 
   const myTargetGrade = user?.grade?.number
     ? quiz?.targetGrades.find(
@@ -114,6 +206,30 @@ export default function TakeQuizPage({ params }: PageProps) {
   useEffect(() => {
     handleSubmitRef.current = handleSubmit;
   });
+
+  // Test davomida chiqishni to'sish: sahifani yopish/yangilash — brauzer ogohlantirishi,
+  // "Orqaga" tugmasi — tarixga qayta yoziladi va chiqish oynasi ochiladi.
+  // Testdan faqat uni yakunlab chiqiladi.
+  const inTest = !!effectiveAttempt;
+  const [exitOpen, setExitOpen] = useState(false);
+  useEffect(() => {
+    if (!inTest) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    const onPopState = () => {
+      window.history.pushState(null, '', window.location.href);
+      setExitOpen(true);
+    };
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [inTest]);
 
   if (isLoading || attemptsLoading || !quiz) {
     return <div className="mx-auto h-96 w-full max-w-5xl animate-pulse rounded-[22px] bg-muted" />;
@@ -175,11 +291,13 @@ export default function TakeQuizPage({ params }: PageProps) {
       { attemptId: effectiveAttempt._id, answers: payload },
       {
         onSuccess: (attempt) => {
+          clearDraft(effectiveAttempt._id);
           setActiveAttempt(null);
           setFinished(attempt);
         },
         onError: (error) => {
           if (isAttemptExpiredError(error)) {
+            clearDraft(effectiveAttempt._id);
             setActiveAttempt(null);
             setExpiredMessage(error.message);
           }
@@ -276,20 +394,28 @@ export default function TakeQuizPage({ params }: PageProps) {
       return value !== undefined && value !== '';
     }
 
-    const answeredCount = questions.filter((q) => isAnswered(q._id)).length;
-    const unansweredCount = questions.length - answeredCount;
-    const safeIndex = Math.min(currentIndex, questions.length - 1);
-    const currentQuestion = questions[safeIndex];
-    const isLastQuestion = safeIndex >= questions.length - 1;
-    const progress = questions.length > 0 ? ((safeIndex + 1) / questions.length) * 100 : 0;
+    // Savollar va variantlar o'quvchiga aralashtirib beriladi (ko'chirmaslik uchun).
+    // Javob baribir asl variant indeksi bilan saqlanadi — backend o'zgarmaydi.
+    const ordered = seededShuffle(questions, effectiveAttempt._id);
+    const answeredCount = ordered.filter((q) => isAnswered(q._id)).length;
+    const unansweredCount = ordered.length - answeredCount;
+    const safeIndex = Math.min(currentIndex, ordered.length - 1);
+    const currentQuestion = ordered[safeIndex];
+    const isLastQuestion = safeIndex >= ordered.length - 1;
+    const progress = ordered.length > 0 ? ((safeIndex + 1) / ordered.length) * 100 : 0;
     const lowTime = remainingSec !== null && remainingSec <= 60;
 
-    const options = currentQuestion
+    // To'g'ri/Noto'g'ri tartibi saqlanadi; ko'p variantlilar aralashtiriladi va
+    // harflar joyiga qarab qayta qo'yiladi (A, B, C...)
+    const options: { label: string; text: string; originalIndex: number }[] = currentQuestion
       ? currentQuestion.options?.length
-        ? currentQuestion.options
+        ? seededShuffle(
+            currentQuestion.options.map((option, originalIndex) => ({ ...option, originalIndex })),
+            `${effectiveAttempt._id}:${currentQuestion._id}`
+          ).map((option, i) => ({ ...option, label: OPTION_LETTERS[i] ?? option.label }))
         : [
-            { label: 'A', text: "To'g'ri" },
-            { label: 'B', text: "Noto'g'ri" },
+            { label: 'A', text: "To'g'ri", originalIndex: 0 },
+            { label: 'B', text: "Noto'g'ri", originalIndex: 1 },
           ]
       : [];
 
@@ -297,9 +423,40 @@ export default function TakeQuizPage({ params }: PageProps) {
       <div className="fixed inset-0 z-40 overflow-y-auto bg-background">
         <header className="sticky top-0 z-10 border-b border-border bg-card">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
-            <Button variant="outline" render={<Link href="/student/quizzes" />}>
+            <Button variant="outline" onClick={() => setExitOpen(true)}>
               Chiqish
             </Button>
+            <AlertDialog open={exitOpen} onOpenChange={setExitOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Testdan chiqib bo&apos;lmaydi</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Test boshlangan — taymer to&apos;xtamaydi va urinish hisoblanadi. Chiqish uchun
+                    testni yakunlang.{' '}
+                    {unansweredCount > 0 ? (
+                      <strong className="text-destructive">
+                        {unansweredCount} ta savolga hali javob berilmagan.
+                      </strong>
+                    ) : (
+                      'Barcha savollarga javob berdingiz.'
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Testni davom ettirish</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    disabled={submitAttempt.isPending}
+                    onClick={() => {
+                      setExitOpen(false);
+                      handleSubmit();
+                    }}
+                  >
+                    Yakunlash va chiqish
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <div className="min-w-0 flex-[1_1_200px]">
               <p className="truncate text-[17px] font-bold">{quiz.title}</p>
               <p className="text-[13px] text-muted-foreground">
@@ -332,7 +489,7 @@ export default function TakeQuizPage({ params }: PageProps) {
             <section className="flex min-w-0 flex-col gap-5 rounded-[22px] border border-border bg-card p-5 sm:p-8">
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className="font-heading font-semibold text-muted-foreground">
-                  {safeIndex + 1} / {questions.length}
+                  {safeIndex + 1} / {ordered.length}
                 </span>
                 <StatusPill tone="primary">
                   {LIVE_QUESTION_TYPE_LABELS[currentQuestion.type]} · {currentQuestion.points} ball
@@ -366,15 +523,18 @@ export default function TakeQuizPage({ params }: PageProps) {
                   onCopy={(e) => e.preventDefault()}
                   onContextMenu={(e) => e.preventDefault()}
                 >
-                  {options.map((option, optIdx) => {
-                    const selected = answers[currentQuestion._id] === optIdx;
+                  {options.map((option) => {
+                    const selected = answers[currentQuestion._id] === option.originalIndex;
                     return (
                       <button
-                        key={option.label}
+                        key={option.originalIndex}
                         type="button"
                         aria-pressed={selected}
                         onClick={() =>
-                          setAnswers((prev) => ({ ...prev, [currentQuestion._id]: optIdx }))
+                          setAnswers((prev) => ({
+                            ...prev,
+                            [currentQuestion._id]: option.originalIndex,
+                          }))
                         }
                         className={cn(
                           'flex items-center gap-3.5 rounded-2xl border-2 px-4 py-4 text-left text-base font-semibold transition-colors sm:text-lg',
@@ -417,7 +577,7 @@ export default function TakeQuizPage({ params }: PageProps) {
                 ) : (
                   <Button
                     size="lg"
-                    onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
+                    onClick={() => setCurrentIndex((i) => Math.min(ordered.length - 1, i + 1))}
                   >
                     Keyingi savol <ArrowRight className="size-4" />
                   </Button>
@@ -432,7 +592,7 @@ export default function TakeQuizPage({ params }: PageProps) {
           >
             <span className="font-bold">Savollar</span>
             <div className="grid grid-cols-5 gap-2">
-              {questions.map((question, idx) => {
+              {ordered.map((question, idx) => {
                 const answered = isAnswered(question._id);
                 const isCurrent = idx === safeIndex;
                 return (

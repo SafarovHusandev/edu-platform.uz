@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { RotateCw, Video, VideoOff } from 'lucide-react';
+import { Loader2, RotateCw, Video, VideoOff } from 'lucide-react';
 import { resolveAssetUrl } from '@/lib/config';
 import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
+import { getTokenCookie } from '@/lib/cookies';
+import type { Lesson } from '@/types';
 
 // YouTube havolasini embed ko'rinishiga o'giradi; boshqa manbalar uchun null
 function youtubeEmbedUrl(url: string) {
@@ -282,4 +284,258 @@ export function LessonVideo({
       <span className="font-semibold">Videoni ochish</span>
     </a>
   );
+}
+
+// To'liq ekran o'rab turgan blokka ko'chiriladi, aks holda suv belgisi yo'qoladi
+function useWrapperFullscreen(
+  wrapperRef: React.RefObject<HTMLDivElement | null>,
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  enabled: boolean
+) {
+  useEffect(() => {
+    if (!enabled) return;
+    function onFullscreenChange() {
+      const wrapper = wrapperRef.current;
+      if (wrapper && document.fullscreenElement === videoRef.current) {
+        document
+          .exitFullscreen()
+          .then(() => wrapper.requestFullscreen())
+          .catch(() => undefined);
+      }
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, [wrapperRef, videoRef, enabled]);
+}
+
+function VideoErrorOverlay({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-admin/95 p-6 text-center text-admin-foreground">
+      <VideoOff className="size-9 text-admin-muted" />
+      <div>
+        <p className="font-semibold">Videoni yuklab bo&apos;lmadi</p>
+        <p className="mt-1 text-sm text-admin-muted">{message}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+      >
+        <RotateCw className="size-4" /> Qayta urinish
+      </button>
+    </div>
+  );
+}
+
+// HLS kalit so'rovi (…/media/hls/<lessonId>/key) — faqat shunga token qo'shiladi
+const HLS_KEY_URL = /\/media\/hls\/[^?]+\/key(\?|$)/;
+
+// Shifrlangan HLS video (hls.js). Playlist va bo'laklar imzolangan (10 daqiqa),
+// kalit esa faqat Authorization token bilan beriladi — havolani nusxalab boshqa
+// joyda ochib bo'lmaydi. Imzo eskirib 403 bo'lsa: yangi havola olinib, to'xtagan
+// joydan davom etiladi.
+function HlsVideo({
+  src,
+  watermark,
+  onExpired,
+}: {
+  src: string;
+  watermark: boolean;
+  onExpired?: () => void;
+}) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const resumeRef = useRef<{ time: number; playing: boolean } | null>(null);
+  const fatalRef = useRef<(status: number | null) => void>(() => undefined);
+  const [activeSrc, setActiveSrc] = useState(src);
+  const [awaitingFresh, setAwaitingFresh] = useState(false);
+  const [failures, setFailures] = useState(0);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const gaveUp = errorText !== null;
+
+  useWrapperFullscreen(wrapperRef, videoRef, watermark);
+
+  // Boshqa dars — darhol; xatodan keyin yangi imzo kelsa — o'tamiz
+  if (src !== activeSrc && (mediaKey(src) !== mediaKey(activeSrc) || awaitingFresh)) {
+    setActiveSrc(src);
+    if (awaitingFresh) setAwaitingFresh(false);
+  }
+
+  function handleFatal(status: number | null) {
+    if (awaitingFresh || gaveUp) return;
+    const video = videoRef.current;
+    if (video) resumeRef.current = { time: video.currentTime, playing: !video.paused };
+    const nextFailures = failures + 1;
+    setFailures(nextFailures);
+    if (nextFailures >= MAX_VIDEO_RETRIES) {
+      setErrorText(videoErrorText(status));
+      return;
+    }
+    if (src !== activeSrc) {
+      setActiveSrc(src);
+    } else {
+      setAwaitingFresh(true);
+      onExpired?.();
+    }
+  }
+
+  useEffect(() => {
+    fatalRef.current = handleFatal;
+  });
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    let cancelled = false;
+    let hls: import('hls.js').default | null = null;
+
+    import('hls.js').then(({ default: Hls }) => {
+      if (cancelled) return;
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          xhrSetup: (xhr, url) => {
+            if (!HLS_KEY_URL.test(url)) return;
+            const token = getTokenCookie();
+            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          },
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) return;
+          fatalRef.current(data.response?.code ?? null);
+        });
+        hls.loadSource(activeSrc);
+        hls.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Eski iOS: MediaSource yo'q, native HLS kalit so'roviga token qo'sha olmaydi
+        video.src = activeSrc;
+      } else {
+        setErrorText("Brauzeringiz bu videoni qo'llab-quvvatlamaydi — boshqa brauzerda oching.");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      hls?.destroy();
+    };
+  }, [activeSrc]);
+
+  function handleLoadedMetadata() {
+    const video = videoRef.current;
+    const resume = resumeRef.current;
+    if (!video || !resume) return;
+    resumeRef.current = null;
+    video.currentTime = resume.time;
+    if (resume.playing) video.play().catch(() => undefined);
+  }
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="relative overflow-hidden rounded-2xl bg-admin [&:fullscreen]:rounded-none"
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <video
+        ref={videoRef}
+        onError={() => fatalRef.current(null)}
+        onLoadedMetadata={handleLoadedMetadata}
+        onPlaying={() => failures && setFailures(0)}
+        controls
+        playsInline
+        preload="metadata"
+        controlsList="nodownload noremoteplayback"
+        disablePictureInPicture
+        className="aspect-video h-full w-full"
+      />
+      {watermark && <VideoWatermark />}
+      {gaveUp && (
+        <VideoErrorOverlay
+          message={errorText}
+          onRetry={() => {
+            setFailures(0);
+            setErrorText(null);
+            setAwaitingFresh(true);
+            onExpired?.();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function VideoPlaceholder({
+  icon: Icon,
+  spin,
+  title,
+  text,
+}: {
+  icon: typeof Video;
+  spin?: boolean;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-2xl bg-admin p-6 text-center text-admin-foreground">
+      <Icon className={cn('size-9 text-admin-muted', spin && 'animate-spin')} />
+      <div>
+        <p className="font-semibold">{title}</p>
+        <p className="mt-1 text-sm text-admin-muted">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+type MainVideoLesson = Pick<Lesson, 'videoUrl' | 'videoStatus' | 'video'>;
+
+// Darsda asosiy video bormi (tayyor, tayyorlanayotgan yoki tashqi havola)
+export function hasMainVideo(lesson: MainVideoLesson) {
+  return Boolean(
+    lesson.videoUrl ||
+    lesson.video?.url ||
+    lesson.videoStatus === 'processing' ||
+    lesson.videoStatus === 'failed'
+  );
+}
+
+// Darsning asosiy videosi: HLS (ready) / tayyorlanmoqda / xato / tashqi havola (YouTube)
+export function LessonMainVideo({
+  lesson,
+  watermark = false,
+  onExpired,
+}: {
+  lesson: MainVideoLesson;
+  watermark?: boolean;
+  onExpired?: () => void;
+}) {
+  if (lesson.videoStatus === 'processing') {
+    return (
+      <VideoPlaceholder
+        icon={Loader2}
+        spin
+        title="Video tayyorlanmoqda..."
+        text="Odatda bir necha daqiqa davom etadi — sahifa o'zi yangilanadi."
+      />
+    );
+  }
+  if (lesson.videoStatus === 'failed') {
+    return (
+      <VideoPlaceholder
+        icon={VideoOff}
+        title="Videoni tayyorlab bo'lmadi"
+        text="Videoni qayta yuklang yoki administratorga xabar bering."
+      />
+    );
+  }
+  if (lesson.videoStatus === 'ready' && lesson.video?.url) {
+    return (
+      <HlsVideo
+        src={resolveAssetUrl(lesson.video.url) ?? lesson.video.url}
+        watermark={watermark}
+        onExpired={onExpired}
+      />
+    );
+  }
+  if (lesson.videoUrl) {
+    return <LessonVideo url={lesson.videoUrl} watermark={watermark} onExpired={onExpired} />;
+  }
+  return null;
 }

@@ -204,9 +204,19 @@ export default function TeacherQuizzesPage() {
         title="Testlarim"
         className="mb-0"
         actions={
-          <Button size="lg" render={<Link href="/teacher/quizzes/new" />}>
-            <Plus className="size-4" /> Yangi test
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="lg" variant="outline" render={<Link href="/teacher/quiz-shares" />}>
+              <Share2 className="size-4" /> Ulashilganlar
+              {pendingCount > 0 && (
+                <span className="rounded-full bg-destructive px-1.5 text-[11px] leading-5 font-bold text-white">
+                  {pendingCount}
+                </span>
+              )}
+            </Button>
+            <Button size="lg" render={<Link href="/teacher/quizzes/new" />}>
+              <Plus className="size-4" /> Yangi test
+            </Button>
+          </div>
         }
       />
 

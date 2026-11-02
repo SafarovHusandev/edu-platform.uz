@@ -6,7 +6,10 @@ import { QuizSharesPanel } from '@/components/quizzes/quiz-share-dialogs';
 export default function QuizSharesPage() {
   return (
     <div className="mx-auto w-full max-w-5xl">
-      <PageHeader title="Ulashilgan testlar" />
+      <PageHeader
+        title="Ulashilgan testlar"
+        breadcrumbs={[{ label: 'Testlarim', href: '/teacher/quizzes' }, { label: 'Ulashilgan' }]}
+      />
       <QuizSharesPanel />
     </div>
   );

@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { StatusPill, type StatusPillTone } from '@/components/dashboard/dashboard-ui';
 import { AttemptResultView } from '@/components/quizzes/attempt-result-view';
+import { StartQuizDialog } from '@/components/quizzes/start-quiz-dialog';
 import {
   isAttemptExpiredError,
   useQuiz,
@@ -131,6 +132,7 @@ export default function TakeQuizPage({ params }: PageProps) {
   const [expiredMessage, setExpiredMessage] = useState<string | null>(null);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const autoSubmittedRef = useRef(false);
   const handleSubmitRef = useRef<() => void>(() => {});
@@ -240,6 +242,8 @@ export default function TakeQuizPage({ params }: PageProps) {
     (a, b) => (b.attemptNumber ?? 0) - (a.attemptNumber ?? 0)
   );
   const lastAttempt = pastAttempts[0];
+  // Ogohlantirish uchun: oxirgi tekshirilgan urinish natijasi
+  const lastReviewed = pastAttempts.find((a) => a.status === 'reviewed' && a.scorePercent != null);
 
   // my-attempts javobidagi maxAttempts allaqachon shu student uchun to'g'ri
   // hisoblangan (sinfi + tarif chegarasi) — shuni ko'rsatamiz. "Standart tarif"
@@ -261,8 +265,12 @@ export default function TakeQuizPage({ params }: PageProps) {
   function handleStart() {
     setStartError(null);
     startAttempt.mutate(id, {
-      onSuccess: resetForNewAttempt,
+      onSuccess: (attempt) => {
+        setConfirmOpen(false);
+        resetForNewAttempt(attempt);
+      },
       onError: (error) => {
+        setConfirmOpen(false);
         if (
           error instanceof ApiError &&
           error.message.includes("sinfingiz uchun mo'ljallanmagan")
@@ -772,12 +780,24 @@ export default function TakeQuizPage({ params }: PageProps) {
               <Button
                 size="lg"
                 className="h-12 w-full text-base font-bold"
-                onClick={handleStart}
+                onClick={() => setConfirmOpen(true)}
                 disabled={startAttempt.isPending}
               >
                 {startAttempt.isPending && <Loader2 className="size-4 animate-spin" />}
                 Testni boshlash
               </Button>
+              <StartQuizDialog
+                open={confirmOpen}
+                onOpenChange={(open) => !startAttempt.isPending && setConfirmOpen(open)}
+                title={quiz.title}
+                questionCount={questionCount}
+                timeLimit={timeLimit}
+                attemptsLeft={attemptsLeft}
+                maxAttempts={displayedMaxAttempts}
+                previousScore={lastReviewed?.scorePercent ?? null}
+                pending={startAttempt.isPending}
+                onConfirm={handleStart}
+              />
               {timeLimit != null && (
                 <p className="text-center text-xs text-muted-foreground">
                   Boshlagach taymer to&apos;xtamaydi

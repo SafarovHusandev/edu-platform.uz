@@ -26,11 +26,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <ul className="flex flex-col gap-3 text-[15px]">
           <li className="flex items-center gap-2.5">
             <span className="size-2.5 rounded-full bg-gold" />
-            Telefon orqali ro&apos;yxatdan o&apos;tganlar admin tasdiqini kutadi
+            Telefon yoki Telegram bot orqali ro&apos;yxatdan o&apos;ting
           </li>
           <li className="flex items-center gap-2.5">
             <span className="size-2.5 rounded-full bg-[#4ADE80]" />
-            Telegram bot orqali — darhol faol hisob
+            Administrator tasdiqlagach, hisobingiz faollashadi
           </li>
         </ul>
       </aside>

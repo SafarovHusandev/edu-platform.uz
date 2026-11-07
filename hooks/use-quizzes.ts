@@ -256,10 +256,20 @@ export function useDeleteQuestion(quizId: string) {
 // "Bu test sizning sinfingiz uchun mo'ljallanmagan" xatosi alohida ko'rsatiladi
 // (chaqiruvchi komponentda banner sifatida) — shu sabab bu yerda toast chiqarilmaydi.
 export function useStartAttempt() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (quizId: string) => {
       const res = await api.post<{ attempt: Attempt }>(`/quizzes/${quizId}/start`);
       return res.attempt;
+    },
+    // Boshlangan urinishni keshga darhol qo'shamiz: test sahifasi ochilganda
+    // eski ma'lumot bilan "Boshlash" ekranini ko'rsatib qo'ymasin
+    onSuccess: (attempt, quizId) => {
+      queryClient.setQueryData<MyAttemptsResult>(['my-attempts', quizId], (old) =>
+        old ? { ...old, attempts: [attempt, ...old.attempts] } : old
+      );
+      queryClient.invalidateQueries({ queryKey: ['my-attempts', quizId] });
+      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
     },
     onError: (error) => {
       if (error instanceof ApiError && error.message.includes("sinfingiz uchun mo'ljallanmagan"))

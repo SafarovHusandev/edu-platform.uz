@@ -34,6 +34,8 @@ export function useUsers(
     isBlocked?: boolean
     role?: Role
     tarif?: Tarif
+    grade?: number
+    gradeLetter?: string
   } = {},
   options: { enabled?: boolean } = {}
 ) {

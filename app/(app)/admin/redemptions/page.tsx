@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Gift, Loader2, PackageCheck, X } from 'lucide-react';
+import { Check, FileDown, Gift, Loader2, PackageCheck, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -25,9 +26,11 @@ import {
   useDeliverRedemption,
 } from '@/hooks/use-rewards';
 import { formatNumber, formatTashkentDateTime } from '@/lib/format';
+import { api } from '@/lib/api-client';
+import { exportRowsToPdf, type ExportColumn } from '@/lib/export-results';
 import { resolveAssetUrl } from '@/lib/config';
 import { cn } from '@/lib/utils';
-import type { Redemption, RedemptionActor, User } from '@/types';
+import type { Paginated, Redemption, RedemptionActor, Reward, User } from '@/types';
 
 const PAGE_SIZE = 15;
 
@@ -49,6 +52,60 @@ function statusLine(redemption: Redemption) {
     case 'rejected':
       return `Rad etildi${actorName(redemption.rejectedBy) ? ` · ${actorName(redemption.rejectedBy)}` : ''}${redemption.rejectReason ? ` · «${redemption.rejectReason}»` : ''} · olmos qaytarildi`;
   }
+}
+
+const STATUS_LABELS: Record<Redemption['status'], string> = {
+  pending: 'Kutilmoqda',
+  approved: 'Tasdiqlangan',
+  delivered: 'Topshirilgan',
+  rejected: 'Rad etilgan',
+};
+
+const PDF_COLUMNS: ExportColumn[] = [
+  { key: 'no', label: '#' },
+  { key: 'reward', label: 'Mukofot' },
+  { key: 'student', label: "O'quvchi" },
+  { key: 'grade', label: 'Sinf' },
+  { key: 'diamonds', label: 'Olmos' },
+  { key: 'createdAt', label: "So'rov vaqti" },
+  { key: 'status', label: 'Holat' },
+  { key: 'details', label: 'Izoh' },
+];
+
+// Tanlangan bo'limdagi barcha so'rovlar (sahifalab yig'iladi)
+async function fetchAllRedemptions(status: string) {
+  const limit = 100;
+  const all: Redemption[] = [];
+  for (let page = 1; page <= 50; page++) {
+    const res = await api.get<Paginated<Redemption>>('/rewards/redemptions', {
+      status,
+      page,
+      limit,
+    });
+    all.push(...res.items);
+    if (all.length >= res.total || res.items.length < limit) break;
+  }
+  return all;
+}
+
+function redemptionRow(redemption: Redemption, index: number) {
+  const student = typeof redemption.student === 'object' ? (redemption.student as User) : null;
+  const reward = typeof redemption.reward === 'object' ? (redemption.reward as Reward) : null;
+  const grade = student?.grade?.number
+    ? `${student.grade.number}-${student.grade.letter ?? ''}`
+    : '';
+  // Holatdan keyingi qism (kim tasdiqladi, sabab va h.k.)
+  const details = statusLine(redemption).split(' · ').slice(1).join(' · ');
+  return {
+    no: index + 1,
+    reward: reward?.title ?? '—',
+    student: student?.name ?? '—',
+    grade,
+    diamonds: formatNumber(redemption.diamondsSpent),
+    createdAt: formatTashkentDateTime(redemption.createdAt),
+    status: STATUS_LABELS[redemption.status],
+    details,
+  };
 }
 
 export default function AdminRedemptionsPage() {
@@ -104,6 +161,46 @@ export default function AdminRedemptionsPage() {
     },
   ];
 
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExportPdf() {
+    setExporting(true);
+    try {
+      const items = await fetchAllRedemptions(status);
+      if (items.length === 0) {
+        toast.info("Yuklab olish uchun so'rovlar yo'q");
+        return;
+      }
+      const stageLabel =
+        stage === 'archive'
+          ? archiveStatus === 'delivered'
+            ? 'Topshirilganlar'
+            : archiveStatus === 'rejected'
+              ? 'Rad etilganlar'
+              : 'Tarix'
+          : stage === 'pending'
+            ? 'Kutilmoqda'
+            : 'Tasdiqlangan';
+      const total = items.reduce((sum, r) => sum + (r.diamondsSpent ?? 0), 0);
+      const today = new Date().toISOString().slice(0, 10);
+      await exportRowsToPdf(
+        items.map(redemptionRow),
+        PDF_COLUMNS,
+        `mukofot-sorovlari-${stage}-${today}`,
+        `Mukofot so'rovlari — ${stageLabel}`,
+        {
+          orientation: 'landscape',
+          subtitle: `${items.length} ta so'rov · jami ${formatNumber(total)} olmos · ${formatTashkentDateTime(new Date().toISOString())}`,
+        }
+      );
+      toast.success('PDF yuklab olindi');
+    } catch {
+      toast.error('PDF tayyorlashda xatolik yuz berdi');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function handleReject() {
     if (!rejecting) return;
     rejectRedemption.mutate(
@@ -122,7 +219,19 @@ export default function AdminRedemptionsPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl">
-      <PageHeader title="Mukofot so'rovlari" />
+      <PageHeader
+        title="Mukofot so'rovlari"
+        actions={
+          <Button variant="outline" onClick={handleExportPdf} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileDown className="size-4" />
+            )}
+            PDF yuklab olish
+          </Button>
+        }
+      />
 
       <div role="tablist" className="mb-5 grid grid-cols-3 gap-2.5 sm:gap-3">
         {stages.map((item) => {

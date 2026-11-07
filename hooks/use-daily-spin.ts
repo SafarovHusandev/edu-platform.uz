@@ -19,12 +19,18 @@ export interface DailySpinStatus {
   canSpin: boolean
 }
 
-export interface DailySpinResult {
+// Aylantirish olmos bermaydi: o'quvchi sinfiga mos savol qaytadi. Aylanish shu
+// zahoti ishlatilgan hisoblanadi, javob esa answerWithinMinutes ichida kutiladi.
+export interface DailySpinQuestion {
+  question: { question: string; options: string[] }
+  answerWithinMinutes: number
+}
+
+export interface DailySpinAnswerResult {
+  correct: boolean
   diamondsWon: number
-  streakCount: number
-  spinsUsedToday: number
-  spinsRemainingToday: number
-  maxSpinsToday: number
+  correctIndex: number
+  streakCount?: number
 }
 
 // Faqat student rolidagi foydalanuvchilar uchun: kuniga standart tarifda 1,
@@ -56,12 +62,31 @@ export function useDailySpinHistory(limit = 10) {
 export function useDailySpin() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => api.post<DailySpinResult>("/daily-spin/spin"),
+    mutationFn: () => api.post<DailySpinQuestion>("/daily-spin/spin"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["daily-spin-status"] })
+    },
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ["daily-spin-status"] })
+      toast.error(errorMessage(error, "Aylantirishda xatolik"))
+    },
+  })
+}
+
+export function useAnswerDailySpin() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (selectedIndex: number) =>
+      api.post<DailySpinAnswerResult>("/daily-spin/answer", { selectedIndex }),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["daily-spin-status"] })
       queryClient.invalidateQueries({ queryKey: ["daily-spin-history"] })
       await refreshCurrentUser()
     },
-    onError: (error) => toast.error(errorMessage(error, "Aylantirishda xatolik")),
+    // 400: javob muddati o'tgan — holatni serverdan qayta olamiz
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ["daily-spin-status"] })
+      toast.error(errorMessage(error, "Javobni yuborishda xatolik"))
+    },
   })
 }

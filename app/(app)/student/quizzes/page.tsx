@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -9,8 +10,14 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { StatusPill, type StatusPillTone } from '@/components/dashboard/dashboard-ui';
+import { StartQuizDialog } from '@/components/quizzes/start-quiz-dialog';
 import { FilterPills } from '@/components/ui/filter-pills';
-import { useMyAttemptsMany, useQuizzes, type MyAttemptsResult } from '@/hooks/use-quizzes';
+import {
+  useMyAttemptsMany,
+  useQuizzes,
+  useStartAttempt,
+  type MyAttemptsResult,
+} from '@/hooks/use-quizzes';
 import { useAuthStore } from '@/store/auth-store';
 import { formatTashkentDateTime, formatTimeLeft } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -36,8 +43,11 @@ interface QuizRowState {
   note: { text: string; className: string } | null;
   attemptsLabel: string;
   remainingLabel: string | null;
-  action: { label: string; variant: 'default' | 'outline'; disabled?: boolean };
+  action: { label: string; variant: 'default' | 'outline'; disabled?: boolean; start?: boolean };
   timeLimit: number | null | undefined;
+  remaining: number;
+  max: number;
+  best: number | null;
 }
 
 function myTargetGrade(quiz: Quiz, grade: Grade | undefined) {
@@ -86,6 +96,9 @@ function getRowState(
   const timeLimit = tg?.effectiveTimeLimit ?? tg?.timeLimit ?? quiz.timeLimit;
 
   const base = {
+    remaining,
+    max,
+    best,
     attemptsLabel: `${remaining}/${max}`,
     remainingLabel: remaining > 0 ? `${remaining}/${max} urinish qoldi` : null,
     timeLimit,
@@ -160,11 +173,22 @@ function getRowState(
           className: urgent ? 'text-destructive' : 'text-muted-foreground',
         }
       : null,
-    action: { label: 'Boshlash', variant: 'default' },
+    action: { label: 'Boshlash', variant: 'default', start: true },
   };
 }
 
-function QuizAction({ quiz, state }: { quiz: Quiz; state: QuizRowState }) {
+function QuizAction({
+  quiz,
+  state,
+  onStart,
+}: {
+  quiz: Quiz;
+  state: QuizRowState;
+  onStart: (quiz: Quiz, state: QuizRowState) => void;
+}) {
+  if (state.action.start) {
+    return <Button onClick={() => onStart(quiz, state)}>{state.action.label}</Button>;
+  }
   if (state.action.disabled) {
     return (
       <Button variant="secondary" disabled>
@@ -190,6 +214,21 @@ export default function StudentQuizzesPage() {
   const { data, isLoading, isError, refetch } = useQuizzes({ page: 1, limit: 50 });
   const grade = useAuthStore((s) => s.user?.grade);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const router = useRouter();
+  const startAttempt = useStartAttempt();
+  const [toStart, setToStart] = useState<{ quiz: Quiz; state: QuizRowState } | null>(null);
+
+  // Tasdiqlangach urinish shu yerda boshlanadi va test ekraniga o'tiladi.
+  // Xato bo'lsa ham test sahifasiga o'tamiz — sababini o'sha yerda ko'rsatadi.
+  function confirmStart() {
+    if (!toStart) return;
+    const quizId = toStart.quiz._id;
+    const open = () => {
+      setToStart(null);
+      router.push(`/student/quizzes/${quizId}`);
+    };
+    startAttempt.mutate(quizId, { onSuccess: open, onError: open });
+  }
 
   // GET /quizzes studentning sinfi bo'yicha filtrlamaydi — frontend o'zi
   // targetGrades ichidan mos kelmagan testlarni yashiradi.
@@ -278,7 +317,11 @@ export default function StudentQuizzesPage() {
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <QuizAction quiz={quiz} state={state} />
+                        <QuizAction
+                          quiz={quiz}
+                          state={state}
+                          onStart={(q, s) => setToStart({ quiz: q, state: s })}
+                        />
                       </td>
                     </tr>
                   );
@@ -319,13 +362,32 @@ export default function StudentQuizzesPage() {
                     >
                       {[state.remainingLabel, state.note?.text].filter(Boolean).join(' · ')}
                     </span>
-                    <QuizAction quiz={quiz} state={state} />
+                    <QuizAction
+                      quiz={quiz}
+                      state={state}
+                      onStart={(q, s) => setToStart({ quiz: q, state: s })}
+                    />
                   </div>
                 </div>
               );
             })}
           </div>
         </>
+      )}
+
+      {toStart && (
+        <StartQuizDialog
+          open
+          onOpenChange={(open) => !open && !startAttempt.isPending && setToStart(null)}
+          title={toStart.quiz.title}
+          questionCount={toStart.quiz.questionsCount ?? toStart.quiz.questions?.length}
+          timeLimit={toStart.state.timeLimit}
+          attemptsLeft={toStart.state.remaining}
+          maxAttempts={toStart.state.max}
+          previousScore={toStart.state.best}
+          pending={startAttempt.isPending}
+          onConfirm={confirmStart}
+        />
       )}
     </div>
   );

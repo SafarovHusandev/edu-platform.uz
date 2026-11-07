@@ -48,25 +48,41 @@ export async function exportRowsToExcel(
   )
 }
 
+// PDF'ning standart shrifti (Helvetica) o'zbekcha ʻ/ʼ va ayrim tirnoqlarni
+// chiqara olmaydi — oddiy apostrofga almashtiramiz
+function pdfSafe(value: string) {
+  return value.replace(/[ʻʼ‘’`´]/g, "'").replace(/[“”]/g, '"')
+}
+
 export async function exportRowsToPdf(
   rows: ExportRow[],
   columns: ExportColumn[],
   filename: string,
-  title?: string
+  title?: string,
+  options: { orientation?: "portrait" | "landscape"; subtitle?: string } = {}
 ) {
   const { jsPDF } = await import("jspdf")
   const autoTable = (await import("jspdf-autotable")).default
-  const doc = new jsPDF()
+  const doc = new jsPDF({ orientation: options.orientation ?? "portrait" })
 
+  let startY = 14
   if (title) {
     doc.setFontSize(14)
-    doc.text(title, 14, 15)
+    doc.text(pdfSafe(title), 14, 15)
+    startY = 22
+  }
+  if (options.subtitle) {
+    doc.setFontSize(9)
+    doc.setTextColor(100)
+    doc.text(pdfSafe(options.subtitle), 14, title ? 21 : 15)
+    doc.setTextColor(0)
+    startY = title ? 26 : 20
   }
 
   autoTable(doc, {
-    startY: title ? 22 : 14,
-    head: [columns.map((column) => column.label)],
-    body: rows.map((row) => columns.map((column) => String(row[column.key] ?? ""))),
+    startY,
+    head: [columns.map((column) => pdfSafe(column.label))],
+    body: rows.map((row) => columns.map((column) => pdfSafe(String(row[column.key] ?? "")))),
     styles: { fontSize: 9 },
     headStyles: { fillColor: [37, 99, 235] },
   })

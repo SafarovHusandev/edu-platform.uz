@@ -9,6 +9,8 @@ export interface ParsedQuestionError {
 
 export interface ParseQuizDocxResult {
   questions: QuestionPayload[];
+  // questions bilan bir tartibda: har bir savolning fayldagi raqami
+  numbers: number[];
   errors: ParsedQuestionError[];
 }
 
@@ -86,9 +88,7 @@ function parseBlock(block: Block): QuestionPayload | ParsedQuestionError {
 
   const normalized = options.map((o) => normalize(o.text));
   const isTrueFalse =
-    options.length === 2 &&
-    normalized.includes('togri') &&
-    normalized.includes('notogri');
+    options.length === 2 && normalized.includes('togri') && normalized.includes('notogri');
 
   const correctIdx = options.findIndex((o) => o.correct);
 
@@ -134,6 +134,7 @@ export async function parseQuizDocx(file: File): Promise<ParseQuizDocxResult> {
 
   const blocks = splitIntoBlocks(rawText);
   const questions: QuestionPayload[] = [];
+  const numbers: number[] = [];
   const errors: ParsedQuestionError[] = [];
 
   for (const block of blocks) {
@@ -142,8 +143,9 @@ export async function parseQuizDocx(file: File): Promise<ParseQuizDocxResult> {
       errors.push(result);
     } else {
       questions.push(result);
+      numbers.push(block.number);
     }
   }
 
-  return { questions, errors };
+  return { questions, numbers, errors };
 }

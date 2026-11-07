@@ -256,6 +256,9 @@ function LoginForm() {
               <span>Olingan 6 xonali kodni quyida kiriting</span>
             </li>
           </ol>
+          <p className="text-sm text-muted-foreground">
+            Yangi hisobga kod administrator tasdiqlagandan keyin beriladi.
+          </p>
 
           <Form {...telegramForm}>
             <form

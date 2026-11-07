@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { Clock, Crown, Flame, Gift, Sparkles, Star, Zap } from 'lucide-react';
+import { toast } from 'sonner';
+import { Check, Clock, Crown, Flame, Gift, Loader2, Sparkles, Star, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,19 +17,22 @@ import { PageHeader } from '@/components/ui/page-header';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { useCountUp } from '@/hooks/use-count-up';
 import {
+  useAnswerDailySpin,
   useDailySpinHistory,
   useDailySpinStatus,
   useDailySpin,
-  type DailySpinResult,
+  type DailySpinAnswerResult,
 } from '@/hooks/use-daily-spin';
 import { useAuthStore } from '@/store/auth-store';
+import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
 const SPIN_DURATION_MS = 4500;
 const SEGMENT_ANGLE = 45;
 
 // 8 bo'lak: rangli bo'laklarda olmos, och bo'laklarda kichik belgilar.
-// Baraban faqat rangli (olmosli) bo'lakda to'xtaydi — yutuq miqdorini backend beradi
+// Baraban faqat rangli (olmosli) bo'lakda to'xtaydi. Yutuqni savolga javob hal qiladi:
+// to'xtagach savol chiqadi, olmosni backend javobdan keyin beradi
 const SEGMENTS = [
   { fill: 'url(#spin-blue)', prize: true },
   { fill: 'url(#spin-light)', icon: Sparkles },
@@ -58,6 +62,37 @@ const CONFETTI = Array.from({ length: 28 }, (_, i) => ({
   delay: (i * 113) % 700,
   round: i % 3 === 0,
 }));
+
+const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+interface PendingQuestion {
+  question: string;
+  options: string[];
+  expiresAt: number;
+}
+
+// Javob berilmagan savol brauzerda saqlanadi: sahifa yangilansa yo'qolmasin, aks
+// holda o'quvchi muddat tugaguncha yangi aylantira olmay qoladi
+const pendingKey = (userId: string) => `daily-spin-question:${userId}`;
+
+function readPending(userId: string): PendingQuestion | null {
+  try {
+    const raw = window.localStorage.getItem(pendingKey(userId));
+    const pending = raw ? (JSON.parse(raw) as PendingQuestion) : null;
+    return pending && pending.expiresAt > Date.now() ? pending : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePending(userId: string, pending: PendingQuestion | null) {
+  try {
+    if (pending) window.localStorage.setItem(pendingKey(userId), JSON.stringify(pending));
+    else window.localStorage.removeItem(pendingKey(userId));
+  } catch {
+    // saqlash imkoni yo'q (maxfiy rejim) — savol faqat sahifa yopilguncha turadi
+  }
+}
 
 function delay(ms: number): CSSProperties {
   return { animationDelay: `${ms}ms` };
@@ -124,6 +159,30 @@ function NextSpinCountdown() {
           </span>
         ))}
       </span>
+    </span>
+  );
+}
+
+// Savolga javob berish uchun qolgan vaqt
+function AnswerCountdown({ expiresAt, onExpire }: { expiresAt: number; onExpire: () => void }) {
+  const [now, setNow] = useState(() => Date.now());
+  const left = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    if (left === 0) onExpire();
+  }, [left, onExpire]);
+  return (
+    <span
+      className={cn(
+        'flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-heading font-bold tabular-nums',
+        left <= 30 ? 'bg-destructive-soft text-destructive' : 'bg-primary-soft text-primary'
+      )}
+    >
+      <Clock className="size-4" />
+      {String(Math.floor(left / 60)).padStart(2, '0')}:{String(left % 60).padStart(2, '0')}
     </span>
   );
 }
@@ -277,19 +336,177 @@ function Wheel({
   );
 }
 
+function SpinQuestionDialog({
+  open,
+  pending,
+  selected,
+  submitting,
+  result,
+  onSelect,
+  onExpire,
+  onClose,
+}: {
+  open: boolean;
+  pending: PendingQuestion | null;
+  selected: number | null;
+  submitting: boolean;
+  result: DailySpinAnswerResult | null;
+  onSelect: (index: number) => void;
+  onExpire: () => void;
+  onClose: () => void;
+}) {
+  if (!pending) return null;
+  const won = !!result?.correct && result.diamondsWon > 0;
+  return (
+    // Javob berilguncha oyna yopilmaydi: aylanish allaqachon ishlatilgan
+    <Dialog open={open} onOpenChange={(next) => !next && result && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="overflow-hidden rounded-3xl p-6 sm:max-w-lg"
+      >
+        {won && (
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            {CONFETTI.map((c, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'lb-confetti absolute -top-3 h-3 w-1.5',
+                  c.round && 'size-2 rounded-full'
+                )}
+                style={{ left: c.left, backgroundColor: c.color, ...delay(c.delay) }}
+              />
+            ))}
+          </div>
+        )}
+        <DialogHeader>
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="font-heading text-xl">
+              {!result
+                ? 'Savolga javob bering'
+                : result.correct
+                  ? "To'g'ri! 🎉"
+                  : "Noto'g'ri javob"}
+            </DialogTitle>
+            {!result && <AnswerCountdown expiresAt={pending.expiresAt} onExpire={onExpire} />}
+          </div>
+        </DialogHeader>
+
+        <p className="text-lg leading-snug font-semibold wrap-break-word">{pending.question}</p>
+
+        <div className="flex flex-col gap-2.5">
+          {pending.options.map((option, index) => {
+            const isCorrect = result?.correctIndex === index;
+            const isWrongPick = !!result && selected === index && !isCorrect;
+            const isPicked = !result && selected === index;
+            return (
+              <button
+                key={index}
+                type="button"
+                disabled={!!result || submitting}
+                onClick={() => onSelect(index)}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border-2 px-3.5 py-3 text-left font-semibold transition-colors',
+                  isCorrect
+                    ? 'border-success bg-success-soft text-success'
+                    : isWrongPick
+                      ? 'border-destructive bg-destructive-soft text-destructive'
+                      : isPicked
+                        ? 'border-primary bg-primary-soft text-primary'
+                        : 'border-border bg-card enabled:hover:border-primary/40',
+                  result && !isCorrect && !isWrongPick && 'opacity-60'
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex size-8 shrink-0 items-center justify-center rounded-[10px] text-sm font-bold',
+                    isCorrect
+                      ? 'bg-success text-white'
+                      : isWrongPick
+                        ? 'bg-destructive text-white'
+                        : isPicked
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-secondary-foreground'
+                  )}
+                >
+                  {isCorrect ? (
+                    <Check className="size-4" />
+                  ) : isWrongPick ? (
+                    <X className="size-4" />
+                  ) : isPicked && submitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    (OPTION_LETTERS[index] ?? index + 1)
+                  )}
+                </span>
+                <span className="min-w-0 wrap-break-word">{option}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {result && (
+          <div className="lb-fade-up flex flex-col items-center gap-1 text-center">
+            {won ? (
+              <>
+                <p className="flex items-center gap-2 font-heading text-4xl font-bold text-gold-foreground">
+                  <DiamondIcon className="lb-pop size-9" />
+                  <WonDiamonds value={result.diamondsWon} />
+                </p>
+                <p className="font-semibold">olmos hisobingizga qo&apos;shildi</p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">
+                Bu safar olmos yo&apos;q, lekin to&apos;g&apos;ri javobni endi bilasiz.
+              </p>
+            )}
+            {!!result.streakCount && result.streakCount > 1 && (
+              <span className="mt-1 flex items-center gap-1 rounded-full bg-gold-soft px-3 py-1 text-sm font-bold text-gold-foreground">
+                <Flame className="size-3.5 fill-[#F59E0B] text-[#EA580C]" />
+                {result.streakCount} kunlik seriya
+              </span>
+            )}
+          </div>
+        )}
+
+        {result && (
+          <DialogFooter>
+            <Button size="lg" className="w-full" onClick={onClose}>
+              Yopish
+            </Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function DailySpinPage() {
   const isPremium = useAuthStore((s) => s.user?.tarif === 'premium');
   const { data: status, isLoading, isError, refetch } = useDailySpinStatus();
   const spin = useDailySpin();
+  const answer = useAnswerDailySpin();
+  const userId = useAuthStore((s) => s.user?._id);
 
   const [rotation, setRotation] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [winIndex, setWinIndex] = useState<number | null>(null);
   const [showWin, setShowWin] = useState(false);
-  const [celebration, setCelebration] = useState(0);
-  const [pendingResult, setPendingResult] = useState<DailySpinResult | null>(null);
-  const [resultOpen, setResultOpen] = useState(false);
+  const [pending, setPending] = useState<PendingQuestion | null>(null);
+  const [questionOpen, setQuestionOpen] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [answerResult, setAnswerResult] = useState<DailySpinAnswerResult | null>(null);
   const { data: history } = useDailySpinHistory(5);
+
+  // Sahifa yangilanganda javob berilmagan savolni bir marta tiklaymiz
+  const [restoredFor, setRestoredFor] = useState<string | null>(null);
+  if (userId && restoredFor !== userId) {
+    setRestoredFor(userId);
+    const saved = readPending(userId);
+    if (saved) {
+      setPending(saved);
+      setQuestionOpen(true);
+    }
+  }
 
   const canSpin = !!status?.canSpin && !spin.isPending && !isAnimating;
   const busy = spin.isPending || isAnimating;
@@ -302,7 +519,15 @@ export default function DailySpinPage() {
         const target = PRIZE_SEGMENTS[Math.floor(Math.random() * PRIZE_SEGMENTS.length)];
         const center = target * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
         const jitter = (Math.random() - 0.5) * (SEGMENT_ANGLE * 0.6);
-        setPendingResult(result);
+        const next: PendingQuestion = {
+          question: result.question.question,
+          options: result.question.options,
+          expiresAt: Date.now() + (result.answerWithinMinutes ?? 5) * 60_000,
+        };
+        if (userId) writePending(userId, next);
+        setPending(next);
+        setSelected(null);
+        setAnswerResult(null);
         setWinIndex(target);
         setIsAnimating(true);
         setRotation((prev) => {
@@ -317,10 +542,42 @@ export default function DailySpinPage() {
     if (!isAnimating) return;
     setIsAnimating(false);
     setShowWin(true);
-    setCelebration((n) => n + 1);
-    if (pendingResult) setTimeout(() => setResultOpen(true), 900);
+    setTimeout(() => setQuestionOpen(true), 900);
   }
 
+  function discardQuestion() {
+    if (userId) writePending(userId, null);
+    setPending(null);
+    setQuestionOpen(false);
+    setSelected(null);
+    setAnswerResult(null);
+    setShowWin(false);
+  }
+
+  function handleExpire() {
+    discardQuestion();
+    toast.error('Javob berish vaqti tugadi');
+    refetch();
+  }
+
+  function handleAnswer(index: number) {
+    if (answer.isPending || answerResult) return;
+    setSelected(index);
+    answer.mutate(index, {
+      onSuccess: (result) => {
+        if (userId) writePending(userId, null);
+        setAnswerResult(result);
+      },
+      onError: (error) => {
+        // 400: muddat tugagan yoki savol bekor — tarmoq xatosida esa qayta urinsin
+        if (error instanceof ApiError && error.status === 400) discardQuestion();
+        else setSelected(null);
+      },
+    });
+  }
+
+  // Noto'g'ri javoblar (0 olmos) yutuqlar ro'yxatiga kirmaydi
+  const wins = history?.filter((win) => win.diamondsWon > 0) ?? [];
   const standardCapReached = !isPremium && status && !status.canSpin && status.maxSpinsToday <= 1;
   const days = status ? streakDays(status.streakCount, status.spinsUsedToday > 0) : [];
 
@@ -351,23 +608,8 @@ export default function DailySpinPage() {
                 style={delay(s.delay)}
               />
             ))}
-            {celebration > 0 && (
-              <div key={celebration} aria-hidden className="pointer-events-none absolute inset-0">
-                {CONFETTI.map((c, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      'lb-confetti absolute -top-3 h-3 w-1.5',
-                      c.round && 'size-2 rounded-full'
-                    )}
-                    style={{ left: c.left, backgroundColor: c.color, ...delay(c.delay) }}
-                  />
-                ))}
-              </div>
-            )}
-
             <span className="relative rounded-full bg-white/10 px-5 py-2 text-base font-semibold backdrop-blur-sm">
-              ✨ Har kuni omadingizni sinang
+              ✨ Aylantiring, savolga javob bering — olmos yuting
             </span>
 
             <Wheel
@@ -457,13 +699,13 @@ export default function DailySpinPage() {
               </section>
             )}
 
-            {history && history.length > 0 && (
+            {wins.length > 0 && (
               <section
                 className="lb-fade-up flex flex-col gap-1 rounded-[20px] border border-border bg-card p-5"
                 style={delay(100)}
               >
                 <span className="mb-1.5 text-lg font-bold">So&apos;nggi yutuqlar</span>
-                {history.map((win, i) => (
+                {wins.map((win, i) => (
                   <div
                     key={i}
                     className="lb-fade-up flex items-center justify-between rounded-xl px-2 py-2 text-base transition-colors hover:bg-muted/60"
@@ -512,45 +754,16 @@ export default function DailySpinPage() {
         </div>
       )}
 
-      <Dialog open={resultOpen} onOpenChange={setResultOpen}>
-        <DialogContent className="overflow-hidden rounded-3xl p-6 sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-center font-heading text-2xl">
-              Tabriklaymiz! 🎉
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-2 py-3">
-            <span className="relative mb-2 flex size-28 items-center justify-center">
-              <span
-                aria-hidden
-                className="lb-spin absolute -inset-10 rounded-full bg-[repeating-conic-gradient(var(--gold)_0deg_8deg,transparent_8deg_30deg)] opacity-30 [mask-image:radial-gradient(circle,black_30%,transparent_70%)]"
-                style={{ animationDuration: '14s' }}
-              />
-              <span className="lb-pop relative flex size-24 items-center justify-center rounded-3xl bg-linear-to-b from-gold-soft to-[#FFE9A8] shadow-lg shadow-gold/30">
-                <DiamondIcon className="animate-float size-14" />
-              </span>
-            </span>
-            <p
-              className="lb-fade-up font-heading text-5xl font-bold text-gold-foreground"
-              style={delay(200)}
-            >
-              {resultOpen && <WonDiamonds value={pendingResult?.diamondsWon ?? 0} />}
-            </p>
-            <p className="text-lg font-semibold">olmos hisobingizga qo&apos;shildi</p>
-            {pendingResult && pendingResult.streakCount > 1 && (
-              <span className="mt-1 flex items-center gap-1 rounded-full bg-gold-soft px-3 py-1 text-sm font-bold text-gold-foreground">
-                <Flame className="size-3.5 fill-[#F59E0B] text-[#EA580C]" />
-                {pendingResult.streakCount} kunlik seriya
-              </span>
-            )}
-          </div>
-          <DialogFooter>
-            <Button size="lg" className="w-full" onClick={() => setResultOpen(false)}>
-              Qabul qilish
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SpinQuestionDialog
+        open={questionOpen}
+        pending={pending}
+        selected={selected}
+        submitting={answer.isPending}
+        result={answerResult}
+        onSelect={handleAnswer}
+        onExpire={handleExpire}
+        onClose={discardQuestion}
+      />
     </div>
   );
 }

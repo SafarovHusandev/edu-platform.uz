@@ -71,7 +71,7 @@ export function LandingHero() {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Telegram bot orqali ro&apos;yxatdan o&apos;tganlar admin tasdiqlashini kutmaydi.
+          Ro&apos;yxatdan o&apos;tgach, hisobingizni administrator tasdiqlaydi.
         </p>
       </div>
 

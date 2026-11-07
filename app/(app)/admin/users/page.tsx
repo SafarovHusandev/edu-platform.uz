@@ -134,6 +134,14 @@ const resetPasswordSchema = z.object({
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
+// Tanlangan filtr ajralib tursin: qaysi biri yoqilgani bir qarashda ko'rinadi
+function filterTriggerClass(active: boolean) {
+  return cn(
+    'h-11 w-full',
+    active && 'border-primary/50 bg-primary-soft font-semibold text-primary'
+  );
+}
+
 function AdminUsersPageContent() {
   const searchParams = useSearchParams();
   // Bildirishnomadan "/admin/users?tab=unverified" kabi to'g'ridan-to'g'ri
@@ -145,6 +153,8 @@ function AdminUsersPageContent() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | Role>('all');
   const [tarifFilter, setTarifFilter] = useState<'all' | Tarif>('all');
+  const [gradeFilter, setGradeFilter] = useState('all');
+  const [gradeLetterFilter, setGradeLetterFilter] = useState('all');
   const [statusTab, setStatusTab] = useState<'all' | 'unverified' | 'blocked'>(
     initialTab === 'unverified' || initialTab === 'blocked' ? initialTab : 'all'
   );
@@ -159,7 +169,28 @@ function AdminUsersPageContent() {
     isBlocked: statusTab === 'blocked' ? true : undefined,
     role: roleFilter === 'all' ? undefined : roleFilter,
     tarif: tarifFilter === 'all' ? undefined : tarifFilter,
+    grade: gradeFilter === 'all' ? undefined : Number(gradeFilter),
+    gradeLetter: gradeLetterFilter === 'all' ? undefined : gradeLetterFilter,
   });
+
+  const activeFilterCount = [
+    search.trim() !== '',
+    statusTab !== 'all',
+    gradeFilter !== 'all',
+    gradeLetterFilter !== 'all',
+    roleFilter !== 'all',
+    tarifFilter !== 'all',
+  ].filter(Boolean).length;
+
+  function clearFilters() {
+    setSearch('');
+    setStatusTab('all');
+    setGradeFilter('all');
+    setGradeLetterFilter('all');
+    setRoleFilter('all');
+    setTarifFilter('all');
+    setPage(1);
+  }
 
   // Statistika kartalari butun bazadagi hisobni ko'rsatadi (joriy sahifa/filtrdan
   // qat'i nazar) — shuning uchun bir martalik, limit:1 so'rovlar orqali faqat
@@ -382,51 +413,111 @@ function AdminUsersPageContent() {
         }
       />
 
-      <div className="mb-4 flex flex-col gap-2.5 lg:flex-row lg:items-center">
-        <div role="tablist" className="flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-muted p-1">
-          {(
-            [
-              { value: 'all', label: 'Barchasi' },
-              {
-                value: 'unverified',
-                label: `Tasdiqlash kutilmoqda · ${formatNumber(unverifiedStats?.total ?? 0)}`,
-              },
-              { value: 'blocked', label: `Bloklangan · ${formatNumber(blockedStats?.total ?? 0)}` },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              role="tab"
-              aria-selected={statusTab === tab.value}
-              onClick={() => {
-                setStatusTab(tab.value);
+      <section
+        aria-label="Filtrlar"
+        className="mb-4 flex flex-col gap-3 rounded-[20px] border border-border bg-card p-3 sm:p-4"
+      >
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
+          <div
+            role="tablist"
+            className="flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-muted p-1"
+          >
+            {(
+              [
+                { value: 'all', label: 'Barchasi' },
+                {
+                  value: 'unverified',
+                  label: `Tasdiqlash kutilmoqda · ${formatNumber(unverifiedStats?.total ?? 0)}`,
+                },
+                {
+                  value: 'blocked',
+                  label: `Bloklangan · ${formatNumber(blockedStats?.total ?? 0)}`,
+                },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                role="tab"
+                aria-selected={statusTab === tab.value}
+                onClick={() => {
+                  setStatusTab(tab.value);
+                  setPage(1);
+                }}
+                className={cn(
+                  'rounded-[9px] px-3.5 py-2 font-semibold whitespace-nowrap transition-colors',
+                  statusTab === tab.value
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
                 setPage(1);
               }}
-              className={cn(
-                'rounded-[9px] px-3.5 py-2 font-semibold whitespace-nowrap transition-colors',
-                statusTab === tab.value
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+              placeholder="Ism yoki telefon bo'yicha qidirish"
+              className="h-11 pl-10"
+            />
+          </div>
         </div>
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+          <Select
+            value={gradeFilter}
+            onValueChange={(v) => {
+              setGradeFilter(v ?? 'all');
               setPage(1);
             }}
-            placeholder="Ism yoki telefon bo'yicha qidirish"
-            className="h-11 pl-10"
-          />
-        </div>
-        <div className="flex gap-2">
+            items={[
+              { value: 'all', label: 'Barcha sinflar' },
+              ...GRADE_NUMBERS.map((n) => ({ value: n, label: `${n}-sinf` })),
+            ]}
+          >
+            <SelectTrigger aria-label="Sinf" className={filterTriggerClass(gradeFilter !== 'all')}>
+              <SelectValue placeholder="Sinf" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha sinflar</SelectItem>
+              {GRADE_NUMBERS.map((n) => (
+                <SelectItem key={n} value={n}>
+                  {n}-sinf
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={gradeLetterFilter}
+            onValueChange={(v) => {
+              setGradeLetterFilter(v ?? 'all');
+              setPage(1);
+            }}
+            items={[
+              { value: 'all', label: 'Barcha harflar' },
+              ...GRADE_LETTERS.map((l) => ({ value: l, label: `"${l}" sinf` })),
+            ]}
+          >
+            <SelectTrigger
+              aria-label="Sinf harfi"
+              className={filterTriggerClass(gradeLetterFilter !== 'all')}
+            >
+              <SelectValue placeholder="Harf" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Barcha harflar</SelectItem>
+              {GRADE_LETTERS.map((l) => (
+                <SelectItem key={l} value={l}>
+                  &quot;{l}&quot; sinf
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select
             value={roleFilter}
             onValueChange={(v) => {
@@ -435,7 +526,7 @@ function AdminUsersPageContent() {
             }}
             items={{ all: 'Barcha rollar', ...ROLE_LABELS }}
           >
-            <SelectTrigger className="h-11 w-full sm:w-40">
+            <SelectTrigger aria-label="Rol" className={filterTriggerClass(roleFilter !== 'all')}>
               <SelectValue placeholder="Rol" />
             </SelectTrigger>
             <SelectContent>
@@ -455,7 +546,7 @@ function AdminUsersPageContent() {
             }}
             items={{ all: 'Barcha tariflar', ...TARIF_LABELS }}
           >
-            <SelectTrigger className="h-11 w-full sm:w-40">
+            <SelectTrigger aria-label="Tarif" className={filterTriggerClass(tarifFilter !== 'all')}>
               <SelectValue placeholder="Tarif" />
             </SelectTrigger>
             <SelectContent>
@@ -467,8 +558,21 @@ function AdminUsersPageContent() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            className="col-span-2 h-11 lg:col-span-1"
+            onClick={clearFilters}
+            disabled={activeFilterCount === 0}
+          >
+            <X className="size-4" /> Tozalash
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-primary px-1.5 text-[11px] leading-5 font-bold text-primary-foreground">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
         </div>
-      </div>
+      </section>
 
       {selectedIds.size > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/30 bg-primary-soft px-4 py-3">

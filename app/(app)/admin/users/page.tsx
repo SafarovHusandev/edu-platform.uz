@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -1050,6 +1051,10 @@ function AdminUsersPageContent() {
                   </span>
                 </div>
               </div>
+
+              <Button variant="outline" render={<Link href={`/admin/users/${detailUser._id}`} />}>
+                To&apos;liq sahifani ochish
+              </Button>
 
               {isSuperadmin && (
                 <div className="space-y-2 border-t border-border/70 pt-4 text-base">

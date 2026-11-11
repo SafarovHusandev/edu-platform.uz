@@ -8,11 +8,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-svh flex-col bg-background lg:flex-row">
       <aside className="hidden flex-col justify-between gap-10 bg-primary p-12 text-primary-foreground lg:flex lg:w-[44%] lg:max-w-[620px]">
-        <Link href="/" className="flex w-fit items-center gap-2.5">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-white font-heading font-bold text-primary">
-            E
-          </span>
-          <span className="font-heading text-lg font-semibold">Edu Platform</span>
+        <Link href="/" aria-label="Edu Platform — bosh sahifa" className="flex w-fit items-center">
+          {/* Ko'k fon ikkala rejimda ham — doim oq logo */}
+          <img src="/logo-white.png" alt="Edu Platform" className="h-11 w-auto" />
         </Link>
         <div className="flex flex-col gap-4">
           <h1 className="font-heading text-4xl leading-tight font-bold xl:text-[44px]">

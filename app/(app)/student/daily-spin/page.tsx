@@ -292,8 +292,8 @@ function Wheel({
                   {Icon ? (
                     <Icon className="size-[9%] text-primary/70" />
                   ) : (
-                    <span className="flex size-[15%] items-center justify-center rounded-full bg-white/90 shadow-md">
-                      <DiamondIcon className="size-[70%]" />
+                    <span className="flex aspect-square w-[15%] items-center justify-center rounded-full bg-white/90 shadow-md">
+                      <DiamondIcon className="h-auto w-[70%]" />
                     </span>
                   )}
                 </span>
@@ -305,7 +305,7 @@ function Wheel({
 
       {/* Markaz */}
       <div className="absolute top-1/2 left-1/2 z-10 flex size-[22%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-linear-to-b from-white to-[#E3E8FA] shadow-[0_6px_20px_rgb(0_0_0/0.35)] ring-4 ring-gold">
-        <DiamondIcon className={cn('size-[58%]', busy ? 'animate-spin' : 'animate-float')} />
+        <DiamondIcon className={cn('h-auto w-[58%]', busy ? 'animate-spin' : 'animate-float')} />
       </div>
 
       {/* Ko'rsatkich */}

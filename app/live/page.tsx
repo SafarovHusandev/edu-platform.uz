@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Clock, Flame, Hourglass, Loader2, LogIn, PartyPopper, UserX, Users, X } from 'lucide-react';
+import { RankMedal } from '@/components/ui/rank-medal';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { QuestionMarkdown } from '@/components/live-quiz/question-markdown';
@@ -466,7 +467,7 @@ function LivePlayer() {
               <OptionTile index={chosen} text={question.options[chosen] ?? ''} size="compact" className="w-full max-w-sm" />
             )}
             <Hourglass className="size-12 animate-pulse" />
-            <p className="text-2xl font-bold">Javob qabul qilindi ⏳</p>
+            <p className="text-2xl font-bold">Javob qabul qilindi</p>
             <p className="text-white/70">Boshqalar javob berishini kuting</p>
           </div>
         ) : (
@@ -565,7 +566,7 @@ function LivePlayer() {
         <p className="text-xl text-white/75">O&apos;yin yakunlandi</p>
         {final?.rank != null && (
           <p className="live-pop-in font-heading text-8xl font-bold">
-            {final.rank <= 3 ? ['🥇', '🥈', '🥉'][final.rank - 1] : `${final.rank}`}
+            {final.rank <= 3 ? <RankMedal rank={final.rank} className="size-28" /> : final.rank}
           </p>
         )}
         {final?.rank != null && (

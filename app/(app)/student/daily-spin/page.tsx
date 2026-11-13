@@ -3,7 +3,19 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Check, Clock, Crown, Flame, Gift, Loader2, Sparkles, Star, X, Zap } from 'lucide-react';
+import {
+  Check,
+  Clock,
+  Crown,
+  Flame,
+  Gift,
+  Loader2,
+  PartyPopper,
+  Sparkles,
+  Star,
+  X,
+  Zap,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -384,7 +396,11 @@ function SpinQuestionDialog({
               {!result
                 ? 'Savolga javob bering'
                 : result.correct
-                  ? "To'g'ri! 🎉"
+                  ? (
+                      <span className="inline-flex items-center gap-2">
+                        To&apos;g&apos;ri! <PartyPopper className="size-5 text-gold" />
+                      </span>
+                    )
                   : "Noto'g'ri javob"}
             </DialogTitle>
             {!result && <AnswerCountdown expiresAt={pending.expiresAt} onExpire={onExpire} />}
@@ -608,8 +624,8 @@ export default function DailySpinPage() {
                 style={delay(s.delay)}
               />
             ))}
-            <span className="relative rounded-full bg-white/10 px-5 py-2 text-base font-semibold backdrop-blur-sm">
-              ✨ Aylantiring, savolga javob bering — olmos yuting
+            <span className="relative inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2 text-base font-semibold backdrop-blur-sm">
+              <Sparkles className="size-4.5 text-gold" /> Aylantiring, savolga javob bering — olmos yuting
             </span>
 
             <Wheel

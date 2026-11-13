@@ -3,6 +3,7 @@
 import { use, useMemo } from 'react';
 import { BadgeCheck, Flame, Users } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
+import { RankMedal } from '@/components/ui/rank-medal';
 import { ErrorState } from '@/components/ui/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -223,7 +224,7 @@ export default function LiveSessionResultPage({
                 players.map((p, i) => (
                   <TableRow key={`${p.name}-${i}`}>
                     <TableCell className="pl-5 font-heading font-bold tabular-nums">
-                      {p.rank <= 3 ? ['🥇', '🥈', '🥉'][p.rank - 1] : p.rank}
+                      {p.rank <= 3 ? <RankMedal rank={p.rank} className="size-6" /> : p.rank}
                     </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1.5 font-medium">

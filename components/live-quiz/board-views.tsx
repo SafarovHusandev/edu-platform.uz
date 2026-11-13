@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, Users, Zap } from 'lucide-react';
+import { Check, Flame, Users, Zap } from 'lucide-react';
 import { QuestionMarkdown } from '@/components/live-quiz/question-markdown';
 import { OptionShape, optionStyle } from '@/components/live-quiz/option-styles';
 import { toServerUrl } from '@/lib/live-quiz';
@@ -222,7 +222,9 @@ export function LeaderboardList({
           <span className="w-10 text-center font-heading tabular-nums opacity-80">{entry.rank}</span>
           <span className="min-w-0 flex-1 truncate">{entry.name}</span>
           {entry.streak != null && entry.streak >= 2 && (
-            <span className="text-[0.75em] font-semibold opacity-90">🔥 {entry.streak}</span>
+            <span className="flex items-center gap-1 text-[0.75em] font-semibold opacity-90">
+              <Flame className="size-[1em] text-[#FFC62E]" aria-label="ketma-ket" /> {entry.streak}
+            </span>
           )}
           <span className="font-heading tabular-nums">{formatNumber(entry.score)}</span>
         </li>

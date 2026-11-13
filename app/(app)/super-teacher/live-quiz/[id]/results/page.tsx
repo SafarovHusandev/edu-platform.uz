@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, History, Users } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
+import { RankMedal } from '@/components/ui/rank-medal';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { PaginationBar } from '@/components/ui/pagination-bar';
@@ -12,8 +13,6 @@ import { useLiveQuiz, useLiveQuizSessions } from '@/hooks/use-live-quizzes';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import { ApiError } from '@/lib/api-client';
 import type { LiveSessionSummary } from '@/types/live-quiz';
-
-const MEDALS = ['🥇', '🥈', '🥉'];
 
 function sessionDuration(session: LiveSessionSummary) {
   if (!session.endedAt) return 'Yakunlanmagan';
@@ -77,7 +76,7 @@ export default function LiveQuizSessionsPage({ params }: { params: Promise<{ id:
               <ol className="flex min-w-0 flex-1 flex-wrap gap-x-4 gap-y-1 text-sm">
                 {session.podium.slice(0, 3).map((p, i) => (
                   <li key={`${p.name}-${i}`} className="flex min-w-0 items-center gap-1">
-                    <span aria-label={`${i + 1}-o'rin`}>{MEDALS[i]}</span>
+                    <RankMedal rank={i + 1} className="size-4" />
                     <span className="truncate font-medium">{p.name}</span>
                     <span className="tabular-nums text-muted-foreground">{p.score}</span>
                   </li>

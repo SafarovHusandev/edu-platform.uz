@@ -7,6 +7,7 @@ import {
   Check,
   ClipboardList,
   Crown,
+  Flame,
   Gift,
   GraduationCap,
   Inbox,
@@ -207,8 +208,8 @@ function RedeemSuccessDialog({ reward, onClose }: { reward: Reward | null; onClo
             />
           ))}
         </div>
-        <DialogTitle className="text-center font-heading text-2xl">
-          So&apos;rov yuborildi! 🎉
+        <DialogTitle className="flex items-center justify-center gap-2 font-heading text-2xl">
+          So&apos;rov yuborildi! <PartyPopper className="size-6 text-gold" />
         </DialogTitle>
         <div className="flex flex-col items-center gap-3 py-2 text-center">
           <span className="relative flex size-28 items-center justify-center">
@@ -330,7 +331,11 @@ function RewardCard({
             : !inStock
               ? 'Tugagan'
               : lowStock
-                ? `🔥 Faqat ${reward.stock} ta qoldi`
+                ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Flame className="size-3.5" /> Faqat {reward.stock} ta qoldi
+                    </span>
+                  )
                 : `Qoldi: ${reward.stock} ta`}
         </span>
 

@@ -19,6 +19,8 @@ export function useRewards(
     includeInactive?: boolean;
     // Faqat includeInactive bilan: true — faollar, false — faolsizlar, undefined — barchasi
     isActive?: boolean;
+    // Nomi yoki tavsifi bo'yicha (bo'sh bo'lsa yuborilmaydi)
+    search?: string;
   } = {}
 ) {
   const { includeInactive, isActive, ...rest } = filters;
@@ -146,6 +148,8 @@ export function useAllRedemptions(
     status?: RedemptionStatus | `${RedemptionStatus},${RedemptionStatus}`
     page?: number
     limit?: number
+    // Student ismi, telefoni yoki sovg'a nomi bo'yicha (bo'sh bo'lsa yuborilmaydi)
+    search?: string
   } = {},
   options: { enabled?: boolean } = {}
 ) {

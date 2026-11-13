@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { Suspense, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -13,6 +13,7 @@ import {
   Lock,
   PartyPopper,
   RotateCw,
+  SearchX,
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { FilterPills } from '@/components/ui/filter-pills';
+import { DebouncedSearch } from '@/components/ui/debounced-search';
+import { useUrlSearch } from '@/hooks/use-url-search';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { useCountUp } from '@/hooks/use-count-up';
 import { useMyRedemptions, useRewards, useRedeemReward } from '@/hooks/use-rewards';
@@ -395,12 +398,18 @@ function RewardCard({
   );
 }
 
-export default function StudentRewardsPage() {
+function StudentRewardsPageContent() {
   const user = useAuthStore((s) => s.user);
   const isStudent = user?.role === 'student';
   const isPremium = user?.tarif === 'premium';
   const diamonds = user?.diamonds ?? 0;
-  const { data, isLoading, isError, refetch } = useRewards({ page: 1, limit: 50 });
+  // Katalog bitta sahifada (limit 50) — shuning uchun qidiruvda sahifani qaytarish shart emas
+  const [search, setSearch] = useUrlSearch();
+  const { data, isLoading, isError, refetch } = useRewards({
+    page: 1,
+    limit: 50,
+    search: search || undefined,
+  });
   const { data: redemptions } = useMyRedemptions(1, 50);
   const redeem = useRedeemReward();
   const [filter, setFilter] = useState<Filter>('all');
@@ -466,26 +475,48 @@ export default function StudentRewardsPage() {
             />
           )}
 
-          {all.length === 0 ? (
+          {all.length === 0 && !search ? (
             <EmptyState icon={Gift} title="Hozircha mukofotlar mavjud emas" />
           ) : (
             <>
-              {isStudent && (
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="font-heading text-lg font-bold">Sovg&apos;alar katalogi</h2>
-                  <FilterPills
-                    value={filter}
-                    onChange={setFilter}
-                    options={[
-                      { value: 'all', label: 'Barchasi' },
-                      { value: 'affordable', label: "Olsa bo'ladi" },
-                      { value: 'premium', label: 'Premium' },
-                    ]}
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <h2 className="font-heading text-lg font-bold">Sovg&apos;alar katalogi</h2>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  {isStudent && (
+                    <FilterPills
+                      value={filter}
+                      onChange={setFilter}
+                      options={[
+                        { value: 'all', label: 'Barchasi' },
+                        { value: 'affordable', label: "Olsa bo'ladi" },
+                        { value: 'premium', label: 'Premium' },
+                      ]}
+                    />
+                  )}
+                  <DebouncedSearch
+                    initial={search}
+                    onSearch={setSearch}
+                    delay={400}
+                    placeholder="Sovg'a nomi bo'yicha qidirish..."
+                    label="Sovg'a qidirish"
+                    className="w-full sm:w-72"
+                    inputClassName="h-11 rounded-xl"
                   />
                 </div>
-              )}
+              </div>
 
-              {items.length === 0 ? (
+              {all.length === 0 ? (
+                <EmptyState
+                  icon={SearchX}
+                  title="Hech narsa topilmadi"
+                  description={`"${search}" bo'yicha sovg'a topilmadi. Boshqa so'z bilan qidirib ko'ring.`}
+                  action={
+                    <Button variant="outline" onClick={() => setSearch('')}>
+                      Qidiruvni tozalash
+                    </Button>
+                  }
+                />
+              ) : items.length === 0 ? (
                 <EmptyState
                   icon={Gift}
                   title={
@@ -497,7 +528,7 @@ export default function StudentRewardsPage() {
               ) : (
                 // key: filtr almashganda kartalar qaytadan animatsiya bilan chiqadi
                 <div
-                  key={filter}
+                  key={`${filter}:${search}`}
                   className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(230px,1fr))] sm:gap-[18px]"
                 >
                   {items.map((reward, index) => (
@@ -520,5 +551,13 @@ export default function StudentRewardsPage() {
 
       <RedeemSuccessDialog reward={redeemed} onClose={() => setRedeemed(null)} />
     </div>
+  );
+}
+
+export default function StudentRewardsPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-md bg-muted" />}>
+      <StudentRewardsPageContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, FileDown, Gift, Loader2, PackageCheck, X } from 'lucide-react';
+import { Suspense, useState } from 'react';
+import { Check, FileDown, Gift, Loader2, PackageCheck, SearchX, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { PaginationBar } from '@/components/ui/pagination-bar';
 import { FilterPills } from '@/components/ui/filter-pills';
+import { DebouncedSearch } from '@/components/ui/debounced-search';
+import { useUrlSearch } from '@/hooks/use-url-search';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { StatusPill } from '@/components/dashboard/dashboard-ui';
 import {
@@ -73,12 +75,13 @@ const PDF_COLUMNS: ExportColumn[] = [
 ];
 
 // Tanlangan bo'limdagi barcha so'rovlar (sahifalab yig'iladi)
-async function fetchAllRedemptions(status: string) {
+async function fetchAllRedemptions(status: string, search?: string) {
   const limit = 100;
   const all: Redemption[] = [];
   for (let page = 1; page <= 50; page++) {
     const res = await api.get<Paginated<Redemption>>('/rewards/redemptions', {
       status,
+      search,
       page,
       limit,
     });
@@ -108,10 +111,12 @@ function redemptionRow(redemption: Redemption, index: number) {
   };
 }
 
-export default function AdminRedemptionsPage() {
+function AdminRedemptionsPageContent() {
   const [stage, setStage] = useState<Stage>('pending');
   const [archiveStatus, setArchiveStatus] = useState<ArchiveStatus>('all');
   const [page, setPage] = useState(1);
+  // Tab almashganda qidiruv saqlanadi (foydalanuvchilar sahifasidagi kabi)
+  const [search, setSearch] = useUrlSearch(() => setPage(1));
   // Arxiv "Barchasi": backend bir nechta holatni vergul bilan qabul qiladi
   const status =
     stage === 'archive'
@@ -122,6 +127,7 @@ export default function AdminRedemptionsPage() {
 
   const { data, isLoading, isError, refetch } = useAllRedemptions({
     status,
+    search: search || undefined,
     page,
     limit: PAGE_SIZE,
   });
@@ -166,7 +172,7 @@ export default function AdminRedemptionsPage() {
   async function handleExportPdf() {
     setExporting(true);
     try {
-      const items = await fetchAllRedemptions(status);
+      const items = await fetchAllRedemptions(status, search || undefined);
       if (items.length === 0) {
         toast.info("Yuklab olish uchun so'rovlar yo'q");
         return;
@@ -190,7 +196,7 @@ export default function AdminRedemptionsPage() {
         `Mukofot so'rovlari — ${stageLabel}`,
         {
           orientation: 'landscape',
-          subtitle: `${items.length} ta so'rov · jami ${formatNumber(total)} olmos · ${formatTashkentDateTime(new Date().toISOString())}`,
+          subtitle: `${search ? `Qidiruv: «${search}» · ` : ''}${items.length} ta so'rov · jami ${formatNumber(total)} olmos · ${formatTashkentDateTime(new Date().toISOString())}`,
         }
       );
       toast.success('PDF yuklab olindi');
@@ -267,26 +273,47 @@ export default function AdminRedemptionsPage() {
         })}
       </div>
 
-      {stage === 'archive' && (
-        <FilterPills
-          className="mb-4"
-          value={archiveStatus}
-          onChange={(v) => {
-            setArchiveStatus(v);
-            setPage(1);
-          }}
-          options={[
-            { value: 'all', label: 'Barchasi' },
-            { value: 'delivered', label: 'Topshirilgan', count: deliveredCount?.total },
-            { value: 'rejected', label: 'Rad etilgan', count: rejectedCount?.total },
-          ]}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {stage === 'archive' && (
+          <FilterPills
+            value={archiveStatus}
+            onChange={(v) => {
+              setArchiveStatus(v);
+              setPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'Barchasi' },
+              { value: 'delivered', label: 'Topshirilgan', count: deliveredCount?.total },
+              { value: 'rejected', label: 'Rad etilgan', count: rejectedCount?.total },
+            ]}
+          />
+        )}
+        <DebouncedSearch
+          initial={search}
+          onSearch={setSearch}
+          delay={400}
+          placeholder="Student ismi, telefoni yoki sovg'a nomi..."
+          label="So'rovlarni qidirish"
+          className="w-full sm:ml-auto sm:w-96"
+          inputClassName="h-11 rounded-xl"
         />
-      )}
+      </div>
 
       {isLoading ? (
         <div className="h-72 animate-pulse rounded-[20px] bg-muted" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
+      ) : (!data || data.items.length === 0) && search ? (
+        <EmptyState
+          icon={SearchX}
+          title="Hech narsa topilmadi"
+          description={`Bu bo'limda "${search}" bo'yicha so'rov topilmadi. Boshqa bo'limni tanlang yoki boshqa so'z bilan qidiring.`}
+          action={
+            <Button variant="outline" onClick={() => setSearch('')}>
+              Qidiruvni tozalash
+            </Button>
+          }
+        />
       ) : !data || data.items.length === 0 ? (
         <EmptyState icon={PackageCheck} title="Bu bo'limda so'rovlar yo'q" />
       ) : (
@@ -469,5 +496,13 @@ export default function AdminRedemptionsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminRedemptionsPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-md bg-muted" />}>
+      <AdminRedemptionsPageContent />
+    </Suspense>
   );
 }

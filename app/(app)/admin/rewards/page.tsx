@@ -1,10 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Camera, Crown, Gift, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Camera, Crown, Gift, Loader2, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,6 +41,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { PaginationBar } from '@/components/ui/pagination-bar';
 import { FilterPills } from '@/components/ui/filter-pills';
+import { DebouncedSearch } from '@/components/ui/debounced-search';
+import { useUrlSearch } from '@/hooks/use-url-search';
 import {
   useRewards,
   useCreateReward,
@@ -77,14 +79,16 @@ const rewardSchema = z.object({
 type RewardFormInput = z.input<typeof rewardSchema>;
 type RewardFormValues = z.output<typeof rewardSchema>;
 
-export default function AdminRewardsPage() {
+function AdminRewardsPageContent() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<StatusFilter>('all');
+  const [search, setSearch] = useUrlSearch(() => setPage(1));
   const { data, isLoading, isError, refetch } = useRewards({
     page,
     limit: PAGE_SIZE,
     includeInactive: true,
     isActive: status === 'all' ? undefined : status === 'active',
+    search: search || undefined,
   });
   const createReward = useCreateReward();
   const updateReward = useUpdateReward();
@@ -165,24 +169,45 @@ export default function AdminRewardsPage() {
         }
       />
 
-      <FilterPills
-        className="mb-4"
-        value={status}
-        onChange={(value) => {
-          setStatus(value);
-          setPage(1);
-        }}
-        options={[
-          { value: 'all', label: 'Barchasi' },
-          { value: 'active', label: 'Faollari' },
-          { value: 'inactive', label: "Faol bo'lmaganlari" },
-        ]}
-      />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <FilterPills
+          value={status}
+          onChange={(value) => {
+            setStatus(value);
+            setPage(1);
+          }}
+          options={[
+            { value: 'all', label: 'Barchasi' },
+            { value: 'active', label: 'Faollari' },
+            { value: 'inactive', label: "Faol bo'lmaganlari" },
+          ]}
+        />
+        <DebouncedSearch
+          initial={search}
+          onSearch={setSearch}
+          delay={400}
+          placeholder="Sovg'a nomi bo'yicha qidirish..."
+          label="Sovg'a qidirish"
+          className="w-full sm:w-80"
+          inputClassName="h-11 rounded-xl"
+        />
+      </div>
 
       {isLoading ? (
         <div className="h-80 animate-pulse rounded-[20px] bg-muted" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
+      ) : (!data || data.items.length === 0) && search ? (
+        <EmptyState
+          icon={SearchX}
+          title="Hech narsa topilmadi"
+          description={`"${search}" bo'yicha mukofot topilmadi. Boshqa so'z bilan qidirib ko'ring.`}
+          action={
+            <Button variant="outline" onClick={() => setSearch('')}>
+              Qidiruvni tozalash
+            </Button>
+          }
+        />
       ) : !data || data.items.length === 0 ? (
         <EmptyState icon={Gift} title={EMPTY_TITLE[status]} />
       ) : (
@@ -493,5 +518,13 @@ export default function AdminRewardsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminRewardsPage() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-md bg-muted" />}>
+      <AdminRewardsPageContent />
+    </Suspense>
   );
 }

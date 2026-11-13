@@ -26,6 +26,7 @@ const PAYMENT_STATUS_PILL: Partial<Record<PaymentStatus, { label: string; tone: 
     success: { label: "To'landi", tone: 'success' },
     error: { label: 'Bekor qilindi', tone: 'danger' },
     revert: { label: 'Qaytarildi', tone: 'neutral' },
+    expired: { label: "Muddati o'tgan", tone: 'neutral' },
   };
 
 function paymentLabel(payment: PaymentRecord) {

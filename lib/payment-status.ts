@@ -4,6 +4,7 @@ import {
   Crown,
   GraduationCap,
   Heart,
+  TimerOff,
   Wallet,
   XCircle,
   type LucideIcon,
@@ -53,6 +54,19 @@ export const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, PaymentStatusConfig> =
     label: "To'lov qaytarildi",
     className: "bg-destructive/10 text-destructive",
   },
+  // Multicard invoysi 1 soat ichida to'lanmagan — backend draft → expired qiladi
+  expired: {
+    icon: TimerOff,
+    label: "To'lov muddati o'tgan",
+    className: "bg-muted text-muted-foreground",
+  },
+}
+
+// Yakuniy holatlar — bularda avtomatik qayta so'rov (polling) to'xtatiladi
+export const TERMINAL_PAYMENT_STATUSES: readonly PaymentStatus[] = ["success", "error", "revert", "expired"]
+
+export function isTerminalPaymentStatus(status: PaymentStatus | undefined) {
+  return !!status && TERMINAL_PAYMENT_STATUSES.includes(status)
 }
 
 export const PAYMENT_PURPOSE_LABELS: Record<PaymentPurpose, string> = {

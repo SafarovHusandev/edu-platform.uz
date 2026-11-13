@@ -17,3 +17,12 @@ export function resolveAssetUrl(path?: string | null) {
 export function bookDownloadUrl(id: string) {
   return `${API_URL}/books/${id}/download`;
 }
+
+// Ommaviy sayt manzili — jonli viktorina QR kodi va "telefonda oching" matni uchun.
+// Sozlanmagan bo'lsa, brauzerdagi joriy domen olinadi.
+export function getFrontendUrl() {
+  const fromEnv = process.env.NEXT_PUBLIC_FRONTEND_URL;
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+  if (typeof window !== 'undefined') return window.location.origin;
+  return 'https://maktab16.uz';
+}

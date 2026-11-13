@@ -1,12 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { useNavBadges } from '@/components/layout/use-nav-badges';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
-import { useLogout } from '@/hooks/use-auth';
+import { LogoutConfirmDialog } from '@/components/layout/logout-confirm-dialog';
 import { useAuthStore } from '@/store/auth-store';
 import { NAV_GROUPS, ROLE_LABELS, isNavItemActive } from '@/lib/roles';
 import { formatDate, formatNumber } from '@/lib/format';
@@ -68,7 +69,7 @@ export function SidebarNav({
   className?: string;
 }) {
   const pathname = usePathname();
-  const logout = useLogout();
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
   const badges = useNavBadges(role);
   const isAdmin = role === 'admin' || role === 'superadmin';
@@ -145,7 +146,7 @@ export function SidebarNav({
 
       <button
         type="button"
-        onClick={() => logout.mutate()}
+        onClick={() => setLogoutOpen(true)}
         className={cn(
           'mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold transition-colors',
           isAdmin
@@ -156,6 +157,7 @@ export function SidebarNav({
         <LogOut className="size-4.5 shrink-0" />
         Chiqish
       </button>
+      <LogoutConfirmDialog open={logoutOpen} onOpenChange={setLogoutOpen} />
     </nav>
   );
 }

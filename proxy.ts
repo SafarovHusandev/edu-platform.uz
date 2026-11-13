@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/student",
   "/teacher",
   "/admin",
+  "/super-teacher",
 ]
 const ROLE_PREFIXES: Record<string, string[]> = {
   // Teachers can browse the rewards catalog, but redemption stays student-only
@@ -23,6 +24,8 @@ const ROLE_PREFIXES: Record<string, string[]> = {
   "/teacher/quizzes": ["teacher", "admin", "superadmin"],
   "/teacher": ["teacher"],
   "/admin": ["admin", "superadmin"],
+  // Super-ustoz (doska asboblari). Ishtirokchi sahifasi /live — public.
+  "/super-teacher": ["teacher", "admin", "superadmin"],
 }
 
 export function proxy(request: NextRequest) {

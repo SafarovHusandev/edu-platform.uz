@@ -504,3 +504,103 @@
     animation: none !important;
   }
 }
+
+/* ---------- Jonli viktorina: savol markdown'i (QuestionMarkdown) ---------- */
+.live-md.wmde-markdown {
+  --color-fg-default: currentColor;
+  --color-canvas-default: transparent;
+  --color-canvas-subtle: color-mix(in oklch, currentColor 8%, transparent);
+  --color-border-default: color-mix(in oklch, currentColor 20%, transparent);
+  --color-border-muted: color-mix(in oklch, currentColor 14%, transparent);
+  --color-neutral-muted: color-mix(in oklch, currentColor 12%, transparent);
+  --color-accent-fg: var(--primary);
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.live-md.wmde-markdown > :first-child {
+  margin-top: 0;
+}
+.live-md.wmde-markdown > :last-child {
+  margin-bottom: 0;
+}
+.live-md.wmde-markdown img {
+  display: inline-block;
+  max-width: 100%;
+  max-height: var(--live-md-img-max, 16rem);
+  object-fit: contain;
+  border-radius: 0.75rem;
+  background: transparent;
+}
+.live-md.wmde-markdown h1,
+.live-md.wmde-markdown h2,
+.live-md.wmde-markdown h3 {
+  border-bottom: 0;
+  font-family: var(--font-display);
+}
+.live-md .live-md-zoom {
+  cursor: zoom-in;
+  display: inline-block;
+}
+.live-md-board.wmde-markdown {
+  --live-md-img-max: 38vh;
+  font-size: clamp(1.75rem, 3.2vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+}
+.live-md-phone.wmde-markdown {
+  --live-md-img-max: 10rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.live-md-card.wmde-markdown {
+  --live-md-img-max: 12rem;
+  font-size: 0.95rem;
+}
+
+/* Muharrir (MDEditor) — loyiha tokenlariga moslash */
+.live-md-editor .w-md-editor {
+  --color-canvas-default: var(--card);
+  --color-fg-default: var(--foreground);
+  --color-border-default: var(--input);
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 1px var(--input);
+  background: var(--card);
+  color: var(--foreground);
+}
+.live-md-editor .w-md-editor-toolbar {
+  background: var(--muted);
+  border-color: var(--input);
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+.live-md-editor .w-md-editor-text-pre > code,
+.live-md-editor .w-md-editor-text-input {
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+
+@keyframes live-pop-in {
+  0% { opacity: 0; transform: scale(0.6) translateY(8px); }
+  70% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.live-pop-in {
+  animation: live-pop-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes live-rise {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.live-rise {
+  animation: live-rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-pop-in,
+  .live-rise {
+    animation: none;
+  }
+}

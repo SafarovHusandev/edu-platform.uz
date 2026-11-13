@@ -22,6 +22,11 @@ import { cn } from '@/lib/utils';
 import type { PaymentPurpose, PaymentRecord, PaymentStatus } from '@/types';
 
 const ALL = 'all';
+// Holat filtri: DEFAULT — status yuborilmaydi (backend expired'larni chiqarmaydi),
+// WITH_EXPIRED — status=all (admin uchun, muddati o'tganlar bilan birga)
+const STATUS_DEFAULT = 'default';
+const STATUS_WITH_EXPIRED = 'all';
+type StatusFilterValue = PaymentStatus | typeof STATUS_DEFAULT | typeof STATUS_WITH_EXPIRED;
 const PAGE_SIZE = 15;
 
 const STATUS_PILL: Record<PaymentStatus, { label: string; tone: StatusPillTone }> = {
@@ -32,7 +37,11 @@ const STATUS_PILL: Record<PaymentStatus, { label: string; tone: StatusPillTone }
   success: { label: "To'landi", tone: 'success' },
   error: { label: 'Bekor qilindi', tone: 'danger' },
   revert: { label: 'Qaytarildi', tone: 'neutral' },
+  expired: { label: "Muddati o'tgan", tone: 'neutral' },
 };
+
+// Backend yangi status qo'shsa — xom qiymat yoki bo'sh badge chiqmasin
+const UNKNOWN_STATUS_PILL = { label: "Noma'lum", tone: 'neutral' as StatusPillTone };
 
 const STATUS_FILTERS: { value: PaymentStatus; label: string }[] = [
   { value: 'success', label: "To'langan" },
@@ -41,6 +50,7 @@ const STATUS_FILTERS: { value: PaymentStatus; label: string }[] = [
   { value: 'hold', label: 'Tekshirilmoqda' },
   { value: 'error', label: 'Bekor qilingan' },
   { value: 'revert', label: 'Qaytarilgan' },
+  { value: 'expired', label: "Muddati o'tgan" },
 ];
 
 function paymentTitle(payment: PaymentRecord) {
@@ -84,7 +94,7 @@ export function PaymentsHistory({
 }) {
   const [page, setPage] = useState(1);
   const [purpose, setPurpose] = useState<PaymentPurpose | typeof ALL>(ALL);
-  const [status, setStatus] = useState<PaymentStatus | typeof ALL>(ALL);
+  const [status, setStatus] = useState<StatusFilterValue>(STATUS_DEFAULT);
   const [userId, setUserId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -92,7 +102,7 @@ export function PaymentsHistory({
     page,
     limit: PAGE_SIZE,
     purpose: purpose === ALL ? undefined : purpose,
-    status: status === ALL ? undefined : status,
+    status: status === STATUS_DEFAULT ? undefined : status,
   };
   const myPayments = useMyPayments(filters, { enabled: scope === 'my' });
   const allPayments = useAllPayments(
@@ -107,6 +117,13 @@ export function PaymentsHistory({
   const { data, isLoading, isError, refetch } = scope === 'all' ? allPayments : myPayments;
   const checkStatus = useCheckPaymentStatus();
   const showUser = scope === 'all';
+  const statusOptions = [
+    { value: STATUS_DEFAULT, label: 'Barcha holatlar' },
+    ...(showUser
+      ? [{ value: STATUS_WITH_EXPIRED, label: "Hammasi (muddati o'tganlar bilan)" }]
+      : []),
+    ...STATUS_FILTERS,
+  ];
 
   return (
     <section className="flex flex-col gap-3.5">
@@ -178,20 +195,16 @@ export function PaymentsHistory({
           <Select
             value={status}
             onValueChange={(v) => {
-              setStatus((v as PaymentStatus | typeof ALL) ?? ALL);
+              setStatus((v as StatusFilterValue) ?? STATUS_DEFAULT);
               setPage(1);
             }}
-            items={[
-              { value: ALL, label: 'Barcha holatlar' },
-              ...STATUS_FILTERS.map((s) => ({ value: s.value, label: s.label })),
-            ]}
+            items={statusOptions}
           >
-            <SelectTrigger className="w-44" aria-label="Holat">
+            <SelectTrigger className={showUser ? 'w-64' : 'w-44'} aria-label="Holat">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barcha holatlar</SelectItem>
-              {STATUS_FILTERS.map((s) => (
+              {statusOptions.map((s) => (
                 <SelectItem key={s.value} value={s.value}>
                   {s.label}
                 </SelectItem>
@@ -223,7 +236,7 @@ export function PaymentsHistory({
               </thead>
               <tbody>
                 {data.items.map((payment) => {
-                  const pill = STATUS_PILL[payment.status] ?? STATUS_PILL.draft;
+                  const pill = STATUS_PILL[payment.status] ?? UNKNOWN_STATUS_PILL;
                   const incoming = payment.purpose === 'wallet';
                   const checking =
                     checkStatus.isPending && checkStatus.variables === payment.invoiceId;

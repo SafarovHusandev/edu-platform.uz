@@ -22,6 +22,8 @@ const PUBLIC_PATHS = [
   "/donate",
   "/oferta",
   "/maxfiylik-siyosati",
+  // Jonli viktorina ishtirokchisi — akkaunt shart emas
+  "/live",
 ]
 
 function isPublicPath(pathname: string) {

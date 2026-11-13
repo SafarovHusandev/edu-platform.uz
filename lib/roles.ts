@@ -20,6 +20,7 @@ import {
   RotateCw,
   ScrollText,
   Share2,
+  Sparkles,
   Tag,
   TicketPercent,
   Trophy,
@@ -78,6 +79,7 @@ const ADMIN_NAV: NavGroup[] = [
         badge: 'pendingRedemptions',
       },
       { label: 'Baraban savollari', href: '/admin/spin-questions', icon: CircleHelp },
+      { label: 'Super-ustoz', href: '/super-teacher', icon: Sparkles },
       { label: 'Kategoriyalar', href: '/admin/categories', icon: FolderTree },
       { label: 'Kitob kategoriyalari', href: '/admin/book-categories', icon: Tag },
       { label: "To'lovlar", href: '/admin/payments', icon: Receipt },
@@ -138,6 +140,8 @@ export const NAV_GROUPS: Record<Role, NavGroup[]> = {
         },
         { label: 'Baholash', href: '/teacher/grading', icon: PenLine, badge: 'pendingReviews' },
         { label: 'Kitoblarim', href: '/teacher/books', icon: BookOpen },
+        // Interaktiv doska asboblari (jonli viktorina va boshqalar)
+        { label: 'Super-ustoz', href: '/super-teacher', icon: Sparkles },
       ],
     },
     {

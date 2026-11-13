@@ -261,7 +261,11 @@ export interface QuizShare {
 }
 
 export type PaymentPurpose ="wallet" | "course" | "premium" | "donation"
-export type PaymentStatus = "draft" | "progress" | "billing" | "hold" | "success" | "error" | "revert"
+export type PaymentStatus = "draft" | "progress" | "billing" | "hold" | "success" | "error" | "revert" | "expired"
+
+// Admin `GET /payment` status filtri: berilmasa — expired'dan tashqari hammasi,
+// "all" — expired ham, yoki vergul bilan bir nechta holat ("success,error")
+export type PaymentStatusFilter = PaymentStatus | "all" | (string & {})
 
 export interface Invoice {
   invoiceId: string

@@ -3,12 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api, ApiError } from "@/lib/api-client"
+import { isTerminalPaymentStatus } from "@/lib/payment-status"
 import type {
   Invoice,
   Paginated,
   PaymentPurpose,
   PaymentRecord,
-  PaymentStatus,
+  PaymentStatusFilter,
   PremiumPlanKey,
   PremiumPlans,
 } from "@/types"
@@ -70,7 +71,8 @@ export function usePaymentStatus(invoiceId: string | undefined, poll = false) {
       return res.payment
     },
     enabled: !!invoiceId,
-    refetchInterval: (query) => (poll && query.state.data?.status !== "success" ? 3000 : false),
+    refetchInterval: (query) =>
+      poll && !isTerminalPaymentStatus(query.state.data?.status) ? 3000 : false,
   })
 }
 
@@ -78,7 +80,7 @@ export interface PaymentHistoryFilters {
   page?: number
   limit?: number
   purpose?: PaymentPurpose
-  status?: PaymentStatus
+  status?: PaymentStatusFilter
 }
 
 // O'zining to'lovlar tarixi — istalgan rol (student/teacher/admin/superadmin)

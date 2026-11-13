@@ -8,7 +8,11 @@ import { ErrorState } from '@/components/ui/error-state';
 import { usePaymentStatus } from '@/hooks/use-payment';
 import { refreshCurrentUser } from '@/hooks/use-auth';
 import { formatDateTime, formatPrice } from '@/lib/format';
-import { getPaymentStatusConfig, PAYMENT_PURPOSE_LABELS } from '@/lib/payment-status';
+import {
+  getPaymentStatusConfig,
+  isTerminalPaymentStatus,
+  PAYMENT_PURPOSE_LABELS,
+} from '@/lib/payment-status';
 import { cn } from '@/lib/utils';
 import type { PaymentPurpose } from '@/types';
 
@@ -57,7 +61,7 @@ export function PaymentStatusView({
   const config = getPaymentStatusConfig(invoice.status);
   const Icon = config.icon;
   const success = invoice.status === 'success';
-  const pending = !success && invoice.status !== 'error' && invoice.status !== 'revert';
+  const pending = !isTerminalPaymentStatus(invoice.status);
   const purposeLink = purposeLinks && success ? PURPOSE_LINKS[invoice.purpose] : undefined;
 
   return (

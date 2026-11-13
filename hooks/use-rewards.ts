@@ -12,10 +12,23 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function useRewards(filters: { page?: number; limit?: number } = {}) {
+export function useRewards(
+  filters: {
+    page?: number;
+    limit?: number;
+    includeInactive?: boolean;
+    // Faqat includeInactive bilan: true — faollar, false — faolsizlar, undefined — barchasi
+    isActive?: boolean;
+  } = {}
+) {
+  const { includeInactive, isActive, ...rest } = filters;
   return useQuery({
     queryKey: ['rewards', filters],
-    queryFn: () => api.get<Paginated<Reward>>('/rewards', { ...filters }, { skipAuth: true }),
+    queryFn: () =>
+      includeInactive
+        ? // Admin katalogi: token bilan yuboriladi, backend faolsizlarini ham qaytaradi
+          api.get<Paginated<Reward>>('/rewards', { ...rest, includeInactive: true, isActive })
+        : api.get<Paginated<Reward>>('/rewards', rest, { skipAuth: true }),
     placeholderData: (prev) => prev,
   });
 }
@@ -39,6 +52,7 @@ export interface RewardPayload {
   cost: number;
   stock: number | null;
   premiumOnly?: boolean;
+  isActive?: boolean;
 }
 
 export function useCreateReward() {

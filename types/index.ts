@@ -310,6 +310,7 @@ export interface Reward {
   stock: number | null
   image?: string
   premiumOnly?: boolean
+  isActive?: boolean
   createdAt?: string
 }
 

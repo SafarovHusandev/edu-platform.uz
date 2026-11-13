@@ -40,6 +40,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { PaginationBar } from '@/components/ui/pagination-bar';
+import { FilterPills } from '@/components/ui/filter-pills';
 import {
   useRewards,
   useCreateReward,
@@ -56,6 +57,14 @@ import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
 
+type StatusFilter = 'all' | 'active' | 'inactive';
+
+const EMPTY_TITLE: Record<StatusFilter, string> = {
+  all: "Hali mukofot qo'shilmagan",
+  active: "Faol mukofotlar yo'q",
+  inactive: "Faol bo'lmagan mukofotlar yo'q",
+};
+
 const rewardSchema = z.object({
   title: z.string().min(2, { error: 'Kamida 2 ta belgi' }),
   description: z.string().optional(),
@@ -70,7 +79,13 @@ type RewardFormValues = z.output<typeof rewardSchema>;
 
 export default function AdminRewardsPage() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError, refetch } = useRewards({ page, limit: PAGE_SIZE });
+  const [status, setStatus] = useState<StatusFilter>('all');
+  const { data, isLoading, isError, refetch } = useRewards({
+    page,
+    limit: PAGE_SIZE,
+    includeInactive: true,
+    isActive: status === 'all' ? undefined : status === 'active',
+  });
   const createReward = useCreateReward();
   const updateReward = useUpdateReward();
   const deleteReward = useDeleteReward();
@@ -150,22 +165,37 @@ export default function AdminRewardsPage() {
         }
       />
 
+      <FilterPills
+        className="mb-4"
+        value={status}
+        onChange={(value) => {
+          setStatus(value);
+          setPage(1);
+        }}
+        options={[
+          { value: 'all', label: 'Barchasi' },
+          { value: 'active', label: 'Faollari' },
+          { value: 'inactive', label: "Faol bo'lmaganlari" },
+        ]}
+      />
+
       {isLoading ? (
         <div className="h-80 animate-pulse rounded-[20px] bg-muted" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState icon={Gift} title="Hali mukofot qo'shilmagan" />
+        <EmptyState icon={Gift} title={EMPTY_TITLE[status]} />
       ) : (
         <>
           <div className="overflow-x-auto rounded-[20px] border border-border bg-card">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
+            <table className="w-full min-w-180 border-collapse text-sm">
               <thead>
                 <tr className="bg-muted/50 text-left text-[13px] text-muted-foreground">
                   <th className="px-5 py-3.5 font-semibold">Mukofot</th>
                   <th className="px-3 py-3.5 font-semibold">Narx</th>
                   <th className="px-3 py-3.5 font-semibold">Qoldiq</th>
                   <th className="px-3 py-3.5 font-semibold">Kimlarga</th>
+                  <th className="px-3 py-3.5 font-semibold">Holat</th>
                   <th className="px-5 py-3.5" />
                 </tr>
               </thead>
@@ -173,9 +203,16 @@ export default function AdminRewardsPage() {
                 {data.items.map((reward) => {
                   const image = resolveAssetUrl(reward.image);
                   const uploading = uploadImage.isPending && uploadTargetId === reward._id;
+                  // isActive maydoni bo'lmagan eski yozuvlar faol hisoblanadi
+                  const active = reward.isActive !== false;
+                  const toggling =
+                    updateReward.isPending && updateReward.variables?.id === reward._id;
                   return (
-                    <tr key={reward._id} className="border-t border-muted">
-                      <td className="px-5 py-3">
+                    <tr
+                      key={reward._id}
+                      className={cn('border-t border-muted', !active && 'bg-muted/30')}
+                    >
+                      <td className={cn('px-5 py-3', !active && 'opacity-55')}>
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
@@ -211,12 +248,12 @@ export default function AdminRewardsPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className={cn('px-3 py-3', !active && 'opacity-55')}>
                         <span className="flex items-center gap-1 font-heading font-semibold text-gold-foreground">
                           <DiamondIcon className="size-4" /> {formatNumber(reward.cost)}
                         </span>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className={cn('px-3 py-3', !active && 'opacity-55')}>
                         {reward.stock === null ? (
                           <span className="text-muted-foreground">Cheksiz</span>
                         ) : (
@@ -231,7 +268,7 @@ export default function AdminRewardsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-3">
+                      <td className={cn('px-3 py-3', !active && 'opacity-55')}>
                         {reward.premiumOnly ? (
                           <StatusPill tone="warning">
                             <Crown className="size-3.5" /> Premium
@@ -239,6 +276,30 @@ export default function AdminRewardsPage() {
                         ) : (
                           <StatusPill tone="neutral">Barcha</StatusPill>
                         )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <label className="flex w-fit cursor-pointer items-center gap-2">
+                          <Switch
+                            checked={active}
+                            disabled={toggling}
+                            aria-label={
+                              active
+                                ? `"${reward.title}" ni faolsizlantirish`
+                                : `"${reward.title}" ni faollashtirish`
+                            }
+                            onCheckedChange={(checked) =>
+                              updateReward.mutate({ id: reward._id, isActive: checked })
+                            }
+                          />
+                          <span
+                            className={cn(
+                              'text-[13px] font-semibold',
+                              active ? 'text-success' : 'text-muted-foreground'
+                            )}
+                          >
+                            {active ? 'Faol' : 'Faolsiz'}
+                          </span>
+                        </label>
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-1.5">

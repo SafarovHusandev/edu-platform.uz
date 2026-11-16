@@ -553,9 +553,15 @@
   text-align: center;
 }
 .live-md-phone.wmde-markdown {
-  --live-md-img-max: 10rem;
-  font-size: 1.125rem;
-  font-weight: 600;
+  /* Javob tugmalaridan doim kattaroq: 360px telefonda ~24px, kompyuterda 64px gacha */
+  --live-md-img-max: clamp(10rem, 22vh, 18rem);
+  /* --q-fit: FitQuestion blokka sig'adigan o'lchamni beradi (uzun savol kichrayadi) */
+  font-size: var(--q-fit, clamp(1.5rem, 0.9rem + 2.8vw, 4rem));
+  font-weight: 700;
+  line-height: 1.3;
+}
+.live-fit-question .live-md.wmde-markdown img {
+  max-height: 16svh;
 }
 .live-md-card.wmde-markdown {
   --live-md-img-max: 12rem;

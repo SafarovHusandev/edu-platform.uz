@@ -53,6 +53,7 @@ export interface LivePodiumEntry {
   rank?: number;
   id?: string;
   name: string;
+  avatar?: string | null;
   score: number;
   correctCount?: number;
 }
@@ -120,6 +121,8 @@ export interface LiveLobbyPlayer {
   name: string;
   connected: boolean;
   isPlatformUser?: boolean;
+  // Ishtirokchi tanlagan ikonka kaliti (components/live-quiz/player-avatars)
+  avatar?: string | null;
 }
 
 export interface LiveQuestionStart {
@@ -138,6 +141,7 @@ export interface LiveLeaderboardEntry {
   rank: number;
   id: string;
   name: string;
+  avatar?: string | null;
   score: number;
   correctCount?: number;
   streak?: number;
@@ -201,6 +205,7 @@ export interface LivePlayerSnapshot {
   status: LiveGameStatus;
   playerId: string;
   name: string;
+  avatar?: string | null;
   score: number;
   totalQuestions: number;
   question?: Partial<LiveQuestionStart>;

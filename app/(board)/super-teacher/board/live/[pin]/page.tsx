@@ -32,13 +32,13 @@ import {
 import { BoardLayout, boardButton } from '@/components/super-teacher/board-layout';
 import {
   BoardQuestion,
-  DistributionBars,
   LeaderboardList,
   OptionGrid,
   useCountdown,
   type BoardQuestionData,
 } from '@/components/live-quiz/board-views';
 import { QuestionMarkdown } from '@/components/live-quiz/question-markdown';
+import { PlayerAvatar } from '@/components/live-quiz/player-avatars';
 import { ackField, useLiveSocket, type LiveCall } from '@/hooks/use-live-socket';
 import { getFrontendUrl } from '@/lib/config';
 import { SILENT_CODES, liveErrorMessage } from '@/lib/live-quiz';
@@ -154,6 +154,7 @@ function Lobby({
               <li key={player.id} className="live-pop-in">
                 {active ? (
                   <span className="flex min-h-16 items-center gap-2 rounded-2xl bg-white p-2 pl-5 text-[clamp(1.25rem,1.8vw,1.9rem)] font-bold text-[#141B3D]">
+                    <PlayerAvatar avatar={player.avatar} className="size-11" />
                     {player.name}
                     <button
                       type="button"
@@ -179,13 +180,15 @@ function Lobby({
                     type="button"
                     onClick={() => setSelected(player.id)}
                     className={cn(
-                      'min-h-16 rounded-2xl bg-white/15 px-6 text-[clamp(1.25rem,1.8vw,1.9rem)] font-bold transition-opacity active:scale-[0.97]',
+                      'flex min-h-16 items-center gap-3 rounded-2xl bg-white/15 py-2 pl-3 pr-6 text-[clamp(1.25rem,1.8vw,1.9rem)] font-bold transition-opacity active:scale-[0.97]',
+                      !player.avatar && 'pl-6',
                       !player.connected && 'opacity-40'
                     )}
                     title={player.connected ? undefined : 'Ulanish uzilgan'}
                   >
+                    <PlayerAvatar avatar={player.avatar} className="size-11" />
                     {player.name}
-                    {!player.connected && <WifiOff className="ml-2 inline size-5" />}
+                    {!player.connected && <WifiOff className="inline size-5" />}
                   </button>
                 )}
               </li>
@@ -226,18 +229,11 @@ function Reveal({
         </div>
       )}
       <div className="grid flex-1 gap-8 lg:grid-cols-[3fr_2fr]">
-        <div className="flex flex-col gap-6">
-          {reveal.distribution.length > 0 && (
-            <DistributionBars
-              options={options}
-              distribution={reveal.distribution}
-              correctIndex={reveal.correctIndex}
-            />
-          )}
+        <div className="flex flex-col justify-center gap-6">
+          <OptionGrid options={options} correctIndex={reveal.correctIndex} />
           <p className="text-center text-[clamp(1.1rem,1.6vw,1.6rem)] text-white/75">
             Javob berdi: {reveal.answered} / {reveal.total}
           </p>
-          <OptionGrid options={options} correctIndex={reveal.correctIndex} />
         </div>
         <div className="flex flex-col gap-4">
           <h2 className="flex items-center gap-3 font-heading text-[clamp(1.5rem,2.2vw,2.25rem)] font-bold">
@@ -292,6 +288,7 @@ function Podium({ podium }: { podium: LiveLeaderboardEntry[] }) {
             >
               {entry && (
                 <>
+                  <PlayerAvatar avatar={entry.avatar} className="mb-2 size-[clamp(3.5rem,6vw,6rem)]" />
                   <span className="max-w-full truncate text-[clamp(1.25rem,2.2vw,2.5rem)] font-bold">
                     {entry.name}
                   </span>

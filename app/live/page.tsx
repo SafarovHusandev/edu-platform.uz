@@ -2,11 +2,30 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Clock, Flame, Hourglass, Loader2, LogIn, PartyPopper, UserX, Users, X } from 'lucide-react';
+import {
+  Check,
+  Clock,
+  Flame,
+  Hourglass,
+  Loader2,
+  LogIn,
+  PartyPopper,
+  UserX,
+  Users,
+  X,
+} from 'lucide-react';
 import { RankMedal } from '@/components/ui/rank-medal';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { QuestionMarkdown } from '@/components/live-quiz/question-markdown';
+import { FitQuestion } from '@/components/live-quiz/fit-question';
+import {
+  DEFAULT_AVATAR,
+  LIVE_AVATARS,
+  PlayerAvatar,
+  findAvatar,
+  readSavedAvatar,
+  saveAvatar,
+} from '@/components/live-quiz/player-avatars';
 import { OptionShape, optionStyle } from '@/components/live-quiz/option-styles';
 import {
   CountdownRing,
@@ -25,7 +44,6 @@ import {
   clearPlayerKey,
   liveErrorMessage,
   readPlayerKey,
-  toServerUrl,
   writePlayerKey,
 } from '@/lib/live-quiz';
 import { formatNumber } from '@/lib/format';
@@ -65,7 +83,15 @@ interface PlayerQuestion {
 
 const NAME_CODES = new Set(['NAME_REQUIRED', 'NAME_TOO_LONG', 'NAME_TAKEN']);
 // Socket ulanib turishi kerak bo'lgan ekranlar
-const SOCKET_SCREENS = new Set<Screen>(['name', 'joining', 'lobby', 'question', 'answered', 'result', 'finished']);
+const SOCKET_SCREENS = new Set<Screen>([
+  'name',
+  'joining',
+  'lobby',
+  'question',
+  'answered',
+  'result',
+  'finished',
+]);
 
 function toPlayerQuestion(q: Partial<LiveQuestionStart>, total: number): PlayerQuestion {
   return {
@@ -79,6 +105,28 @@ function toPlayerQuestion(q: Partial<LiveQuestionStart>, total: number): PlayerQ
     endsAt: q.endsAt,
     offset: q.serverNow ? q.serverNow - Date.now() : 0,
   };
+}
+
+// Shu o'yindagi tanlov — sahifa yangilanib rejoin bo'lganda (server avatar qaytarmasa) tiklash uchun
+function pinAvatarKey(pin: string) {
+  return `live:${pin}:avatar`;
+}
+
+function readPinAvatar(pin: string | null) {
+  if (!pin) return null;
+  try {
+    return sessionStorage.getItem(pinAvatarKey(pin));
+  } catch {
+    return null;
+  }
+}
+
+function writePinAvatar(pin: string, avatar: string) {
+  try {
+    sessionStorage.setItem(pinAvatarKey(pin), avatar);
+  } catch {
+    // e'tiborsiz
+  }
 }
 
 function vibrate(pattern: number | number[]) {
@@ -95,7 +143,12 @@ const bigButton =
 
 function Centered({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('flex flex-1 flex-col items-center justify-center gap-5 px-5 py-10 text-center', className)}>
+    <div
+      className={cn(
+        'flex flex-1 flex-col items-center justify-center gap-5 px-5 py-10 text-center',
+        className
+      )}
+    >
       {children}
     </div>
   );
@@ -115,7 +168,10 @@ function LivePlayer() {
   const [nameInput, setNameInput] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [me, setMe] = useState<{ name: string; score: number } | null>(null);
+  const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
+  const [me, setMe] = useState<{ name: string; score: number; avatar?: string | null } | null>(
+    null
+  );
   const [count, setCount] = useState<number | null>(null);
   const [question, setQuestion] = useState<PlayerQuestion | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -145,6 +201,7 @@ function LivePlayer() {
         setScreen('joining');
       } else {
         setNameInput((prev) => prev || (userName ?? '').slice(0, LIVE_LIMITS.nameMax));
+        setAvatar(readSavedAvatar());
         setScreen('name');
       }
     },
@@ -201,7 +258,11 @@ function LivePlayer() {
   }, []);
 
   const applySnapshot = useCallback((snap: LivePlayerSnapshot) => {
-    setMe({ name: snap.name, score: snap.score ?? 0 });
+    setMe({
+      name: snap.name,
+      score: snap.score ?? 0,
+      avatar: snap.avatar ?? readPinAvatar(pinRef.current),
+    });
     if (snap.playerCount != null) setCount(snap.playerCount);
     setStanding({ rank: snap.rank, totalPlayers: snap.totalPlayers });
     const q = snap.question ? toPlayerQuestion(snap.question, snap.totalQuestions) : null;
@@ -219,7 +280,12 @@ function LivePlayer() {
         setScreen('result');
         break;
       case 'finished':
-        setFinal({ rank: snap.rank, score: snap.score, totalQuestions: snap.totalQuestions, totalPlayers: snap.totalPlayers });
+        setFinal({
+          rank: snap.rank,
+          score: snap.score,
+          totalQuestions: snap.totalQuestions,
+          totalPlayers: snap.totalPlayers,
+        });
         setScreen('finished');
         break;
     }
@@ -241,6 +307,7 @@ function LivePlayer() {
       if (res.code === 'PLAYER_NOT_FOUND') {
         clearPlayerKey(currentPin);
         setNameInput((prev) => prev || (userName ?? '').slice(0, LIVE_LIMITS.nameMax));
+        setAvatar(readSavedAvatar());
         setScreen('name');
       } else if (res.code === 'GAME_NOT_FOUND') {
         clearPlayerKey(currentPin);
@@ -298,18 +365,27 @@ function LivePlayer() {
     if (name.length > LIVE_LIMITS.nameMax) return setNameError('24 belgidan oshmasin');
     setNameError(null);
     setJoining(true);
-    const res = await call('player:join', { pin, name });
+    const res = await call('player:join', { pin, name, avatar });
     setJoining(false);
     if (res.ok) {
       const key = ackField<string>(res, 'playerKey');
       if (key) writePlayerKey(pin, key);
+      saveAvatar(avatar);
+      writePinAvatar(pin, avatar);
       const snap = ackField<LivePlayerSnapshot>(res, 'game');
-      if (snap) applySnapshot({ ...snap, name: snap.name ?? name });
-      else setScreen('lobby');
+      if (snap) applySnapshot({ ...snap, name: snap.name ?? name, avatar: snap.avatar ?? avatar });
+      else {
+        setMe({ name, score: 0, avatar });
+        setScreen('lobby');
+      }
       return;
     }
     if (res.code && NAME_CODES.has(res.code)) setNameError(liveErrorMessage(res.code));
-    else if (res.code === 'GAME_NOT_FOUND' || res.code === 'GAME_STARTED' || res.code === 'GAME_FULL')
+    else if (
+      res.code === 'GAME_NOT_FOUND' ||
+      res.code === 'GAME_STARTED' ||
+      res.code === 'GAME_FULL'
+    )
       backToPin(liveErrorMessage(res.code));
     else toast.error(liveErrorMessage(res.code, res.message));
   }
@@ -404,15 +480,54 @@ function LivePlayer() {
               {nameInput.length}/{LIVE_LIMITS.nameMax}
             </span>
           </div>
-          {userName && (
-            <p className="text-sm text-white/60">Natija akkauntingizga ham yoziladi</p>
-          )}
-          <button type="submit" className={bigButton} disabled={joining || connection !== 'connected'}>
-            {joining || connection !== 'connected' ? <Loader2 className="size-6 animate-spin" /> : <Check className="size-6" />}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-base font-semibold text-white/80">
+              Ikonkangizni tanlang
+            </legend>
+            <div className="grid grid-cols-4 gap-2.5" role="radiogroup" aria-label="Ikonka">
+              {LIVE_AVATARS.map((item) => {
+                const active = item.key === avatar;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={item.label}
+                    title={item.label}
+                    onClick={() => setAvatar(item.key)}
+                    className={cn(
+                      'flex h-14 items-center justify-center rounded-2xl text-white transition-transform active:scale-95',
+                      item.bg,
+                      active ? 'scale-105 ring-4 ring-white' : 'opacity-60'
+                    )}
+                  >
+                    <Icon className="size-7" aria-hidden />
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+          {userName && <p className="text-sm text-white/60">Natija akkauntingizga ham yoziladi</p>}
+          <button
+            type="submit"
+            className={bigButton}
+            disabled={joining || connection !== 'connected'}
+          >
+            {joining || connection !== 'connected' ? (
+              <Loader2 className="size-6 animate-spin" />
+            ) : (
+              <Check className="size-6" />
+            )}
             Qo&apos;shilish
           </button>
         </form>
-        <button type="button" className="min-h-14 px-4 text-white/70 underline" onClick={() => backToPin()}>
+        <button
+          type="button"
+          className="min-h-14 px-4 text-white/70 underline"
+          onClick={() => backToPin()}
+        >
           Boshqa PIN
         </button>
       </Centered>
@@ -427,7 +542,19 @@ function LivePlayer() {
   } else if (screen === 'lobby') {
     content = (
       <Centered>
-        <Check className="size-16 rounded-full bg-[#26890C] p-3" strokeWidth={3} />
+        <span className="relative">
+          {findAvatar(me?.avatar) ? (
+            <PlayerAvatar avatar={me?.avatar} className="size-24" />
+          ) : (
+            <Check className="size-16 rounded-full bg-[#26890C] p-3" strokeWidth={3} />
+          )}
+          {findAvatar(me?.avatar) && (
+            <Check
+              className="absolute -bottom-1 -right-1 size-8 rounded-full border-4 border-[#141B3D] bg-[#26890C] p-1"
+              strokeWidth={3}
+            />
+          )}
+        </span>
         <h1 className="font-heading text-2xl font-bold">Siz qo&apos;shildingiz!</h1>
         <p className="text-xl text-white/80">O&apos;qituvchi boshlashini kuting</p>
         <p className="rounded-2xl bg-white/10 px-6 py-3 text-2xl font-bold">{me?.name}</p>
@@ -439,64 +566,80 @@ function LivePlayer() {
       </Centered>
     );
   } else if ((screen === 'question' || screen === 'answered') && question) {
-    const image = toServerUrl(question.image);
     content = (
-      <div className="flex flex-1 flex-col gap-3 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <span className="rounded-full bg-white/15 px-3 py-1 font-bold tabular-nums">
+      <div className="flex flex-1 flex-col gap-3 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 lg:mx-auto lg:w-full lg:max-w-[1500px] lg:px-8 lg:pb-8 lg:pt-6">
+        <div className="flex items-center justify-between gap-2 text-[clamp(0.875rem,0.6rem+1vw,1.5rem)]">
+          <span className="rounded-full bg-white/15 px-[0.8em] py-[0.25em] font-bold tabular-nums">
             {question.index + 1} / {question.total}
           </span>
           <PointsBadge multiplier={question.pointsMultiplier} />
           {remainingMs != null && (
-            <CountdownRing remainingMs={remainingMs} totalMs={question.timeLimit * 1000} className="size-14 text-sm" />
+            <CountdownRing
+              remainingMs={remainingMs}
+              totalMs={question.timeLimit * 1000}
+              className="size-[clamp(3.5rem,2.5rem+4vw,6.5rem)] text-[clamp(0.875rem,0.6rem+1vw,1.5rem)]"
+            />
           )}
         </div>
-        <div className="max-h-[32svh] overflow-y-auto rounded-2xl bg-white/5 p-3">
-          <QuestionMarkdown text={question.text} variant="phone" onImageClick={setZoom} />
-          {image && (
-            <button type="button" className="mt-2 block cursor-zoom-in" onClick={() => setZoom(image)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="" className="max-h-40 rounded-xl object-contain" />
-            </button>
-          )}
-        </div>
+        {/* Kompyuterda savol va javoblar ekran o'rtasida, kartalar cho'zilmaydi */}
+        <div className="flex flex-1 flex-col gap-3 lg:justify-center lg:gap-6">
+          {/* Shrift blokka scroll'siz sig'adigan o'lchamga avtomatik tushadi */}
+          <FitQuestion
+            text={question.text}
+            image={question.image}
+            onImageClick={setZoom}
+            className="max-h-[38svh] lg:max-h-[42svh]"
+          />
 
-        {screen === 'answered' ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-            {chosen != null && (
-              <OptionTile index={chosen} text={question.options[chosen] ?? ''} size="compact" className="w-full max-w-sm" />
-            )}
-            <Hourglass className="size-12 animate-pulse" />
-            <p className="text-2xl font-bold">Javob qabul qilindi</p>
-            <p className="text-white/70">Boshqalar javob berishini kuting</p>
-          </div>
-        ) : (
-          <div
-            className={cn(
-              'grid flex-1 gap-3',
-              question.options.length > 2 ? 'grid-cols-2' : 'grid-cols-1'
-            )}
-          >
-            {question.options.map((text, i) => {
-              const style = optionStyle(i);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => answer(i)}
-                  className={cn(
-                    'flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl p-3 text-white shadow-[0_5px_0_rgb(0_0_0/0.3)] transition-transform active:translate-y-1 active:shadow-none',
-                    style.bg
-                  )}
-                  aria-label={`${style.name} ${style.symbol}: ${text}`}
-                >
-                  <OptionShape index={i} className="size-10" />
-                  <span className="line-clamp-3 text-base font-bold leading-tight">{text}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+          {screen === 'answered' ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+              {chosen != null && (
+                <OptionTile
+                  index={chosen}
+                  text={question.options[chosen] ?? ''}
+                  size="compact"
+                  className="w-full max-w-xl"
+                />
+              )}
+              <Hourglass className="size-12 animate-pulse" />
+              <p className="text-2xl font-bold">Javob qabul qilindi</p>
+              <p className="text-white/70">Boshqalar javob berishini kuting</p>
+            </div>
+          ) : (
+            <div
+              className={cn(
+                'grid flex-1 gap-3 lg:flex-none lg:gap-5',
+                question.options.length > 2 ? 'grid-cols-2' : 'grid-cols-1 lg:grid-cols-2'
+              )}
+            >
+              {question.options.map((text, i) => {
+                const style = optionStyle(i);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => answer(i)}
+                    disabled={remainingMs != null && remainingMs <= 0}
+                    className={cn(
+                      'flex min-h-24 cursor-pointer flex-col items-center justify-center gap-[0.4em] rounded-2xl p-3 text-white shadow-[0_5px_0_rgb(0_0_0/0.3)] outline-none transition-[transform,box-shadow,filter] duration-150 select-none sm:p-5',
+                      'active:translate-y-1 active:shadow-none focus-visible:ring-4 focus-visible:ring-white/80 disabled:cursor-not-allowed disabled:opacity-60',
+                      // 360px telefonda ~20px, planshetda kattaroq
+                      'text-[clamp(1.25rem,0.75rem+2.4vw,3rem)]',
+                      // Kompyuter: ixcham gorizontal karta, hover effekti
+                      'lg:min-h-36 lg:flex-row lg:justify-start lg:gap-5 lg:px-7 lg:text-left lg:text-[clamp(1.5rem,1.5vw,2rem)]',
+                      'lg:hover:-translate-y-1 lg:hover:shadow-[0_9px_0_rgb(0_0_0/0.3)] lg:hover:brightness-110',
+                      style.bg
+                    )}
+                    aria-label={`${style.name} ${style.symbol}: ${text}`}
+                  >
+                    <OptionShape index={i} className="size-[1.8em] lg:size-[1.5em]" />
+                    <span className="line-clamp-4 font-bold leading-tight break-words">{text}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     );
   } else if (screen === 'result') {
@@ -524,7 +667,9 @@ function LivePlayer() {
           <>
             <Check className="size-24 rounded-full bg-white/20 p-4" strokeWidth={3} />
             <p className="font-heading text-3xl font-bold">To&apos;g&apos;ri!</p>
-            <p className="live-pop-in font-heading text-5xl font-bold">+{formatNumber(result.points)}</p>
+            <p className="live-pop-in font-heading text-5xl font-bold">
+              +{formatNumber(result.points)}
+            </p>
             {result.streak >= 2 && (
               <p className="flex items-center gap-2 text-xl font-bold">
                 <Flame className="size-6 text-[#FFC62E]" /> {result.streak} ta ketma-ket
@@ -538,8 +683,8 @@ function LivePlayer() {
           </>
         )}
         {result && !result.correct && question?.options[result.correctIndex] != null && (
-          <div className="flex w-full max-w-sm flex-col gap-2">
-            <p className="text-white/80">To&apos;g&apos;ri javob:</p>
+          <div className="flex w-full max-w-xl flex-col gap-2">
+            <p className="text-lg text-white/80">To&apos;g&apos;ri javob:</p>
             <OptionTile
               index={result.correctIndex}
               text={question.options[result.correctIndex]}
@@ -550,7 +695,9 @@ function LivePlayer() {
         )}
         <div className="mt-4 flex flex-col items-center gap-1 rounded-2xl bg-black/20 px-8 py-4">
           <span className="text-white/75">Jami ball</span>
-          <span className="font-heading text-3xl font-bold tabular-nums">{formatNumber(me?.score ?? 0)}</span>
+          <span className="font-heading text-3xl font-bold tabular-nums">
+            {formatNumber(me?.score ?? 0)}
+          </span>
           {standing.rank != null && (
             <span className="text-lg font-semibold">
               {standing.totalPlayers ? `${standing.totalPlayers} tadan ` : ''}

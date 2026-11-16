@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Flame, Users, Zap } from 'lucide-react';
 import { QuestionMarkdown } from '@/components/live-quiz/question-markdown';
+import { PlayerAvatar } from '@/components/live-quiz/player-avatars';
 import { OptionShape, optionStyle } from '@/components/live-quiz/option-styles';
 import { toServerUrl } from '@/lib/live-quiz';
 import { formatNumber } from '@/lib/format';
@@ -96,7 +97,10 @@ export function OptionTile({
       className={cn(
         'relative flex min-h-16 items-center gap-4 rounded-2xl px-5 py-4 text-white shadow-[0_6px_0_rgb(0_0_0/0.25)] transition-all duration-500',
         style.bg,
-        size === 'board' ? 'text-[clamp(1.25rem,2.2vw,2.25rem)] font-bold' : 'text-base font-semibold',
+        size === 'board'
+          ? 'text-[clamp(1.25rem,2.2vw,2.25rem)] font-bold'
+          : // telefon: 360px da ~22px, katta ekranda 40px gacha
+            'text-[clamp(1.375rem,1rem+1.6vw,2.5rem)] font-bold',
         state === 'dim' && 'scale-[0.97] opacity-30 saturate-50',
         state === 'correct' && 'ring-[6px] ring-white',
         className
@@ -104,7 +108,7 @@ export function OptionTile({
     >
       <OptionShape
         index={index}
-        className={size === 'board' ? 'size-[1.4em]' : 'size-6'}
+        className="size-[1.4em]"
         title={`${style.name} ${style.symbol}`}
       />
       <span className="min-w-0 flex-1 break-words leading-tight">{text}</span>
@@ -142,61 +146,6 @@ export function OptionGrid({
   );
 }
 
-// ---------- Javoblar taqsimoti ----------
-
-export function DistributionBars({
-  options,
-  distribution,
-  correctIndex,
-  className,
-}: {
-  options: string[];
-  distribution: number[];
-  correctIndex: number;
-  className?: string;
-}) {
-  // Ustunlar 0 dan o'sib chiqadi
-  const [grown, setGrown] = useState(false);
-  useEffect(() => {
-    const id = window.requestAnimationFrame(() => setGrown(true));
-    return () => window.cancelAnimationFrame(id);
-  }, []);
-  const max = Math.max(1, ...distribution);
-
-  return (
-    <div className={cn('flex h-56 items-end justify-center gap-4 sm:gap-8', className)}>
-      {options.map((_, i) => {
-        const style = optionStyle(i);
-        const count = distribution[i] ?? 0;
-        const correct = i === correctIndex;
-        return (
-          <div key={i} className="flex h-full w-24 flex-col items-center justify-end gap-2">
-            <span className="font-heading text-3xl font-bold tabular-nums">{count}</span>
-            <div
-              className={cn(
-                'w-full rounded-t-xl transition-[height] duration-1000 ease-out',
-                style.bg,
-                !correct && 'opacity-40'
-              )}
-              style={{ height: grown ? `${Math.max(4, (count / max) * 100)}%` : '4%' }}
-            />
-            <span
-              className={cn(
-                'flex h-12 w-full items-center justify-center gap-1.5 rounded-b-xl text-white',
-                style.bg,
-                !correct && 'opacity-40'
-              )}
-            >
-              <OptionShape index={i} className="size-6" title={`${style.name} ${style.symbol}`} />
-              {correct && <Check className="size-6" strokeWidth={4} />}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // ---------- Reyting ----------
 
 export function LeaderboardList({
@@ -220,6 +169,7 @@ export function LeaderboardList({
           style={{ animationDelay: `${i * 80}ms` }}
         >
           <span className="w-10 text-center font-heading tabular-nums opacity-80">{entry.rank}</span>
+          <PlayerAvatar avatar={entry.avatar} className="size-[1.6em]" />
           <span className="min-w-0 flex-1 truncate">{entry.name}</span>
           {entry.streak != null && entry.streak >= 2 && (
             <span className="flex items-center gap-1 text-[0.75em] font-semibold opacity-90">

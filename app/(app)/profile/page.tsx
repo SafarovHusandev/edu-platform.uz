@@ -84,7 +84,7 @@ const setPasswordSchema = z
   });
 
 const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
-const GRADE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const GRADE_LETTERS = ['A', 'B', 'V', 'C', 'D', 'E', 'F'];
 
 const nameSchema = z.object({
   name: z.string().trim().min(2, { error: "Ism kamida 2 ta belgidan iborat bo'lsin" }),

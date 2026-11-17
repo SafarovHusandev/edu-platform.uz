@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { useRegister } from '@/hooks/use-auth';
 
 const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
-const GRADE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const GRADE_LETTERS = ['A', 'B', 'V', 'C', 'D', 'E', 'F'];
 
 const ROLE_OPTIONS = [
   { value: 'student', label: "O'quvchi", hint: 'Darslar va testlar', icon: GraduationCap },

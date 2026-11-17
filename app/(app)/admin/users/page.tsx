@@ -101,7 +101,7 @@ const ROLES: Role[] = ['student', 'teacher', 'admin', 'superadmin'];
 const TARIFS: Tarif[] = ['standart', 'premium'];
 const TARIF_LABELS: Record<Tarif, string> = { standart: 'Standart', premium: 'Premium' };
 const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
-const GRADE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const GRADE_LETTERS = ['A', 'B', 'V', 'C', 'D', 'E', 'F'];
 
 const userCreateSchema = z
   .object({

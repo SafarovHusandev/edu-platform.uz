@@ -5,12 +5,13 @@ import rehypeSanitize from 'rehype-sanitize';
 import { toServerUrl } from '@/lib/live-quiz';
 import { cn } from '@/lib/utils';
 
-type Variant = 'board' | 'phone' | 'card';
+type Variant = 'board' | 'phone' | 'card' | 'slide';
 
 const VARIANT_CLASS: Record<Variant, string> = {
   board: 'live-md-board',
   phone: 'live-md-phone',
   card: 'live-md-card',
+  slide: 'live-md-slide',
 };
 
 // Savol matnini xavfsiz ko'rsatish (muharrirdan tashqarida faqat shu komponent).

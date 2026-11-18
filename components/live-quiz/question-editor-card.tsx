@@ -59,6 +59,8 @@ export function QuestionEditorCard({
   onDuplicate,
   onRemove,
   onPreview,
+  hideTiming,
+  upload = uploadLiveQuizImage,
 }: {
   id: string;
   index: number;
@@ -71,6 +73,9 @@ export function QuestionEditorCard({
   onDuplicate: () => void;
   onRemove: () => void;
   onPreview: () => void;
+  // Interaktiv dars mashqlari: taymer va ball yo'q
+  hideTiming?: boolean;
+  upload?: (file: File) => Promise<string>;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id });
@@ -99,7 +104,7 @@ export function QuestionEditorCard({
     }
     setImageUploading(true);
     try {
-      onChange({ image: await uploadLiveQuizImage(file) });
+      onChange({ image: await upload(file) });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Rasmni yuklab bo'lmadi");
     } finally {
@@ -158,10 +163,12 @@ export function QuestionEditorCard({
             {collapsed && (
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{question.options.length} variant</span>
-                <span className="flex items-center gap-0.5">
-                  <Timer className="size-3" /> {question.timeLimit}s
-                </span>
-                {question.pointsMultiplier !== 1 && (
+                {!hideTiming && (
+                  <span className="flex items-center gap-0.5">
+                    <Timer className="size-3" /> {question.timeLimit}s
+                  </span>
+                )}
+                {!hideTiming && question.pointsMultiplier !== 1 && (
                   <span>{POINTS_ITEMS[String(question.pointsMultiplier)]}</span>
                 )}
               </span>
@@ -208,6 +215,7 @@ export function QuestionEditorCard({
               value={question.text}
               onChange={(text) => onChange({ text })}
               invalid={hasErrors && !question.text.trim()}
+              upload={upload}
             />
           </div>
 
@@ -342,7 +350,7 @@ export function QuestionEditorCard({
           </div>
 
           {/* Taymer va ball */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={cn('grid gap-4 sm:grid-cols-2', hideTiming && 'hidden')}>
             <div className="flex flex-col gap-1.5">
               <Label>Taymer</Label>
               <Select

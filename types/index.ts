@@ -410,3 +410,10 @@ export interface ApiErrorShape {
   message: string
   errors?: Record<string, string[]>
 }
+
+// GET /users/class-roster — o'qituvchi uchun sinf o'quvchilari (minimal maydonlar)
+export interface ClassRosterStudent {
+  _id: string
+  name: string
+  avatar: string | null
+}

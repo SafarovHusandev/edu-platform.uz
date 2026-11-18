@@ -59,7 +59,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 15;
-const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
+const OPTION_LETTERS = ['A', 'B', 'V', 'C', 'D', 'E', 'F'];
 const ALL_GRADES = 'all';
 const GRADES = Array.from({ length: 11 }, (_, i) => String(i + 1));
 const GRADE_ITEMS = GRADES.map((grade) => ({ value: grade, label: `${grade}-sinf` }));

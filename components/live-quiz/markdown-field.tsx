@@ -24,11 +24,16 @@ export function MarkdownField({
   onChange,
   invalid,
   id,
+  upload = uploadLiveQuizImage,
+  height = 190,
 }: {
   value: string;
   onChange: (value: string) => void;
   invalid?: boolean;
   id?: string;
+  // Rasm qaysi endpoint'ga yuklanadi (standart — jonli viktorina)
+  upload?: (file: File) => Promise<string>;
+  height?: number;
 }) {
   const { resolvedTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +63,7 @@ export function MarkdownField({
       }
       setUploading((n) => n + 1);
       try {
-        const path = await uploadLiveQuizImage(file);
+        const path = await upload(file);
         const alt = file.name.replace(/\.[^.]+$/, '').replace(/[[\]]/g, '');
         const next = `${latestRef.current}${latestRef.current && !latestRef.current.endsWith('\n') ? '\n' : ''}![${alt}](${path})\n`;
         if (next.length > LIVE_LIMITS.textMax) {
@@ -129,7 +134,7 @@ export function MarkdownField({
       <MDEditor
         value={value}
         onChange={(v) => onChange(v ?? '')}
-        height={190}
+        height={height}
         preview="edit"
         commands={toolbar}
         extraCommands={[commands.codeEdit, commands.codeLive, commands.codePreview]}

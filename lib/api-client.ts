@@ -6,6 +6,8 @@ export class ApiError extends Error {
   errors?: Record<string, string[]>;
   // Mashina o'qiydigan xato kodi (masalan "ATTEMPT_EXPIRED"), backend yuborsa
   code?: string;
+  // 429 javobida Retry-After / RateLimit-Reset header'idan (soniya), backend yuborsa
+  retryAfter?: number;
 
   constructor(message: string, status: number, errors?: Record<string, string[]>, code?: string) {
     super(message);
@@ -42,6 +44,17 @@ interface RequestOptions {
   params?: QueryParams;
   token?: string;
   skipAuth?: boolean;
+  // So'rovni bekor qilish (AbortController)
+  signal?: AbortSignal;
+}
+
+function retryAfterSeconds(headers: Headers) {
+  const raw = headers.get('retry-after') ?? headers.get('ratelimit-reset');
+  if (!raw) return undefined;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds);
+  const date = Date.parse(raw);
+  return Number.isNaN(date) ? undefined : Math.max(0, Math.round((date - Date.now()) / 1000));
 }
 
 const PAGINATION_KEYS = ['total', 'page', 'limit', 'totalPages', 'pages', 'count'];
@@ -97,7 +110,7 @@ function unwrap(json: unknown) {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, params, token, skipAuth } = options;
+  const { method = 'GET', body, params, token, skipAuth, signal } = options;
   const url = `${API_URL}${path}${buildQuery(params)}`;
 
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
@@ -117,6 +130,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     method,
     headers,
     body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
+    signal,
   });
 
   const contentType = res.headers.get('content-type') ?? '';
@@ -141,7 +155,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       json && typeof json === 'object' && typeof (json as Record<string, unknown>).code === 'string'
         ? ((json as Record<string, unknown>).code as string)
         : undefined;
-    throw new ApiError(message, res.status, errors, code);
+    const error = new ApiError(message, res.status, errors, code);
+    if (res.status === 429) error.retryAfter = retryAfterSeconds(res.headers);
+    throw error;
   }
 
   return unwrap(json) as T;

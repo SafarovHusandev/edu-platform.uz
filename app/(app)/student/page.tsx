@@ -23,8 +23,12 @@ import { useQuizzes } from '@/hooks/use-quizzes';
 import { formatNumber, formatTimeLeft } from '@/lib/format';
 import type { Quiz, User } from '@/types';
 
-// O'quvchi sinfiga mo'ljallangan, hozir ochiq bo'lgan testlardan eng tez tugaydigani
-function pickActiveQuiz(quizzes: Quiz[], user: User | null) {
+// O'quvchi sinfiga mo'ljallangan, hozir ochiq bo'lgan testlar — eng tez tugaydigani birinchi.
+// GET /quizzes sinf bo'yicha filtrlamaydi: targetGrades'da o'quvchining sinfi bo'lmasa
+// (yoki o'quvchiga sinf belgilanmagan bo'lsa) test umuman ko'rsatilmaydi.
+function activeQuizzesFor(quizzes: Quiz[], user: User | null) {
+  const grade = user?.grade;
+  if (!grade?.number) return [];
   const now = Date.now();
   const candidates = quizzes
     // Urinishi qolmagan yoki allaqachon yechilgan testlar "faol" sanalmaydi
@@ -36,16 +40,15 @@ function pickActiveQuiz(quizzes: Quiz[], user: User | null) {
             (quiz.myAttempts.attemptsUsed === 0 || quiz.myAttempts.hasInProgress)))
     )
     .map((quiz) => {
-      const tg = user?.grade?.number
-        ? quiz.targetGrades.find(
-            (g) => g.number === user.grade!.number && (!g.letter || g.letter === user.grade!.letter)
-          )
-        : undefined;
+      const tg = quiz.targetGrades.find(
+        (g) => g.number === grade.number && (!g.letter || g.letter === grade.letter)
+      );
       const from = tg?.availableFrom ?? quiz.availableFrom;
       const until = tg?.availableUntil ?? quiz.availableUntil;
       return { quiz, tg, from, until };
     })
-    .filter(({ from, until }) => {
+    .filter(({ tg, from, until }) => {
+      if (!tg) return false;
       if (from && new Date(from).getTime() > now) return false;
       if (until && new Date(until).getTime() < now) return false;
       return true;
@@ -55,7 +58,7 @@ function pickActiveQuiz(quizzes: Quiz[], user: User | null) {
     const bt = b.until ? new Date(b.until).getTime() : Infinity;
     return at - bt;
   });
-  return candidates[0];
+  return candidates;
 }
 
 export default function StudentDashboardPage() {
@@ -72,8 +75,10 @@ export default function StudentDashboardPage() {
     : null;
 
   const inProgress = enrollments.data?.items.filter((e) => !isEnrollmentCompleted(e)) ?? [];
-  const activeQuiz = pickActiveQuiz(quizzes?.items ?? [], user);
-  const activeQuizCount = stats?.activeQuizzesCount ?? 0;
+  const activeQuizzes = activeQuizzesFor(quizzes?.items ?? [], user);
+  const activeQuiz = activeQuizzes[0];
+  // Backend statistikasi sinfni hisobga olmaydi — son shu yerda, mos testlardan sanaladi
+  const activeQuizCount = activeQuizzes.length;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 sm:gap-6">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
@@ -27,6 +27,7 @@ import {
 import { ErrorState } from '@/components/ui/error-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
+import { Confetti, type ConfettiHandle } from '@/components/board-lesson/confetti';
 import { useCountUp } from '@/hooks/use-count-up';
 import {
   useAnswerDailySpin,
@@ -67,14 +68,6 @@ const SPARKLES = [
   { className: 'bottom-24 right-[14%] size-3', delay: 1500 },
   { className: 'bottom-16 left-[10%] size-4', delay: 1200 },
 ];
-const CONFETTI_COLORS = ['#FFD45C', '#FFFFFF', '#F59E0B', '#93C5FD', '#6EE7B7', '#F9A8D4'];
-const CONFETTI = Array.from({ length: 28 }, (_, i) => ({
-  left: `${(i * 37 + 5) % 97}%`,
-  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-  delay: (i * 113) % 700,
-  round: i % 3 === 0,
-}));
-
 const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 interface PendingQuestion {
@@ -210,12 +203,16 @@ function Wheel({
   busy,
   winIndex,
   onStop,
+  canSpin,
+  onSpin,
 }: {
   rotation: number;
   spinning: boolean;
   busy: boolean;
   winIndex: number | null;
   onStop: () => void;
+  canSpin: boolean;
+  onSpin: () => void;
 }) {
   return (
     <div className="relative aspect-square w-full max-w-[360px]">
@@ -316,9 +313,22 @@ function Wheel({
       </div>
 
       {/* Markaz */}
-      <div className="absolute top-1/2 left-1/2 z-10 flex size-[22%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-linear-to-b from-white to-[#E3E8FA] shadow-[0_6px_20px_rgb(0_0_0/0.35)] ring-4 ring-gold">
-        <DiamondIcon className={cn('h-auto w-[58%]', busy ? 'animate-spin' : 'animate-float')} />
-      </div>
+      {/* Aylantirish mumkin bo'lsa — markazdagi olmosni bosib ham aylantiriladi */}
+      <button
+        type="button"
+        onClick={onSpin}
+        disabled={!canSpin}
+        aria-label="Aylantirish"
+        className={cn(
+          'absolute top-1/2 left-1/2 z-10 flex size-[22%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-linear-to-b from-white to-[#E3E8FA] shadow-[0_6px_20px_rgb(0_0_0/0.35)] ring-4 ring-gold transition-transform duration-200 focus-visible:outline-none focus-visible:ring-[6px] disabled:cursor-default',
+          canSpin && 'cursor-pointer hover:scale-110 active:scale-95'
+        )}
+      >
+        {canSpin && (
+          <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-gold/40 [animation-duration:1.8s]" />
+        )}
+        <DiamondIcon className={cn('relative h-auto w-[58%]', busy ? 'animate-spin' : 'animate-float')} />
+      </button>
 
       {/* Ko'rsatkich */}
       <div
@@ -367,8 +377,17 @@ function SpinQuestionDialog({
   onExpire: () => void;
   onClose: () => void;
 }) {
-  if (!pending) return null;
+  const confetti = useRef<ConfettiHandle>(null);
   const won = !!result?.correct && result.diamondsWon > 0;
+
+  // To'g'ri javob — ikki burchakdan konfetti pushkasi + portlash + qisqa yomg'ir
+  useEffect(() => {
+    if (!won) return;
+    const t = window.setTimeout(() => confetti.current?.celebrate(), 120);
+    return () => window.clearTimeout(t);
+  }, [won]);
+
+  if (!pending) return null;
   return (
     // Javob berilguncha oyna yopilmaydi: aylanish allaqachon ishlatilgan
     <Dialog open={open} onOpenChange={(next) => !next && result && onClose()}>
@@ -376,20 +395,7 @@ function SpinQuestionDialog({
         showCloseButton={false}
         className="overflow-hidden rounded-3xl p-6 sm:max-w-lg"
       >
-        {won && (
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            {CONFETTI.map((c, i) => (
-              <span
-                key={i}
-                className={cn(
-                  'lb-confetti absolute -top-3 h-3 w-1.5',
-                  c.round && 'size-2 rounded-full'
-                )}
-                style={{ left: c.left, backgroundColor: c.color, ...delay(c.delay) }}
-              />
-            ))}
-          </div>
-        )}
+        <Confetti ref={confetti} palette="light" />
         <DialogHeader>
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="font-heading text-xl">
@@ -634,6 +640,8 @@ export default function DailySpinPage() {
               busy={busy}
               winIndex={showWin ? winIndex : null}
               onStop={handleStop}
+              canSpin={canSpin}
+              onSpin={handleSpin}
             />
 
             {status?.canSpin || busy ? (

@@ -303,6 +303,21 @@ export function useUploadAvatar() {
   })
 }
 
+// O'z avatarini o'chirish — DELETE /users/me/avatar, javobda yangilangan user (avatar: null)
+export function useDeleteMyAvatar() {
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.delete<{ user: User }>("/users/me/avatar")
+      return res.user
+    },
+    onSuccess: (user) => {
+      useAuthStore.getState().updateUser(user)
+      toast.success("Rasm o'chirildi")
+    },
+    onError: (error) => toast.error(errorMessage(error, "Rasmni o'chirishda xatolik")),
+  })
+}
+
 export type TeacherOption = Pick<User, "_id" | "name" | "phone" | "avatar">
 
 // Test ulashishda qabul qiluvchini tanlash uchun. Backend ism yoki telefon

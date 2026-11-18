@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Crown, Presentation, Sparkles, Star, TrendingUp, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -9,6 +9,7 @@ import { FilterPills } from '@/components/ui/filter-pills';
 import { PageHeader } from '@/components/ui/page-header';
 import { PaginationBar } from '@/components/ui/pagination-bar';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
+import { Confetti, type ConfettiHandle } from '@/components/board-lesson/confetti';
 import { useCountUp } from '@/hooks/use-count-up';
 import { useLeaderboard } from '@/hooks/use-users';
 import { useTopTeachers } from '@/hooks/use-stats';
@@ -35,9 +36,8 @@ function delay(ms: number): CSSProperties {
 
 function Diamonds({ value, delayMs = 0 }: { value: number; delayMs?: number }) {
   const current = useCountUp(value, 1200, delayMs);
-  return (
-    <span className="text-[22px] text-white">{formatNumber(Math.round(current * 10) / 10)}</span>
-  );
+  // O'lcham va rang ota pill'dan meros olinadi (podium/qator/"natijangiz" har xil fonda)
+  return <span className="tabular-nums">{formatNumber(Math.round(current * 10) / 10)}</span>;
 }
 
 // Premium belgisi (olmos belgisi ball uchun band, shuning uchun toj)
@@ -99,40 +99,56 @@ function RingedAvatar({
 const PODIUM_ORDER = [1, 0, 2];
 const PODIUM_STYLES = [
   {
-    ring: 'bg-linear-to-br from-[#FFE58A] to-gold',
+    ring: 'bg-linear-to-br from-[#FFF3B0] via-[#FFD45C] to-[#F59E0B]',
     avatar: 'size-20 sm:size-24 text-2xl',
     fallback: 'bg-white text-primary',
+    // Yorqin oltin metall
     column:
-      'lb-shine h-[150px] sm:h-[170px] bg-linear-to-b from-[#FFD45C] to-gold/50 text-admin shadow-[0_-10px_40px_-8px_var(--gold)]',
-    rank: 'text-5xl sm:text-6xl from-admin to-admin/60',
-    diamonds: 'bg-admin/15 text-admin',
+      'h-[178px] sm:h-[204px] bg-linear-to-b from-[#FFE89A] via-[#FFC93D] to-[#E8930C] shadow-[0_-12px_48px_-6px_rgb(255_201_61/0.75)]',
+    rank: 'text-6xl sm:text-7xl text-[#7A3E00] [text-shadow:0_2px_0_rgb(255_255_255/0.55),0_5px_12px_rgb(122_62_0/0.35)]',
+    diamonds: 'bg-white/60 text-[#7A3E00] shadow-sm',
+    chip: 'bg-[#FFD45C] text-[#7A3E00]',
     label: 'Oltin',
+    medal: 'from-[#FFF3B0] via-[#FFD45C] to-[#D97706] text-[#7A3E00]',
+    stars: 3,
+    starClass: 'fill-white text-white',
     delay: 400,
   },
-
   {
-    ring: 'bg-linear-to-br from-white to-slate-300',
+    ring: 'bg-linear-to-br from-white via-[#DCE4F7] to-[#94A3C8]',
     avatar: 'size-16 sm:size-[72px] text-lg',
     fallback: 'bg-slate-100 text-admin',
-    column: 'h-[110px] sm:h-[125px] bg-linear-to-b from-slate-200/45 to-white/5',
-    rank: 'text-4xl from-white to-white/60',
-    diamonds: 'bg-white/15 text-gold',
+    // Kumush metall (sovuq ko'kish)
+    column:
+      'h-[148px] sm:h-[166px] bg-linear-to-b from-[#F4F7FF] via-[#C8D3F0] to-[#8796C4] shadow-[0_-10px_36px_-8px_rgb(200_211_240/0.6)]',
+    rank: 'text-5xl text-[#3A4672] [text-shadow:0_2px_0_rgb(255_255_255/0.7),0_5px_12px_rgb(58_70_114/0.3)]',
+    diamonds: 'bg-white/65 text-[#3A4672] shadow-sm',
+    chip: 'bg-[#DCE4F7] text-[#3A4672]',
     label: 'Kumush',
+    medal: 'from-white via-slate-200 to-slate-400 text-[#3A4672]',
+    stars: 2,
+    starClass: 'fill-white text-white',
     delay: 200,
   },
   {
-    ring: 'bg-linear-to-br from-[#F4B57E] to-[#B4622D]',
+    ring: 'bg-linear-to-br from-[#FFD2AE] via-[#E8894F] to-[#A9521F]',
     avatar: 'size-16 sm:size-[72px] text-lg',
     fallback: 'bg-[#B45309] text-white',
-    column: 'h-[88px] sm:h-[100px] bg-linear-to-b from-[#E39B5F]/75 to-[#B4622D]/15',
-    rank: 'text-[32px] from-white to-white/60',
-    diamonds: 'bg-white/15 text-gold',
+    // Bronza metall (iliq to'q sariq)
+    column:
+      'h-[128px] sm:h-[142px] bg-linear-to-b from-[#FFC9A0] via-[#E8894F] to-[#A9521F] shadow-[0_-10px_36px_-8px_rgb(232_137_79/0.6)]',
+    rank: 'text-[40px] text-white [text-shadow:0_2px_0_rgb(122_50_10/0.45),0_5px_12px_rgb(122_50_10/0.35)]',
+    diamonds: 'bg-[#6B2E0B]/30 text-white shadow-sm',
+    chip: 'bg-[#E8894F] text-white',
     label: 'Bronza',
+    medal: 'from-[#FBD3AE] via-[#E39B5F] to-[#9A4A1C] text-white',
+    stars: 1,
+    starClass: 'fill-[#FFF3B0] text-[#FFF3B0]',
     delay: 0,
   },
 ];
 
-// Fondagi yulduzchalar va bir martalik konfetti (qiymatlar qat'iy — SSR va brauzerda bir xil)
+// Fon bezaklari (qiymatlar qat'iy — SSR va brauzerda bir xil)
 const SPARKLES = [
   { className: 'top-6 left-[8%] size-4', delay: 0 },
   { className: 'top-16 left-[22%] size-3', delay: 900 },
@@ -141,49 +157,114 @@ const SPARKLES = [
   { className: 'top-1/2 left-[4%] size-3', delay: 2000 },
   { className: 'top-1/2 right-[5%] size-4', delay: 1200 },
 ];
-const CONFETTI_COLORS = ['#FFD45C', '#FFFFFF', '#F59E0B', '#93C5FD', '#F9A8D4'];
-const CONFETTI = Array.from({ length: 18 }, (_, i) => ({
-  left: `${(i * 37 + 7) % 96}%`,
-  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-  delay: 900 + ((i * 173) % 900),
-  round: i % 3 === 0,
+const STAR_DOTS = Array.from({ length: 18 }, (_, i) => ({
+  left: `${(i * 41 + 9) % 97}%`,
+  top: `${(i * 23 + 6) % 60}%`,
+  size: i % 4 === 0 ? 3 : 2,
+  delay: (i * 370) % 2600,
 }));
+// Pastdan yuqoriga sekin suzib chiqadigan olmoschalar
+const FLOAT_DIAMONDS = [
+  { left: '6%', size: 'size-4', duration: 9, delay: 0 },
+  { left: '18%', size: 'size-3', duration: 12, delay: 3 },
+  { left: '31%', size: 'size-5', duration: 10, delay: 6 },
+  { left: '69%', size: 'size-3', duration: 11, delay: 1.5 },
+  { left: '82%', size: 'size-5', duration: 9.5, delay: 4.5 },
+  { left: '93%', size: 'size-4', duration: 12.5, delay: 7.5 },
+];
+// 1-o'rin toji atrofidagi uchqunlar
+const CROWN_SPARKS = [
+  { className: '-top-12 -left-7 size-3.5', delay: 0 },
+  { className: '-top-14 -right-6 size-3', delay: 700 },
+  { className: '-top-4 -right-9 size-2.5', delay: 1300 },
+];
+
+const CONFETTI_SESSION_KEY = 'lb-confetti-shown';
 
 function Podium({ entries }: { entries: RankedUser[] }) {
+  const confetti = useRef<ConfettiHandle>(null);
+  const championRef = useRef<HTMLDivElement>(null);
+
+  // Ochilganda 1-o'rin avatari yonidan konfetti — sessiyada bir marta (har kirishda bezovta qilmasin)
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(CONFETTI_SESSION_KEY)) return;
+      window.sessionStorage.setItem(CONFETTI_SESSION_KEY, '1');
+    } catch {
+      // sessionStorage yopiq — baribir ko'rsatamiz
+    }
+    const t = window.setTimeout(() => {
+      const rect = championRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      confetti.current?.burst({
+        x: (rect.left + rect.width / 2) / window.innerWidth,
+        y: (rect.top + rect.height / 2) / window.innerHeight,
+        count: 160,
+      });
+      confetti.current?.rain(1400);
+    }, 1300);
+    return () => window.clearTimeout(t);
+  }, []);
+
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-linear-to-b from-primary to-[oklch(0.33_0.19_268)] px-3 pt-16 text-primary-foreground shadow-xl shadow-primary/25 sm:px-7">
+    <section className="relative isolate overflow-hidden rounded-3xl bg-linear-to-b from-[#3A4BF2] via-[#3B2FCB] to-[#1C1A86] px-3 pt-16 text-primary-foreground shadow-2xl shadow-primary/30 sm:px-7">
+      {/* Aurora: sekin suzuvchi rangli dog'lar */}
       <span
         aria-hidden
-        className="animate-pulse-slow absolute -top-24 left-1/2 size-80 -translate-x-1/2 rounded-full bg-gold/35 blur-3xl"
+        className="lb-aurora absolute -top-28 -left-20 size-80 rounded-full bg-[#F472B6]/35 blur-3xl"
       />
       <span
         aria-hidden
-        className="absolute -bottom-24 -left-16 size-56 rounded-full bg-white/10 blur-3xl"
+        className="lb-aurora absolute -top-24 -right-16 size-72 rounded-full bg-[#22D3EE]/30 blur-3xl [animation-delay:-6s]"
       />
       <span
         aria-hidden
-        className="absolute -right-20 -bottom-20 size-56 rounded-full bg-[#93C5FD]/15 blur-3xl"
+        className="animate-pulse-slow absolute -top-24 left-1/2 size-80 -translate-x-1/2 rounded-full bg-gold/40 blur-3xl"
       />
+      <span
+        aria-hidden
+        className="lb-aurora absolute -bottom-28 left-1/4 size-72 rounded-full bg-[#A78BFA]/30 blur-3xl [animation-delay:-11s]"
+      />
+
       {SPARKLES.map((s) => (
         <Sparkles
           key={s.className}
           aria-hidden
-          className={cn('lb-twinkle absolute text-white/70', s.className)}
+          className={cn('lb-twinkle absolute text-white/80', s.className)}
           style={delay(s.delay)}
         />
       ))}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-full">
-        {CONFETTI.map((c, i) => (
-          <span
-            key={i}
-            className={cn(
-              'lb-confetti absolute -top-3 h-2.5 w-1.5',
-              c.round && 'size-2 rounded-full'
-            )}
-            style={{ left: c.left, backgroundColor: c.color, ...delay(c.delay) }}
-          />
-        ))}
-      </div>
+      {STAR_DOTS.map((d, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="lb-twinkle absolute rounded-full bg-white"
+          style={{ left: d.left, top: d.top, width: d.size, height: d.size, ...delay(d.delay) }}
+        />
+      ))}
+      {FLOAT_DIAMONDS.map((d) => (
+        <span
+          key={d.left}
+          aria-hidden
+          className="lb-float-up absolute bottom-0"
+          style={{ left: d.left, animationDuration: `${d.duration}s`, animationDelay: `${d.delay}s` }}
+        >
+          <DiamondIcon className={d.size} />
+        </span>
+      ))}
+
+      {/* 1-o'ringa tushayotgan projektor nuri */}
+      <span
+        aria-hidden
+        className="lb-spotlight pointer-events-none absolute top-0 left-1/2 h-[80%] w-[48%] -translate-x-1/2 bg-linear-to-b from-[#FFE58A]/35 via-[#FFE58A]/10 to-transparent [clip-path:polygon(40%_0,60%_0,100%_100%,0_100%)]"
+      />
+      {/* Sahna poli: yorug' chiziq va soya */}
+      <span
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-white/60 to-transparent"
+      />
+      <span aria-hidden className="absolute inset-x-6 -bottom-3 h-8 rounded-[50%] bg-black/30 blur-xl" />
+      <Confetti ref={confetti} />
 
       <div className="relative grid grid-cols-3 items-end gap-2 sm:gap-4">
         {PODIUM_ORDER.map((index) => {
@@ -191,63 +272,121 @@ function Podium({ entries }: { entries: RankedUser[] }) {
           if (!entry) return <div key={index} />;
           const style = PODIUM_STYLES[index];
           const first = index === 0;
+          const rank = entry.rank ?? index + 1;
           return (
             <div key={entry._id} className="flex min-w-0 flex-col items-center text-center">
-              <div className="lb-pop relative" style={delay(style.delay + 450)}>
+              <div
+                ref={first ? championRef : undefined}
+                className="lb-pop relative"
+                style={delay(style.delay + 450)}
+              >
                 {first && (
                   <>
+                    {/* Aylanadigan quyosh nurlari: manfiy inset avatar atrofida markazlaydi, ichki qatlam aylanadi */}
                     <span
                       aria-hidden
-                      className="animate-pulse-slow absolute -inset-5 rounded-full bg-gold/50 blur-xl"
+                      className="pointer-events-none absolute -inset-[90px] sm:-inset-[150px]"
+                    >
+                      <span className="lb-rays absolute inset-0 rounded-full bg-[repeating-conic-gradient(rgb(255_229_138/0.24)_0deg_7deg,transparent_7deg_22deg)] [mask-image:radial-gradient(circle,black_16%,transparent_64%)]" />
+                    </span>
+                    <span
+                      aria-hidden
+                      className="animate-pulse-slow absolute -inset-5 rounded-full bg-gold/55 blur-xl"
                     />
-                    <Crown className="animate-float absolute -top-10 left-1/2 size-9 -translate-x-1/2 fill-gold text-gold drop-shadow-[0_2px_10px_var(--gold)]" />
+                    <Crown className="lb-crown absolute -top-11 left-1/2 size-10 -translate-x-1/2 fill-gold text-[#FFE58A] drop-shadow-[0_2px_12px_var(--gold)]" />
+                    {CROWN_SPARKS.map((s) => (
+                      <Sparkles
+                        key={s.className}
+                        aria-hidden
+                        className={cn('lb-twinkle absolute text-[#FFE58A]', s.className)}
+                        style={delay(s.delay)}
+                      />
+                    ))}
                   </>
                 )}
                 <RingedAvatar
                   user={entry}
                   ringClass={style.ring}
-                  avatarClass={style.avatar}
+                  avatarClass={cn(style.avatar, 'shadow-[0_6px_18px_rgb(0_0_0/0.35)]')}
                   fallbackClass={style.fallback}
                   thick
                 />
                 {isPremium(entry) && (
-                  <span className="absolute -right-1 -bottom-1">
+                  <span className="absolute -top-1 -right-1">
                     <PremiumBadge compact />
                   </span>
                 )}
+                {/* Medal */}
+                <span
+                  className={cn(
+                    'absolute -bottom-2.5 left-1/2 flex -translate-x-1/2 items-center justify-center rounded-full bg-linear-to-br font-heading font-bold shadow-[0_3px_8px_rgb(0_0_0/0.35)] ring-2 ring-white',
+                    first ? 'size-8 text-base' : 'size-7 text-sm',
+                    style.medal
+                  )}
+                >
+                  {rank}
+                </span>
               </div>
-              <div className="lb-fade-up mt-2.5 w-full" style={delay(style.delay + 650)}>
-                <span className="block truncate text-sm font-bold sm:text-base">{entry.name}</span>
-                <span className="mt-0.5 inline-block rounded-full bg-white/10 px-2 text-[11px] leading-5 font-semibold tracking-wide text-primary-foreground/80 uppercase">
+
+              <div className="lb-fade-up mt-4 w-full" style={delay(style.delay + 650)}>
+                <span
+                  className="line-clamp-2 px-1 text-sm leading-tight font-bold wrap-break-word drop-shadow-[0_1px_2px_rgb(0_0_0/0.3)] sm:text-base"
+                  title={entry.name}
+                >
+                  {entry.name}
+                </span>
+                <span
+                  className={cn(
+                    'mt-1 inline-block rounded-full px-2.5 text-[11px] leading-5 font-bold tracking-wide uppercase shadow-sm',
+                    style.chip
+                  )}
+                >
                   {gradeLabel(entry) ?? style.label}
                 </span>
               </div>
+
               <div
                 className={cn(
-                  'lb-rise relative mt-3 flex w-full flex-col items-center rounded-t-2xl border-t border-white/40 pt-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.35)]',
+                  'lb-rise lb-shine relative mt-3 flex w-full flex-col items-center rounded-t-2xl pt-4',
                   style.column
                 )}
                 style={delay(style.delay)}
               >
+                {/* 3D zinapoya: yuqori yorug' qirra, chap yaltiroq aks, o'ng soya */}
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-3 rounded-t-2xl bg-linear-to-b from-white/70 to-transparent"
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-1/4 rounded-tl-2xl bg-linear-to-r from-white/35 to-transparent"
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 right-0 w-1/5 rounded-tr-2xl bg-linear-to-l from-black/15 to-transparent"
+                />
                 <div
-                  className="lb-fade-up flex flex-col items-center gap-2"
+                  className="lb-fade-up relative flex flex-col items-center gap-1.5"
                   style={delay(style.delay + 600)}
                 >
-                  <span
-                    className={cn(
-                      'bg-linear-to-b bg-clip-text font-heading leading-none font-bold text-transparent',
-                      style.rank
-                    )}
-                  >
-                    {entry.rank ?? index + 1}
+                  <span className="flex gap-0.5">
+                    {Array.from({ length: style.stars }, (_, i) => (
+                      <Star
+                        key={i}
+                        aria-hidden
+                        className={cn('lb-pop size-3.5 drop-shadow-sm sm:size-4', style.starClass)}
+                        style={delay(style.delay + 800 + i * 120)}
+                      />
+                    ))}
                   </span>
+                  <span className={cn('font-heading leading-none font-black', style.rank)}>{rank}</span>
                   <span
                     className={cn(
-                      'flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-bold backdrop-blur-sm',
+                      'mt-1 flex items-center gap-1.5 rounded-full px-3 py-1 text-base font-extrabold backdrop-blur-sm sm:px-3.5 sm:text-lg',
                       style.diamonds
                     )}
                   >
-                    <DiamondIcon className="size-4" />
+                    <DiamondIcon className="size-5" />
                     <Diamonds value={entry.diamonds ?? 0} delayMs={style.delay + 600} />
                   </span>
                 </div>

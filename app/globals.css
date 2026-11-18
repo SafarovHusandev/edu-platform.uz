@@ -424,6 +424,72 @@
   animation: lb-confetti 2.8s ease-in 1 both;
 }
 
+/* Reyting podiumi: nurlar, projektor, aurora, suzuvchi olmoslar, toj */
+@keyframes lb-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.lb-rays {
+  animation: lb-rays 40s linear infinite;
+}
+@keyframes lb-spotlight {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.lb-spotlight {
+  animation: lb-spotlight 4s ease-in-out infinite;
+}
+@keyframes lb-aurora {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(40px, 24px) scale(1.12);
+  }
+  66% {
+    transform: translate(-28px, 36px) scale(0.92);
+  }
+}
+.lb-aurora {
+  animation: lb-aurora 16s ease-in-out infinite;
+}
+@keyframes lb-float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(-12deg);
+  }
+  15% {
+    opacity: 0.55;
+  }
+  85% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-360px) rotate(18deg);
+  }
+}
+.lb-float-up {
+  opacity: 0;
+  animation: lb-float-up 10s ease-in infinite;
+}
+@keyframes lb-crown {
+  0%, 100% {
+    transform: translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(6deg);
+  }
+}
+.lb-crown {
+  animation: lb-crown 2.6s ease-in-out infinite;
+}
+
 /* Kunlik baraban animatsiyalari */
 @keyframes spin-bulb {
   0%, 100% {
@@ -500,6 +566,11 @@
   .lb-spin,
   .lb-twinkle,
   .lb-bar,
+  .lb-rays,
+  .lb-spotlight,
+  .lb-aurora,
+  .lb-float-up,
+  .lb-crown,
   .lb-shine::after {
     animation: none !important;
   }

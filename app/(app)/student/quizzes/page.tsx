@@ -231,10 +231,9 @@ export default function StudentQuizzesPage() {
   }
 
   // GET /quizzes studentning sinfi bo'yicha filtrlamaydi — frontend o'zi
-  // targetGrades ichidan mos kelmagan testlarni yashiradi.
-  const myQuizzes = (data?.items ?? []).filter(
-    (quiz) => !grade?.number || !!myTargetGrade(quiz, grade)
-  );
+  // targetGrades ichidan mos kelmagan testlarni yashiradi. Sinf belgilanmagan
+  // o'quvchiga hech qaysi test ko'rinmaydi.
+  const myQuizzes = (data?.items ?? []).filter((quiz) => !!myTargetGrade(quiz, grade));
   // Backend myAttempts qaytarmagan testlar uchungina alohida so'rov yuboriladi
   const missing = myQuizzes.filter((q) => !q.myAttempts);
   const fallbackQueries = useMyAttemptsMany(missing.map((q) => q._id));

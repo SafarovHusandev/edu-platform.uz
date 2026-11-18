@@ -14,6 +14,7 @@ import {
   Loader2,
   Send,
   LogOut,
+  Trash2,
   Unlink,
   Wallet,
 } from 'lucide-react';
@@ -48,13 +49,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuthStore } from '@/store/auth-store';
 import {
@@ -63,6 +57,7 @@ import {
   useUnlinkTelegram,
   useUpdateProfile,
   useUploadAvatar,
+  useDeleteMyAvatar,
 } from '@/hooks/use-users';
 import { refreshCurrentUser, useLogout } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
@@ -83,16 +78,9 @@ const setPasswordSchema = z
     path: ['confirmPassword'],
   });
 
-const GRADE_NUMBERS = Array.from({ length: 11 }, (_, i) => String(i + 1));
-const GRADE_LETTERS = ['A', 'B', 'V', 'C', 'D', 'E', 'F'];
 
 const nameSchema = z.object({
   name: z.string().trim().min(2, { error: "Ism kamida 2 ta belgidan iborat bo'lsin" }),
-});
-
-const gradeSchema = z.object({
-  gradeNumber: z.string().min(1, { error: 'Sinf raqamini tanlang' }),
-  gradeLetter: z.string().min(1, { error: 'Guruh harfini tanlang' }),
 });
 
 const passwordSchema = z
@@ -110,25 +98,18 @@ export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadAvatar = useUploadAvatar();
+  const deleteAvatar = useDeleteMyAvatar();
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
   const linkTelegram = useLinkTelegram();
   const unlinkTelegram = useUnlinkTelegram();
   const logout = useLogout();
 
-  // Backend PATCH /users/me'da o'quvchi yuborgan "name"ni jimgina e'tiborsiz
-  // qoldiradi — shu sabab o'quvchi faqat sinfini, qolgan rollar esa ismini tahrirlaydi.
+  // O'quvchi ismini ham, sinfini ham o'zgartira olmaydi (o'qituvchi/administrator
+  // belgilaydi) — unga faqat ko'rsatiladi; qolgan rollar ismini tahrirlaydi.
   const nameForm = useForm<z.infer<typeof nameSchema>>({
     resolver: zodResolver(nameSchema),
     values: { name: user?.name ?? '' },
-  });
-
-  const gradeForm = useForm<z.infer<typeof gradeSchema>>({
-    resolver: zodResolver(gradeSchema),
-    values: {
-      gradeNumber: user?.grade?.number != null ? String(user.grade.number) : '',
-      gradeLetter: user?.grade?.letter ?? '',
-    },
   });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -194,8 +175,6 @@ export default function ProfilePage() {
   const isStudent = user.role === 'student';
   const isPremium = user.tarif === 'premium';
   const premiumDaysLeft = user.premiumExpiresAt ? daysUntil(user.premiumExpiresAt) : null;
-  const gradeNumberError = gradeForm.formState.errors.gradeNumber?.message;
-  const gradeLetterError = gradeForm.formState.errors.gradeLetter?.message;
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -244,18 +223,55 @@ export default function ProfilePage() {
                 </Link>
               )}
             </div>
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadAvatar.isPending}
-            >
-              {uploadAvatar.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Camera className="size-4" />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadAvatar.isPending || deleteAvatar.isPending}
+              >
+                {uploadAvatar.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Camera className="size-4" />
+                )}
+                {user.avatar ? 'Almashtirish' : 'Avatar yuklash'}
+              </Button>
+              {user.avatar && (
+                <AlertDialog>
+                  <AlertDialogTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
+                        disabled={uploadAvatar.isPending || deleteAvatar.isPending}
+                      />
+                    }
+                  >
+                    {deleteAvatar.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-4" />
+                    )}
+                    O&apos;chirish
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Profil rasmi o&apos;chirilsinmi?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Rasm o&apos;rniga ismingizning bosh harflari ko&apos;rinadi. Keyin yangi rasm
+                        yuklashingiz mumkin.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                      <AlertDialogAction variant="destructive" onClick={() => deleteAvatar.mutate()}>
+                        O&apos;chirish
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
-              Avatar yuklash
-            </Button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -288,88 +304,29 @@ export default function ProfilePage() {
 
           {/* Shaxsiy ma'lumotlar */}
           {isStudent ? (
-            <Form {...gradeForm}>
-              <form
-                onSubmit={gradeForm.handleSubmit((values) =>
-                  updateProfile.mutate({
-                    grade: { number: Number(values.gradeNumber), letter: values.gradeLetter },
-                  })
-                )}
-                className="flex flex-col gap-4"
-              >
-                <div className="grid gap-3.5 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="profile-name" className="text-sm font-semibold">
-                      Ism familiya
-                    </label>
-                    <Input id="profile-name" value={user.name} readOnly disabled className="h-11" />
-                    <span className="text-xs text-muted-foreground">
-                      Ismni faqat o&apos;qituvchi yoki administrator o&apos;zgartira oladi.
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-sm font-semibold">Sinf</span>
-                    <div className="flex gap-2">
-                      <FormField
-                        control={gradeForm.control}
-                        name="gradeNumber"
-                        render={({ field }) => (
-                          <Select
-                            value={field.value}
-                            onValueChange={(v) => field.onChange(v ?? '')}
-                          >
-                            <SelectTrigger className="h-11 w-full" aria-label="Sinf raqami">
-                              <SelectValue placeholder="Sinf" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {GRADE_NUMBERS.map((n) => (
-                                <SelectItem key={n} value={n}>
-                                  {n}-sinf
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                      <FormField
-                        control={gradeForm.control}
-                        name="gradeLetter"
-                        render={({ field }) => (
-                          <Select
-                            value={field.value}
-                            onValueChange={(v) => field.onChange(v ?? '')}
-                          >
-                            <SelectTrigger className="h-11 w-full" aria-label="Sinf harfi">
-                              <SelectValue placeholder="Harf" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {GRADE_LETTERS.map((l) => (
-                                <SelectItem key={l} value={l}>
-                                  {l}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                    </div>
-                    {(gradeNumberError || gradeLetterError) && (
-                      <span className="text-xs text-destructive">
-                        {gradeNumberError ?? gradeLetterError}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="h-11 self-start px-5"
-                  disabled={updateProfile.isPending || !gradeForm.formState.isDirty}
-                >
-                  {updateProfile.isPending && <Loader2 className="size-4 animate-spin" />}
-                  Saqlash
-                </Button>
-              </form>
-            </Form>
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="profile-name" className="text-sm font-semibold">
+                  Ism familiya
+                </label>
+                <Input id="profile-name" value={user.name} readOnly disabled className="h-11" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="profile-grade" className="text-sm font-semibold">
+                  Sinf
+                </label>
+                <Input
+                  id="profile-grade"
+                  value={user.grade?.number ? `${user.grade.number}-${user.grade.letter ?? ''} sinf` : 'Belgilanmagan'}
+                  readOnly
+                  disabled
+                  className="h-11"
+                />
+              </div>
+              <span className="text-xs text-muted-foreground sm:col-span-2">
+                Ism va sinfni faqat o&apos;qituvchi yoki administrator o&apos;zgartira oladi.
+              </span>
+            </div>
           ) : (
             <Form {...nameForm}>
               <form

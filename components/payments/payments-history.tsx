@@ -87,10 +87,13 @@ function shortDateTime(value: string) {
 export function PaymentsHistory({
   scope = 'my',
   title,
+  fixedUserId,
 }: {
   // 'all' — admin: barcha foydalanuvchilar to'lovlari (to'lovchi ustuni bilan)
   scope?: 'my' | 'all';
   title?: string;
+  // Admin: faqat shu foydalanuvchining to'lovlari (ID maydoni va to'lovchi ustuni yashiriladi)
+  fixedUserId?: string;
 }) {
   const [page, setPage] = useState(1);
   const [purpose, setPurpose] = useState<PaymentPurpose | typeof ALL>(ALL);
@@ -108,7 +111,7 @@ export function PaymentsHistory({
   const allPayments = useAllPayments(
     {
       ...filters,
-      userId: userId.trim() || undefined,
+      userId: fixedUserId ?? (userId.trim() || undefined),
       from: dayBoundary(from, false),
       to: dayBoundary(to, true),
     },
@@ -116,10 +119,11 @@ export function PaymentsHistory({
   );
   const { data, isLoading, isError, refetch } = scope === 'all' ? allPayments : myPayments;
   const checkStatus = useCheckPaymentStatus();
-  const showUser = scope === 'all';
+  const isAdmin = scope === 'all';
+  const showUser = isAdmin && !fixedUserId;
   const statusOptions = [
     { value: STATUS_DEFAULT, label: 'Barcha holatlar' },
-    ...(showUser
+    ...(isAdmin
       ? [{ value: STATUS_WITH_EXPIRED, label: "Hammasi (muddati o'tganlar bilan)" }]
       : []),
     ...STATUS_FILTERS,
@@ -142,7 +146,7 @@ export function PaymentsHistory({
               className="w-full sm:w-56"
             />
           )}
-          {showUser && (
+          {isAdmin && (
             <div className="flex items-center gap-1.5">
               <Input
                 type="date"
@@ -200,7 +204,7 @@ export function PaymentsHistory({
             }}
             items={statusOptions}
           >
-            <SelectTrigger className={showUser ? 'w-64' : 'w-44'} aria-label="Holat">
+            <SelectTrigger className={isAdmin ? 'w-64' : 'w-44'} aria-label="Holat">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

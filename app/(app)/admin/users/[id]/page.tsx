@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useRef, useState } from 'react';
+import { Suspense, use, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -57,6 +57,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusPill } from '@/components/dashboard/dashboard-ui';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
+import { UserHistoryTabs } from '@/components/admin/user-history-tabs';
 import {
   useAdminDeleteAvatar,
   useAdminUploadAvatar,
@@ -393,6 +394,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
 
   const [blockOpen, setBlockOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteAvatarOpen, setDeleteAvatarOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
 
   const listCrumb = { label: 'Foydalanuvchilar', href: '/admin/users' };
@@ -496,14 +498,20 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
             )}
           </div>
           {isSuperadmin && user.avatar && (
-            <button
-              type="button"
-              onClick={() => deleteAvatar.mutate(user._id)}
+            <Button
+              variant="destructive"
+              size="sm"
+              className="self-start cursor-pointer"
+              onClick={() => setDeleteAvatarOpen(true)}
               disabled={deleteAvatar.isPending}
-              className="self-start text-sm text-muted-foreground hover:text-destructive"
             >
+              {deleteAvatar.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
               Rasmni o&apos;chirish
-            </button>
+            </Button>
           )}
         </div>
 
@@ -531,57 +539,67 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </section>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-5">
-          {isSuperadmin ? (
-            <section className="rounded-[20px] border border-border bg-card p-5">
-              <h2 className="mb-4 text-lg font-bold">Ma&apos;lumotlarni tahrirlash</h2>
-              {/* key: saqlangach forma serverdagi yangi qiymatlar bilan qayta ochiladi */}
-              <UserEditForm key={user.updatedAt ?? user._id} user={user} isSelf={isSelf} />
-            </section>
-          ) : (
-            <p className="rounded-[20px] border border-border bg-card p-5 text-muted-foreground">
-              Foydalanuvchi ma&apos;lumotlarini faqat bosh admin tahrirlay oladi.
-            </p>
-          )}
+      <Suspense fallback={<div className="h-80 animate-pulse rounded-[20px] bg-muted" />}>
+        <UserHistoryTabs
+          user={user}
+          overview={
+            <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="flex min-w-0 flex-col gap-5">
+                {isSuperadmin ? (
+                  <section className="rounded-[20px] border border-border bg-card p-5">
+                    <h2 className="mb-4 text-lg font-bold">Ma&apos;lumotlarni tahrirlash</h2>
+                    {/* key: saqlangach forma serverdagi yangi qiymatlar bilan qayta ochiladi */}
+                    <UserEditForm key={user.updatedAt ?? user._id} user={user} isSelf={isSelf} />
+                  </section>
+                ) : (
+                  <p className="rounded-[20px] border border-border bg-card p-5 text-muted-foreground">
+                    Foydalanuvchi ma&apos;lumotlarini faqat bosh admin tahrirlay oladi.
+                  </p>
+                )}
 
-          {isSuperadmin && (
-            <section className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-border bg-card p-5">
-              <div>
-                <h2 className="font-bold">Xavfsizlik</h2>
-                <p className="text-sm text-muted-foreground">
-                  Parolni tiklash yoki hisobni o&apos;chirish
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setResetOpen(true)}>
-                  <KeyRound className="size-4" /> Parolni tiklash
-                </Button>
-                {!isSelf && (
-                  <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-                    <Trash2 className="size-4" /> O&apos;chirish
-                  </Button>
+                {isSuperadmin && (
+                  <section className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-border bg-card p-5">
+                    <div>
+                      <h2 className="font-bold">Xavfsizlik</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Parolni tiklash yoki hisobni o&apos;chirish
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" onClick={() => setResetOpen(true)}>
+                        <KeyRound className="size-4" /> Parolni tiklash
+                      </Button>
+                      {!isSelf && (
+                        <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                          <Trash2 className="size-4" /> O&apos;chirish
+                        </Button>
+                      )}
+                    </div>
+                  </section>
                 )}
               </div>
-            </section>
-          )}
-        </div>
 
-        <section className="rounded-[20px] border border-border bg-card p-5">
-          <h2 className="mb-2 text-lg font-bold">Ma&apos;lumotlar</h2>
-          <dl className="divide-y divide-muted">
-            {details.map((item) => (
-              <div key={item.label} className="flex items-baseline justify-between gap-4 py-2.5">
-                <dt className="shrink-0 text-sm text-muted-foreground">{item.label}</dt>
-                <dd className="flex min-w-0 items-center gap-1 text-right font-semibold wrap-anywhere">
-                  {item.diamond && <DiamondIcon className="size-4" />}
-                  {item.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      </div>
+              <section className="rounded-[20px] border border-border bg-card p-5">
+                <h2 className="mb-2 text-lg font-bold">Ma&apos;lumotlar</h2>
+                <dl className="divide-y divide-muted">
+                  {details.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-baseline justify-between gap-4 py-2.5"
+                    >
+                      <dt className="shrink-0 text-sm text-muted-foreground">{item.label}</dt>
+                      <dd className="flex min-w-0 items-center gap-1 text-right font-semibold wrap-anywhere">
+                        {item.diamond && <DiamondIcon className="size-4" />}
+                        {item.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            </div>
+          }
+        />
+      </Suspense>
 
       <input
         ref={avatarInputRef}
@@ -636,6 +654,23 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                 deleteUser.mutate(user._id, { onSuccess: () => router.push('/admin/users') })
               }
             >
+              O&apos;chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteAvatarOpen} onOpenChange={setDeleteAvatarOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{user.name}ning rasmini o&apos;chirasizmi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Profil rasmi o&apos;chiriladi, o&apos;rniga ism bosh harflari ko&apos;rsatiladi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => deleteAvatar.mutate(user._id)}>
               O&apos;chirish
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -27,8 +27,10 @@ import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { StatusPill, type StatusPillTone } from '@/components/dashboard/dashboard-ui';
 import { AttemptResultView } from '@/components/quizzes/attempt-result-view';
 import { StartQuizDialog } from '@/components/quizzes/start-quiz-dialog';
+import { QuizAccessError } from '@/components/quizzes/quiz-access-error';
 import {
   isAttemptExpiredError,
+  isWrongGradeError,
   useQuiz,
   useStartAttempt,
   useSubmitAttempt,
@@ -110,7 +112,7 @@ function attemptStatusPill(attempt: Attempt): { label: string; tone: StatusPillT
 
 export default function TakeQuizPage({ params }: PageProps) {
   const { id } = use(params);
-  const { data: quiz, isLoading } = useQuiz(id);
+  const { data: quiz, isLoading, error: quizError, refetch: refetchQuiz } = useQuiz(id);
   const {
     data: attemptsData,
     isLoading: attemptsLoading,
@@ -233,6 +235,14 @@ export default function TakeQuizPage({ params }: PageProps) {
     };
   }, [inTest]);
 
+  if (quizError && !quiz) {
+    return (
+      <div className="mx-auto w-full max-w-5xl">
+        <QuizAccessError error={quizError} onRetry={() => refetchQuiz()} />
+      </div>
+    );
+  }
+
   if (isLoading || attemptsLoading || !quiz) {
     return <div className="mx-auto h-96 w-full max-w-5xl animate-pulse rounded-[22px] bg-muted" />;
   }
@@ -271,10 +281,8 @@ export default function TakeQuizPage({ params }: PageProps) {
       },
       onError: (error) => {
         setConfirmOpen(false);
-        if (
-          error instanceof ApiError &&
-          error.message.includes("sinfingiz uchun mo'ljallanmagan")
-        ) {
+        // Toast useStartAttempt'da chiqmaydi — xabar boshlash tugmasi ustida ko'rsatiladi
+        if (isWrongGradeError(error) && error instanceof ApiError) {
           setStartError(error.message);
         }
       },

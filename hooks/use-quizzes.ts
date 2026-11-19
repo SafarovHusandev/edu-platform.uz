@@ -20,15 +20,25 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+// Student uchun test o'z sinfiga mo'ljallanmagan bo'lsa backend 403 qaytaradi
+// ("Bu test sizning sinfingiz uchun emas") — GET /quizzes/:id va POST .../start
+export function isWrongGradeError(error: unknown) {
+  return (
+    error instanceof ApiError &&
+    (error.status === 403 || error.status === 400) &&
+    error.message.includes('sinfingiz uchun')
+  );
+}
+
+// Token yuboriladi: student uchun backend ro'yxatni o'z sinfi bo'yicha filtrlaydi
+// (meta.total ham shu bo'yicha). Mehmonda token yo'q — header qo'shilmaydi.
 export function useQuizzes(filters: { page?: number; limit?: number } = {}) {
   return useQuery({
     queryKey: ['quizzes', filters],
     queryFn: async () => {
-      const result = await api.get<Paginated<Quiz> | { quizzes: Quiz[] }>(
-        '/quizzes',
-        { ...filters },
-        { skipAuth: true }
-      );
+      const result = await api.get<Paginated<Quiz> | { quizzes: Quiz[] }>('/quizzes', {
+        ...filters,
+      });
       if ('items' in result) return result;
       const items = result.quizzes ?? [];
       return {
@@ -70,14 +80,14 @@ export function useQuiz(id: string | undefined) {
   return useQuery({
     queryKey: ['quiz', id],
     queryFn: async () => {
-      const res = await api.get<{ quiz: Quiz; questions: Question[] }>(
-        `/quizzes/${id}`,
-        undefined,
-        { skipAuth: true }
-      );
+      // Backend token o'qiydi: o'quvchi sinfiga mos bo'lmagan test uchun 403
+      const res = await api.get<{ quiz: Quiz; questions: Question[] }>(`/quizzes/${id}`);
       return { ...res.quiz, questions: res.questions };
     },
     enabled: !!id,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && (error.status === 403 || error.status === 404)) &&
+      failureCount < 3,
   });
 }
 
@@ -253,8 +263,8 @@ export function useDeleteQuestion(quizId: string) {
   });
 }
 
-// "Bu test sizning sinfingiz uchun mo'ljallanmagan" xatosi alohida ko'rsatiladi
-// (chaqiruvchi komponentda banner sifatida) — shu sabab bu yerda toast chiqarilmaydi.
+// "Bu test sizning sinfingiz uchun emas" (403) xatosi alohida ko'rsatiladi
+// (test sahifasida xabar sifatida) — shu sabab bu yerda toast chiqarilmaydi.
 export function useStartAttempt() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -272,8 +282,7 @@ export function useStartAttempt() {
       queryClient.invalidateQueries({ queryKey: ['quizzes'] });
     },
     onError: (error) => {
-      if (error instanceof ApiError && error.message.includes("sinfingiz uchun mo'ljallanmagan"))
-        return;
+      if (isWrongGradeError(error)) return;
       toast.error(errorMessage(error, 'Testni boshlashda xatolik'));
     },
   });

@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,16 +10,12 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowUp,
-  Camera,
-  Check,
   GraduationCap,
   Loader2,
   Search,
   ShieldBan,
-  ShieldCheck,
   UserCheck,
   UserPlus,
   Users,
@@ -29,7 +25,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
@@ -46,7 +41,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,21 +69,16 @@ import {
   useToggleUserBlock,
   useVerifyUser,
   useCreateUser,
-  useUpdateUser,
-  useDeleteUser,
-  useResetUserPassword,
-  useAdminUploadAvatar,
-  useAdminDeleteAvatar,
 } from '@/hooks/use-users';
 import { useAuthStore } from '@/store/auth-store';
-import { api } from '@/lib/api-client';
+import { api, ApiError, validationMessages } from '@/lib/api-client';
+import { isPremiumActive } from '@/lib/premium';
 import { ROLE_LABELS } from '@/lib/roles';
 import { resolveAssetUrl } from '@/lib/config';
 import {
   formatDate,
   formatDateTime,
   formatNumber,
-  formatRelativeTime,
   initials,
 } from '@/lib/format';
 import { StatusPill } from '@/components/dashboard/dashboard-ui';
@@ -129,12 +118,6 @@ const userCreateSchema = z
 
 type UserCreateFormValues = z.infer<typeof userCreateSchema>;
 
-const resetPasswordSchema = z.object({
-  newPassword: z.string().min(6, { error: 'Kamida 6 ta belgi' }),
-});
-
-type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
-
 // Tanlangan filtr ajralib tursin: qaysi biri yoqilgani bir qarashda ko'rinadi
 function filterTriggerClass(active: boolean) {
   return cn(
@@ -143,26 +126,71 @@ function filterTriggerClass(active: boolean) {
   );
 }
 
+const STATUS_TABS = ['unverified', 'blocked'] as const;
+const SEARCH_MAX_LENGTH = 100;
+const SEARCH_DEBOUNCE_MS = 300;
+
+// URL'dagi qiymat ruxsat etilganlar ichida bo'lsagina olinadi — qo'lda buzilgan
+// havola backend'ga 422 keltiradigan qiymat yubormasin
+function pickParam<T extends string>(value: string | null | undefined, allowed: readonly T[]) {
+  return allowed.find((a) => a === value);
+}
+
 function AdminUsersPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  // Bildirishnomadan "/admin/users?tab=unverified" kabi to'g'ridan-to'g'ri
-  // havola bilan kelinganda tegishli filtr avtomatik yoqilishi uchun.
-  const initialTab = searchParams.get('tab');
   const queryClient = useQueryClient();
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | Role>('all');
-  const [tarifFilter, setTarifFilter] = useState<'all' | Tarif>('all');
-  const [gradeFilter, setGradeFilter] = useState('all');
-  const [gradeLetterFilter, setGradeLetterFilter] = useState('all');
-  const [statusTab, setStatusTab] = useState<'all' | 'unverified' | 'blocked'>(
-    initialTab === 'unverified' || initialTab === 'blocked' ? initialTab : 'all'
+  // Filtrlar URL query'da saqlanadi (sahifa yangilanganda tiklanadi, havola bilan
+  // ulashish mumkin). "/admin/users?tab=unverified" kabi bildirishnoma havolalari ham shu.
+  const statusTab: 'all' | (typeof STATUS_TABS)[number] =
+    pickParam(searchParams.get('tab'), STATUS_TABS) ?? 'all';
+  const roleFilter: 'all' | Role = pickParam(searchParams.get('role'), ROLES) ?? 'all';
+  const tarifFilter: 'all' | Tarif = pickParam(searchParams.get('tarif'), TARIFS) ?? 'all';
+  const gradeFilter = pickParam(searchParams.get('grade'), GRADE_NUMBERS) ?? 'all';
+  const gradeLetterFilter =
+    pickParam(searchParams.get('gradeLetter')?.toUpperCase(), GRADE_LETTERS) ?? 'all';
+  const search = (searchParams.get('search') ?? '').slice(0, SEARCH_MAX_LENGTH);
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1);
+
+  // Qiymat 'all' / bo'sh / null bo'lsa parametr URL'dan olib tashlanadi. Filtr
+  // o'zgarganda sahifa 1 ga qaytadi (page parametri o'chiriladi).
+  const updateParams = useCallback(
+    (patch: Record<string, string | null>, { resetPage = true } = {}) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null || value === '' || value === 'all') next.delete(key);
+        else next.set(key, value);
+      }
+      if (resetPage) next.delete('page');
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams]
   );
+
+  const setPage = (p: number) => updateParams({ page: p > 1 ? String(p) : null }, { resetPage: false });
+
+  // Qidiruv maydoni darhol yangilanadi, URL (va so'rov) esa 300ms jimlikdan keyin
+  const [searchInput, setSearchInput] = useState(search);
+  useEffect(() => {
+    const value = searchInput.trim();
+    if (value === search) return;
+    const timer = setTimeout(() => updateParams({ search: value || null }), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, search, updateParams]);
+
   const [nameSort, setNameSort] = useState<'asc' | 'desc'>('asc');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data, isLoading, isError, refetch } = useUsers({
+  const {
+    data: queryData,
+    error,
+    isLoading,
+    isError,
+    refetch,
+  } = useUsers({
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
@@ -174,6 +202,18 @@ function AdminUsersPageContent() {
     gradeLetter: gradeLetterFilter === 'all' ? undefined : gradeLetterFilter,
   });
 
+  // 422 (noto'g'ri filtr qiymati): xato toast qilinadi, jadvalda esa oxirgi
+  // muvaffaqiyatli natija qoladi — ro'yxat bo'shab qolmaydi
+  const isValidationError = error instanceof ApiError && error.status === 422;
+  const [lastData, setLastData] = useState(queryData);
+  if (queryData && queryData !== lastData) setLastData(queryData);
+  const data = queryData ?? (isValidationError ? lastData : undefined);
+
+  useEffect(() => {
+    if (!(error instanceof ApiError) || error.status !== 422) return;
+    toast.error(validationMessages(error).join('\n'));
+  }, [error]);
+
   const activeFilterCount = [
     search.trim() !== '',
     statusTab !== 'all',
@@ -184,13 +224,15 @@ function AdminUsersPageContent() {
   ].filter(Boolean).length;
 
   function clearFilters() {
-    setSearch('');
-    setStatusTab('all');
-    setGradeFilter('all');
-    setGradeLetterFilter('all');
-    setRoleFilter('all');
-    setTarifFilter('all');
-    setPage(1);
+    setSearchInput('');
+    updateParams({
+      search: null,
+      tab: null,
+      grade: null,
+      gradeLetter: null,
+      role: null,
+      tarif: null,
+    });
   }
 
   // Statistika kartalari butun bazadagi hisobni ko'rsatadi (joriy sahifa/filtrdan
@@ -206,42 +248,15 @@ function AdminUsersPageContent() {
   const toggleBlock = useToggleUserBlock();
   const verifyUser = useVerifyUser();
   const createUser = useCreateUser();
-  const updateUser = useUpdateUser();
-  const deleteUser = useDeleteUser();
-  const resetPassword = useResetUserPassword();
-  const uploadAvatar = useAdminUploadAvatar();
-  const deleteAvatar = useAdminDeleteAvatar();
   const currentUser = useAuthStore((s) => s.user);
   const isSuperadmin = currentUser?.role === 'superadmin';
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [blockTarget, setBlockTarget] = useState<User | null>(null);
-  const [resetTarget, setResetTarget] = useState<User | null>(null);
-  const [detailUserId, setDetailUserId] = useState<string | null>(null);
-  const [editingRole, setEditingRole] = useState(false);
-  const [editingGrade, setEditingGrade] = useState(false);
-  const [tempGradeNumber, setTempGradeNumber] = useState('1');
-  const [tempGradeLetter, setTempGradeLetter] = useState('A');
   const [bulkGradeOpen, setBulkGradeOpen] = useState(false);
   const [bulkGradeNumber, setBulkGradeNumber] = useState('1');
   const [bulkGradeLetter, setBulkGradeLetter] = useState('A');
   const [bulkPending, setBulkPending] = useState(false);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-
-  const detailUser = data?.items.find((u) => u._id === detailUserId) ?? null;
-
-  function openDetail(id: string) {
-    setEditingRole(false);
-    setEditingGrade(false);
-    setDetailUserId(id);
-  }
-
-  function closeDetail() {
-    setDetailUserId(null);
-    setEditingRole(false);
-    setEditingGrade(false);
-  }
 
   const sortedItems = useMemo(() => {
     const items = data?.items ?? [];
@@ -339,24 +354,6 @@ function AdminUsersPageContent() {
     }
   }
 
-  const resetForm = useForm<ResetPasswordFormValues>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { newPassword: '' },
-  });
-
-  function openReset(user: User) {
-    resetForm.reset({ newPassword: '' });
-    setResetTarget(user);
-  }
-
-  function onResetSubmit(values: ResetPasswordFormValues) {
-    if (!resetTarget) return;
-    resetPassword.mutate(
-      { id: resetTarget._id, newPassword: values.newPassword },
-      { onSuccess: () => setResetTarget(null) }
-    );
-  }
-
   const createForm = useForm<UserCreateFormValues>({
     resolver: zodResolver(userCreateSchema),
     defaultValues: {
@@ -441,10 +438,7 @@ function AdminUsersPageContent() {
                 type="button"
                 role="tab"
                 aria-selected={statusTab === tab.value}
-                onClick={() => {
-                  setStatusTab(tab.value);
-                  setPage(1);
-                }}
+                onClick={() => updateParams({ tab: tab.value })}
                 className={cn(
                   'rounded-[9px] px-3.5 py-2 font-semibold whitespace-nowrap transition-colors',
                   statusTab === tab.value
@@ -459,11 +453,9 @@ function AdminUsersPageContent() {
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              maxLength={SEARCH_MAX_LENGTH}
               placeholder="Ism yoki telefon bo'yicha qidirish"
               className="h-11 pl-10"
             />
@@ -472,10 +464,7 @@ function AdminUsersPageContent() {
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
           <Select
             value={gradeFilter}
-            onValueChange={(v) => {
-              setGradeFilter(v ?? 'all');
-              setPage(1);
-            }}
+            onValueChange={(v) => updateParams({ grade: v ?? null })}
             items={[
               { value: 'all', label: 'Barcha sinflar' },
               ...GRADE_NUMBERS.map((n) => ({ value: n, label: `${n}-sinf` })),
@@ -495,10 +484,7 @@ function AdminUsersPageContent() {
           </Select>
           <Select
             value={gradeLetterFilter}
-            onValueChange={(v) => {
-              setGradeLetterFilter(v ?? 'all');
-              setPage(1);
-            }}
+            onValueChange={(v) => updateParams({ gradeLetter: v ?? null })}
             items={[
               { value: 'all', label: 'Barcha harflar' },
               ...GRADE_LETTERS.map((l) => ({ value: l, label: `"${l}" sinf` })),
@@ -521,10 +507,7 @@ function AdminUsersPageContent() {
           </Select>
           <Select
             value={roleFilter}
-            onValueChange={(v) => {
-              setRoleFilter((v as 'all' | Role) ?? 'all');
-              setPage(1);
-            }}
+            onValueChange={(v) => updateParams({ role: v ?? null })}
             items={{ all: 'Barcha rollar', ...ROLE_LABELS }}
           >
             <SelectTrigger aria-label="Rol" className={filterTriggerClass(roleFilter !== 'all')}>
@@ -541,10 +524,7 @@ function AdminUsersPageContent() {
           </Select>
           <Select
             value={tarifFilter}
-            onValueChange={(v) => {
-              setTarifFilter((v as 'all' | Tarif) ?? 'all');
-              setPage(1);
-            }}
+            onValueChange={(v) => updateParams({ tarif: v ?? null })}
             items={{ all: 'Barcha tariflar', ...TARIF_LABELS }}
           >
             <SelectTrigger aria-label="Tarif" className={filterTriggerClass(tarifFilter !== 'all')}>
@@ -613,7 +593,7 @@ function AdminUsersPageContent() {
 
       {isLoading ? (
         <SkeletonTable rows={6} />
-      ) : isError ? (
+      ) : isError && !isValidationError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState icon={Users} title="Foydalanuvchi topilmadi" />
@@ -647,6 +627,7 @@ function AdminUsersPageContent() {
                   <th className="px-3 py-3.5 font-semibold">Telefon</th>
                   <th className="px-3 py-3.5 font-semibold">Rol</th>
                   <th className="px-3 py-3.5 font-semibold">Sinf</th>
+                  <th className="px-3 py-3.5 font-semibold">Olmos</th>
                   <th className="px-3 py-3.5 font-semibold">Telegram</th>
                   <th className="px-3 py-3.5 font-semibold">Ro&apos;yxatdan</th>
                   <th className="px-5 py-3.5 text-right font-semibold">Amallar</th>
@@ -672,9 +653,8 @@ function AdminUsersPageContent() {
                         />
                       </td>
                       <td className="px-3 py-3">
-                        <button
-                          type="button"
-                          onClick={() => openDetail(item._id)}
+                        <Link
+                          href={`/admin/users/${item._id}`}
                           className="flex items-center gap-2.5 text-left"
                         >
                           <Avatar>
@@ -698,14 +678,16 @@ function AdminUsersPageContent() {
                                   Bloklangan
                                 </StatusPill>
                               )}
-                              {item.tarif === 'premium' && (
+                              {isPremiumActive(item) && (
                                 <StatusPill tone="warning" className="px-2 py-0 text-[11px]">
                                   Premium
+                                  {item.premiumExpiresAt &&
+                                    ` · ${formatDate(item.premiumExpiresAt)} gacha`}
                                 </StatusPill>
                               )}
                             </span>
                           </span>
-                        </button>
+                        </Link>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">+{item.phone}</td>
                       <td className="px-3 py-3">
@@ -725,6 +707,22 @@ function AdminUsersPageContent() {
                       <td className="px-3 py-3">
                         {item.role === 'student' && item.grade?.number ? (
                           `${item.grade.number}-${item.grade.letter ?? ''}`
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {item.role === 'student' ? (
+                          <span className="inline-flex items-center gap-1 font-semibold tabular-nums">
+                            <Image
+                              src="/diamond.png"
+                              alt=""
+                              width={32}
+                              height={32}
+                              className="size-3.5"
+                            />
+                            {formatNumber(item.diamonds ?? 0)}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -768,7 +766,7 @@ function AdminUsersPageContent() {
                             size="icon-sm"
                             variant="outline"
                             aria-label="Boshqa amallar"
-                            onClick={() => openDetail(item._id)}
+                            render={<Link href={`/admin/users/${item._id}`} />}
                           >
                             <MoreHorizontal className="size-4" />
                           </Button>
@@ -792,308 +790,6 @@ function AdminUsersPageContent() {
           </div>
         </>
       )}
-
-      <Sheet open={!!detailUser} onOpenChange={(open) => !open && closeDetail()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-sm">
-          <SheetHeader>
-            <SheetTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Tafsilot
-            </SheetTitle>
-          </SheetHeader>
-          {detailUser && (
-            <div className="flex flex-col gap-5 px-4 pb-4">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <div className="relative">
-                  <Avatar className="size-20 shadow-sm ring-2 ring-background">
-                    <AvatarImage src={resolveAssetUrl(detailUser.avatar)} alt={detailUser.name} />
-                    <AvatarFallback className="text-xl">{initials(detailUser.name)}</AvatarFallback>
-                  </Avatar>
-                  <button
-                    type="button"
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={uploadAvatar.isPending}
-                    aria-label="Rasmni almashtirish"
-                    className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm ring-2 ring-background"
-                  >
-                    {uploadAvatar.isPending ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Camera className="size-3.5" />
-                    )}
-                  </button>
-                </div>
-                {detailUser.avatar && (
-                  <button
-                    type="button"
-                    onClick={() => deleteAvatar.mutate(detailUser._id)}
-                    disabled={deleteAvatar.isPending}
-                    className="text-base text-muted-foreground hover:text-destructive"
-                  >
-                    Rasmni o&apos;chirish
-                  </button>
-                )}
-                <div>
-                  <p className="text-xl font-semibold text-foreground">{detailUser.name}</p>
-                  <p className="text-base text-muted-foreground">{detailUser.phone}</p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-1.5">
-                  {!detailUser.isVerified && (
-                    <Badge className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400">
-                      Tasdiqlanmagan
-                    </Badge>
-                  )}
-                  {detailUser.isBlocked ? (
-                    <Badge variant="destructive" className="rounded-full">
-                      Bloklangan
-                    </Badge>
-                  ) : (
-                    <Badge className="rounded-full bg-success/10 text-success">Faol</Badge>
-                  )}
-                  <Badge className="rounded-full bg-muted text-muted-foreground">
-                    {TARIF_LABELS[detailUser.tarif ?? 'standart']}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {!detailUser.isVerified && (
-                  <Button
-                    onClick={() => verifyUser.mutate(detailUser._id)}
-                    disabled={verifyUser.isPending}
-                    className="col-span-2"
-                  >
-                    {verifyUser.isPending ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <UserCheck className="size-4" />
-                    )}
-                    Tasdiqlash
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  className={cn(detailUser.isVerified && 'col-span-2')}
-                  onClick={() => setBlockTarget(detailUser)}
-                  disabled={toggleBlock.isPending}
-                >
-                  {detailUser.isBlocked ? (
-                    <>
-                      <ShieldCheck className="size-4 text-success" /> Blokdan chiqarish
-                    </>
-                  ) : (
-                    <>
-                      <ShieldBan className="size-4 text-destructive" /> Bloklash
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="divide-y divide-border/70 rounded-xl border border-border/70">
-                <div className="flex items-center justify-between px-3.5 py-2.5">
-                  <span className="text-base text-muted-foreground">Rol</span>
-                  {editingRole ? (
-                    <Select
-                      value={detailUser.role}
-                      onValueChange={(v) =>
-                        updateUser.mutate(
-                          { id: detailUser._id, role: v as Role },
-                          { onSuccess: () => setEditingRole(false) }
-                        )
-                      }
-                      items={ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
-                    >
-                      <SelectTrigger className="h-9 w-36 rounded-lg text-base">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {ROLE_LABELS[r]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span className="flex items-center gap-2 text-base font-medium text-foreground">
-                      {ROLE_LABELS[detailUser.role]}
-                      {isSuperadmin && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingRole(true)}
-                          className="text-base font-medium text-primary hover:underline"
-                        >
-                          o&apos;zgartirish
-                        </button>
-                      )}
-                    </span>
-                  )}
-                </div>
-
-                {detailUser.role === 'student' && (
-                  <div className="flex items-center justify-between px-3.5 py-2.5">
-                    <span className="text-base text-muted-foreground">Sinf</span>
-                    {editingGrade ? (
-                      <div className="flex items-center gap-1.5">
-                        <Select
-                          value={tempGradeNumber}
-                          onValueChange={(v) => setTempGradeNumber(v ?? '1')}
-                          items={GRADE_NUMBERS.map((n) => ({ value: n, label: n }))}
-                        >
-                          <SelectTrigger className="h-9 w-16 rounded-lg text-base">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {GRADE_NUMBERS.map((n) => (
-                              <SelectItem key={n} value={n}>
-                                {n}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select
-                          value={tempGradeLetter}
-                          onValueChange={(v) => setTempGradeLetter(v ?? 'A')}
-                          items={GRADE_LETTERS.map((l) => ({ value: l, label: l }))}
-                        >
-                          <SelectTrigger className="h-9 w-16 rounded-lg text-base">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {GRADE_LETTERS.map((l) => (
-                              <SelectItem key={l} value={l}>
-                                {l}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          disabled={updateUser.isPending}
-                          onClick={() =>
-                            updateUser.mutate(
-                              {
-                                id: detailUser._id,
-                                grade: {
-                                  number: Number(tempGradeNumber),
-                                  letter: tempGradeLetter,
-                                },
-                              },
-                              { onSuccess: () => setEditingGrade(false) }
-                            )
-                          }
-                        >
-                          <Check className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          onClick={() => setEditingGrade(false)}
-                        >
-                          <X className="size-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="flex items-center gap-2 text-base font-medium text-foreground">
-                        {detailUser.grade?.number
-                          ? `${detailUser.grade.number}-${detailUser.grade.letter ?? ''}`
-                          : '—'}
-                        {isSuperadmin && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setTempGradeNumber(
-                                detailUser.grade?.number ? String(detailUser.grade.number) : '1'
-                              );
-                              setTempGradeLetter(detailUser.grade?.letter ?? 'A');
-                              setEditingGrade(true);
-                            }}
-                            className="text-base font-medium text-primary hover:underline"
-                          >
-                            o&apos;zgartirish
-                          </button>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between px-3.5 py-2.5">
-                  <span className="text-base text-muted-foreground">Olmos</span>
-                  <span className="flex items-center gap-1 text-base font-medium text-foreground">
-                    <Image src="/diamond.png" alt="" width={32} height={32} className="size-3.5" />
-                    {formatNumber(detailUser.diamonds ?? 0)}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between px-3.5 py-2.5">
-                  <span className="text-base text-muted-foreground">Tarif</span>
-                  <span className="text-base font-medium text-foreground">
-                    {TARIF_LABELS[detailUser.tarif ?? 'standart']}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between px-3.5 py-2.5">
-                  <span className="text-base text-muted-foreground">
-                    Ro&apos;yxatdan o&apos;tgan
-                  </span>
-                  <span className="text-base font-medium text-foreground">
-                    {detailUser.createdAt ? formatDate(detailUser.createdAt) : '—'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between px-3.5 py-2.5">
-                  <span className="text-base text-muted-foreground">Oxirgi kirish</span>
-                  <span className="text-base font-medium text-foreground">
-                    {detailUser.lastLogin
-                      ? formatRelativeTime(detailUser.lastLogin)
-                      : 'Hech qachon'}
-                  </span>
-                </div>
-              </div>
-
-              <Button variant="outline" render={<Link href={`/admin/users/${detailUser._id}`} />}>
-                To&apos;liq sahifani ochish
-              </Button>
-
-              {isSuperadmin && (
-                <div className="space-y-2 border-t border-border/70 pt-4 text-base">
-                  <button
-                    type="button"
-                    onClick={() => openReset(detailUser)}
-                    className="block font-medium text-primary hover:underline"
-                  >
-                    Parolni tiklash
-                  </button>
-                  {detailUser._id !== currentUser?._id && (
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTarget(detailUser)}
-                      className="block font-medium text-destructive hover:underline"
-                    >
-                      Hisobni o&apos;chirish · superadmin
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file && detailUser) {
-                    uploadAvatar.mutate({ id: detailUser._id, file });
-                  }
-                  e.target.value = '';
-                }}
-              />
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
 
       <AlertDialog open={!!blockTarget} onOpenChange={(open) => !open && setBlockTarget(null)}>
         <AlertDialogContent>
@@ -1123,73 +819,6 @@ function AdminUsersPageContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {deleteTarget?.name}ni butunlay o&apos;chirmoqchimisiz?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu amalni orqaga qaytarib bo&apos;lmaydi.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteTarget) deleteUser.mutate(deleteTarget._id);
-                setDeleteTarget(null);
-                closeDetail();
-              }}
-            >
-              O&apos;chirish
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={!!resetTarget} onOpenChange={(open) => !open && setResetTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{resetTarget?.name}ning parolini tiklash</DialogTitle>
-            <DialogDescription className="text-base">
-              Eski parol so&apos;ralmaydi — yangi parol to&apos;g&apos;ridan-to&apos;g&apos;ri
-              o&apos;rnatiladi.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-base text-amber-700 dark:text-amber-400">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-            <p>
-              Bu amaldan so&apos;ng foydalanuvchining barcha eski sessiyalari yaroqsiz bo&apos;ladi
-              — u qayta tizimga kirishi kerak bo&apos;ladi.
-            </p>
-          </div>
-          <Form {...resetForm}>
-            <form onSubmit={resetForm.handleSubmit(onResetSubmit)} className="space-y-3">
-              <FormField
-                control={resetForm.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-medium">Yangi parol</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoFocus className="h-11 md:text-base" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" disabled={resetPassword.isPending}>
-                  {resetPassword.isPending && <Loader2 className="size-4 animate-spin" />}
-                  Parolni tiklash
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={bulkGradeOpen} onOpenChange={setBulkGradeOpen}>
         <DialogContent>

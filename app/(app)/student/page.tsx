@@ -23,12 +23,11 @@ import { useQuizzes } from '@/hooks/use-quizzes';
 import { formatNumber, formatTimeLeft } from '@/lib/format';
 import type { Quiz, User } from '@/types';
 
-// O'quvchi sinfiga mo'ljallangan, hozir ochiq bo'lgan testlar — eng tez tugaydigani birinchi.
-// GET /quizzes sinf bo'yicha filtrlamaydi: targetGrades'da o'quvchining sinfi bo'lmasa
-// (yoki o'quvchiga sinf belgilanmagan bo'lsa) test umuman ko'rsatilmaydi.
+// Hozir ochiq bo'lgan testlar — eng tez tugaydigani birinchi. GET /quizzes student
+// uchun backend'da o'z sinfi bo'yicha filtrlangan; targetGrades faqat sinfga xos
+// ochilish/tugash vaqtini olish uchun ishlatiladi.
 function activeQuizzesFor(quizzes: Quiz[], user: User | null) {
   const grade = user?.grade;
-  if (!grade?.number) return [];
   const now = Date.now();
   const candidates = quizzes
     // Urinishi qolmagan yoki allaqachon yechilgan testlar "faol" sanalmaydi
@@ -40,15 +39,16 @@ function activeQuizzesFor(quizzes: Quiz[], user: User | null) {
             (quiz.myAttempts.attemptsUsed === 0 || quiz.myAttempts.hasInProgress)))
     )
     .map((quiz) => {
-      const tg = quiz.targetGrades.find(
-        (g) => g.number === grade.number && (!g.letter || g.letter === grade.letter)
-      );
+      const tg = grade?.number
+        ? quiz.targetGrades.find(
+            (g) => g.number === grade.number && (!g.letter || g.letter === grade.letter)
+          )
+        : undefined;
       const from = tg?.availableFrom ?? quiz.availableFrom;
       const until = tg?.availableUntil ?? quiz.availableUntil;
       return { quiz, tg, from, until };
     })
-    .filter(({ tg, from, until }) => {
-      if (!tg) return false;
+    .filter(({ from, until }) => {
       if (from && new Date(from).getTime() > now) return false;
       if (until && new Date(until).getTime() < now) return false;
       return true;
@@ -77,8 +77,8 @@ export default function StudentDashboardPage() {
   const inProgress = enrollments.data?.items.filter((e) => !isEnrollmentCompleted(e)) ?? [];
   const activeQuizzes = activeQuizzesFor(quizzes?.items ?? [], user);
   const activeQuiz = activeQuizzes[0];
-  // Backend statistikasi sinfni hisobga olmaydi — son shu yerda, mos testlardan sanaladi
-  const activeQuizCount = activeQuizzes.length;
+  // Backend faqat hozir ochiq, faol va urinishi qolgan (o'z sinfidagi) testlarni sanaydi
+  const activeQuizCount = stats?.activeQuizzesCount ?? 0;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 sm:gap-6">

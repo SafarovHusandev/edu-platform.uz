@@ -50,6 +50,7 @@ interface QuizRowState {
   best: number | null;
 }
 
+// Sinfga xos sozlamalar (ochilish vaqti, urinishlar, vaqt limiti) uchun
 function myTargetGrade(quiz: Quiz, grade: Grade | undefined) {
   if (!grade?.number) return undefined;
   return quiz.targetGrades.find(
@@ -230,10 +231,10 @@ export default function StudentQuizzesPage() {
     startAttempt.mutate(quizId, { onSuccess: open, onError: open });
   }
 
-  // GET /quizzes studentning sinfi bo'yicha filtrlamaydi — frontend o'zi
-  // targetGrades ichidan mos kelmagan testlarni yashiradi. Sinf belgilanmagan
-  // o'quvchiga hech qaysi test ko'rinmaydi.
-  const myQuizzes = (data?.items ?? []).filter((quiz) => !!myTargetGrade(quiz, grade));
+  // GET /quizzes student uchun backend'da o'z sinfi bo'yicha filtrlanadi
+  // (sinf belgilanmagan bo'lsa ro'yxat bo'sh keladi) — frontend qayta filtrlamaydi.
+  const myQuizzes = data?.items ?? [];
+  const hasGrade = !!grade?.number;
   // Backend myAttempts qaytarmagan testlar uchungina alohida so'rov yuboriladi
   const missing = myQuizzes.filter((q) => !q.myAttempts);
   const fallbackQueries = useMyAttemptsMany(missing.map((q) => q._id));
@@ -261,6 +262,12 @@ export default function StudentQuizzesPage() {
         <SkeletonList count={5} itemClassName="h-20 rounded-[18px]" />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
+      ) : myQuizzes.length === 0 && !hasGrade ? (
+        <EmptyState
+          icon={ClipboardList}
+          title="Profilingizda sinf ko'rsatilmagan"
+          description="Testlar sinfingiz bo'yicha ko'rsatiladi. Sinfingizni belgilash uchun o'qituvchi yoki administratorga murojaat qiling."
+        />
       ) : items.length === 0 ? (
         <EmptyState
           icon={ClipboardList}

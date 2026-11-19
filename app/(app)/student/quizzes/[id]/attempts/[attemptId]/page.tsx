@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AttemptResultView } from '@/components/quizzes/attempt-result-view';
+import { QuizAccessError } from '@/components/quizzes/quiz-access-error';
 import { useQuiz, useMyAttempts } from '@/hooks/use-quizzes';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -14,9 +15,17 @@ interface PageProps {
 
 export default function QuizAttemptResultPage({ params }: PageProps) {
   const { id, attemptId } = use(params);
-  const { data: quiz, isLoading: quizLoading } = useQuiz(id);
+  const { data: quiz, isLoading: quizLoading, error: quizError, refetch } = useQuiz(id);
   const { data: attemptsData, isLoading: attemptsLoading } = useMyAttempts(id);
   const isPremium = useAuthStore((s) => s.user?.tarif === 'premium');
+
+  if (quizError && !quiz) {
+    return (
+      <div className="mx-auto w-full max-w-5xl">
+        <QuizAccessError error={quizError} onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   if (quizLoading || attemptsLoading || !quiz) {
     return <div className="mx-auto h-96 w-full max-w-5xl animate-pulse rounded-[22px] bg-muted" />;

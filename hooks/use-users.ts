@@ -44,6 +44,9 @@ export function useUsers(
     queryKey: ["admin-users", filters],
     queryFn: () => api.get<Paginated<User>>("/users", { ...filters }),
     placeholderData: (prev) => prev,
+    // 422 (noto'g'ri filtr qiymati) qayta urinish bilan tuzalmaydi
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 422) && failureCount < 3,
   })
 }
 

@@ -18,6 +18,22 @@ export class ApiError extends Error {
   }
 }
 
+// 422 javobidagi xato matnlari. Backend `errors`ni [{ field, message }] massivi
+// sifatida yuboradi; eski { field: [msg] } ko'rinishi ham qo'llab-quvvatlanadi.
+export function validationMessages(error: unknown): string[] {
+  if (!(error instanceof ApiError)) return [];
+  const raw = error.errors as unknown;
+  const messages: unknown[] = Array.isArray(raw)
+    ? raw.map((item) =>
+        item && typeof item === 'object' ? (item as { message?: unknown }).message : item
+      )
+    : raw && typeof raw === 'object'
+      ? Object.values(raw as Record<string, unknown>).flat()
+      : [];
+  const list = messages.filter((m): m is string => typeof m === 'string' && m.trim() !== '');
+  return list.length > 0 ? list : [error.message];
+}
+
 type UnauthorizedHandler = () => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
@@ -88,10 +104,14 @@ function unwrap(json: unknown) {
           (key) => key !== 'meta' && Array.isArray(dataObj[key])
         );
         if (arrayKey) {
-          return toPaginated(
-            dataObj[arrayKey] as unknown[],
-            dataObj.meta as Record<string, unknown>
+          // Ro'yxat yonidagi qo'shimcha maydonlar (masalan `summary`, `me`) saqlanadi
+          const extra = Object.fromEntries(
+            Object.entries(dataObj).filter(([key]) => key !== arrayKey && key !== 'meta')
           );
+          return {
+            ...extra,
+            ...toPaginated(dataObj[arrayKey] as unknown[], dataObj.meta as Record<string, unknown>),
+          };
         }
       }
 

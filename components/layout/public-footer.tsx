@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { TELEGRAM_BOT_USERNAME } from '@/lib/config';
+import { TELEGRAM_BOT_USERNAME, TELEGRAM_CHANNEL_URL } from '@/lib/config';
 
 const LINKS = [
   { label: 'Kurslar', href: '/courses' },
@@ -25,6 +25,14 @@ export function PublicFooter() {
             className="text-primary hover:underline"
           >
             Telegram bot
+          </a>
+          <a
+            href={TELEGRAM_CHANNEL_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary hover:underline"
+          >
+            Telegram kanal
           </a>
           {LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="hover:text-foreground">

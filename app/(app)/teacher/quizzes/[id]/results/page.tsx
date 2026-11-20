@@ -102,7 +102,7 @@ function attemptStudent(attempt: Attempt): User | null {
 }
 
 function attemptStudentId(attempt: Attempt): string {
-  return typeof attempt.student === 'object' ? attempt.student._id : attempt.student;
+  return typeof attempt.student === 'object' ? attempt.student?._id : attempt.student;
 }
 
 function statusRank(attempt: Attempt) {

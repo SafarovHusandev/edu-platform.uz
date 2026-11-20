@@ -6,6 +6,9 @@ export const ASSET_URL = process.env.NEXT_PUBLIC_ASSET_URL ?? 'https://server.ma
 export const TELEGRAM_BOT_USERNAME =
   process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? 'client_register_bot';
 
+// Platformaning rasmiy Telegram kanali (yangiliklar, e'lonlar)
+export const TELEGRAM_CHANNEL_URL = 'https://t.me/edu_Platform_Uz';
+
 export function resolveAssetUrl(path?: string | null) {
   if (!path) return undefined;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;

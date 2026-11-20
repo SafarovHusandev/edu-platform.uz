@@ -73,7 +73,7 @@ export function UserHistoryTabs({ user, overview }: { user: User; overview: Reac
       case 'spin':
         return <SpinPanel userId={user._id} />;
       case 'rewards':
-        return <RedemptionsPanel user={user} />;
+        return <RedemptionsPanel userId={user._id} />;
       case 'payments':
         return <PaymentsHistory scope="all" fixedUserId={user._id} />;
       case 'activity':

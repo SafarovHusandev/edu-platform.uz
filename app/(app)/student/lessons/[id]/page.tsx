@@ -79,7 +79,7 @@ export default function LessonViewerPage({ params }: PageProps) {
 
   const lessons = sortLessons(courseLessons);
   const enrollment = enrollments?.items.find(
-    (e) => (typeof e.course === 'object' ? e.course._id : e.course) === lesson.course
+    (e) => (typeof e.course === 'object' ? e.course?._id : e.course) === lesson.course
   );
   const course = enrollment && typeof enrollment.course === 'object' ? enrollment.course : null;
   const completed = new Set(enrollment?.completedLessons ?? []);

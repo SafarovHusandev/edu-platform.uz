@@ -664,7 +664,7 @@ function AdminUsersPageContent() {
                             </AvatarFallback>
                           </Avatar>
                           <span className="min-w-0">
-                            <span className="block font-semibold hover:text-primary">
+                            <span className="block text-[15px] font-semibold hover:text-primary">
                               {item.name}
                             </span>
                             <span className="flex flex-wrap gap-1">

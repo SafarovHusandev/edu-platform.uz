@@ -1,12 +1,13 @@
 import Link from 'next/link';
-import { Clock, Flame, Send } from 'lucide-react';
+import { ArrowRight, BookOpen, ClipboardCheck, Clock, Flame, Gift, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
 import { CourseCard } from '@/components/courses/course-card';
 import { BookCard } from '@/components/books/book-card';
 import { CertificateVerifyForm } from '@/components/certificates/certificate-verify-form';
-import { TELEGRAM_BOT_USERNAME, resolveAssetUrl } from '@/lib/config';
+import { TELEGRAM_BOT_USERNAME, TELEGRAM_CHANNEL_URL, resolveAssetUrl } from '@/lib/config';
 import { formatNumber } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Book, Course, Reward } from '@/types';
 
 // Bosh sahifa bo'limlari (edu-platform-dizayn: Main)
@@ -132,22 +133,43 @@ export function LandingHero() {
   );
 }
 
-const STEPS = [
+// Har bir qadam o'z rangi va ikonkasi bilan: o'qish → test → olmos → mukofot
+const STEPS: {
+  title: string;
+  text: string;
+  icon: React.ComponentType<{ className?: string }>;
+  // Ikonka foni va rangi
+  tone: string;
+  // "0N-qadam" yozuvi rangi — ikonka bilan bir xil
+  label: string;
+}[] = [
   {
     title: "Kurs va kitob o'qing",
     text: "Video va matnli darslar, bepul PDF kitoblar — sinfingiz bo'yicha saralangan.",
+    icon: BookOpen,
+    tone: 'bg-primary-soft text-primary',
+    label: 'text-primary',
   },
   {
     title: 'Test yeching',
     text: "O'qituvchingiz tayyorlagan testlar — vaqt chegarasi va aniq natija bilan.",
+    icon: ClipboardCheck,
+    tone: 'bg-success-soft text-success',
+    label: 'text-success',
   },
   {
     title: "Olmos to'plang",
     text: "Har kuni barabanni aylantiring, testlardan olmos oling, reytingda ko'tariling.",
+    icon: DiamondIcon,
+    tone: 'bg-primary-soft text-primary',
+    label: 'text-primary',
   },
   {
     title: 'Mukofotga almashtiring',
     text: "Katalogdan sovg'a tanlang — admin tasdiqlab, sizga topshiradi.",
+    icon: Gift,
+    tone: 'bg-gold-soft text-gold-foreground',
+    label: 'text-gold-foreground',
   },
 ];
 
@@ -155,20 +177,41 @@ export function LandingSteps() {
   return (
     <SectionShell className="pt-6 pb-14">
       <SectionHeading title="Qanday ishlaydi" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {STEPS.map((step, i) => (
-          <div
-            key={step.title}
-            className="flex flex-col gap-2.5 rounded-[20px] border border-border bg-card p-6"
-          >
-            <span className="font-heading text-sm font-semibold text-primary">
-              {String(i + 1).padStart(2, '0')}
-            </span>
-            <h3 className="text-[19px] font-bold">{step.title}</h3>
-            <p className="text-[15px] leading-relaxed text-muted-foreground">{step.text}</p>
-          </div>
-        ))}
-      </div>
+      {/* Qadamlar ketma-ketligi: kartochkalar orasida o'q (desktop — o'ngga, telefon — pastga).
+          Oxirgi qadam — maqsad (mukofot), oltin rang bilan ajratilgan. */}
+      <ol className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {STEPS.map((step, i) => {
+          const Icon = step.icon;
+          const isLast = i === STEPS.length - 1;
+          return (
+            <li
+              key={step.title}
+              className={cn(
+                'group relative flex flex-col gap-3 rounded-[20px] border p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg',
+                isLast
+                  ? 'border-gold/50 bg-gold-soft/40 hover:border-gold'
+                  : 'border-border bg-card hover:border-primary/40'
+              )}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className={cn('font-heading text-base font-semibold', step.label)}>
+                  {String(i + 1).padStart(2, '0')}-qadam
+                </span>
+                <span
+                  className={cn(
+                    'flex size-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-110',
+                    step.tone
+                  )}
+                >
+                  <Icon className="size-6" />
+                </span>
+              </div>
+              <h3 className="text-[19px] font-bold">{step.title}</h3>
+              <p className="text-[15px] leading-relaxed text-muted-foreground">{step.text}</p>
+            </li>
+          );
+        })}
+      </ol>
     </SectionShell>
   );
 }
@@ -255,6 +298,32 @@ export function LandingRewards({ rewards }: { rewards: Reward[] }) {
             );
           })}
         </div>
+      </div>
+    </SectionShell>
+  );
+}
+
+export function LandingTelegramChannel() {
+  return (
+    <SectionShell className="pt-6 pb-14">
+      <div className="flex flex-wrap items-center gap-6 rounded-3xl border border-[#229ED9]/30 bg-[#229ED9]/8 p-6 sm:p-8">
+        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#229ED9] text-white">
+          <Send className="size-7" />
+        </span>
+        <div className="min-w-0 flex-[1_1_280px]">
+          <h2 className="font-heading text-2xl font-semibold">Rasmiy Telegram kanalimiz</h2>
+          <p className="mt-1.5 text-muted-foreground">
+            Yangi kurslar, testlar, jonli o&apos;yinlar va mukofotlar haqidagi e&apos;lonlarni
+            birinchi bo&apos;lib biling.
+          </p>
+        </div>
+        <Button
+          size="lg"
+          className="h-[52px] bg-[#229ED9] px-6 text-base text-white hover:bg-[#229ED9]/90"
+          render={<a href={TELEGRAM_CHANNEL_URL} target="_blank" rel="noreferrer" />}
+        >
+          <Send className="size-4.5" /> Kanalga obuna bo&apos;lish
+        </Button>
       </div>
     </SectionShell>
   );

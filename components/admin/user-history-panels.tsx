@@ -1,91 +1,233 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import type { UseQueryResult } from '@tanstack/react-query';
 import {
   Activity,
   Award,
   BookOpen,
   ClipboardList,
-  Construction,
   Gift,
   RotateCw,
+  TimerOff,
+  UserX,
   type LucideIcon,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { PaginationBar } from '@/components/ui/pagination-bar';
 import { StatusPill, type StatusPillTone } from '@/components/dashboard/dashboard-ui';
 import { DiamondIcon } from '@/components/icons/diamond-icon';
 import {
-  isEndpointMissing,
   useUserHistory,
   useUserRedemptions,
+  type DiamondHistoryItem,
   type DiamondSource,
+  type EnrollmentStatus,
   type UserActivityItem,
   type UserActivityType,
 } from '@/hooks/use-user-history';
-import { formatDate, formatDateTime, formatDuration, formatNumber } from '@/lib/format';
+import { ApiError, validationMessages } from '@/lib/api-client';
+import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { ROLE_LABELS } from '@/lib/roles';
 import { cn } from '@/lib/utils';
-import type { AttemptStatus, Paginated, RedemptionStatus, Role, User } from '@/types';
+import type { AttemptStatus, Paginated, RedemptionStatus, Role } from '@/types';
 
-// --- Umumiy qobiq: yuklanish / xato / endpoint yo'q / bo'sh / sahifalash ---
+const ALL = 'all';
+
+// --- Filtrlar: sana oralig'i + har bir tabga xos select'lar ---
+
+// <input type="date"> qiymatini Toshkent kun chegarasiga aylantiradi
+function dayBoundary(value: string, end: boolean) {
+  return value ? `${value}T${end ? '23:59:59.999' : '00:00:00.000'}+05:00` : undefined;
+}
+
+// Sahifa, sana oralig'i va qo'shimcha filtrlar. Har qanday filtr o'zgarsa sahifa 1 ga qaytadi.
+// 'all' qiymatli filtr so'rovga umuman qo'shilmaydi.
+function useHistoryFilters<K extends string>(initial: Record<K, string>) {
+  const [page, setPage] = useState(1);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [selects, setSelects] = useState(initial);
+
+  const params: { page: number } & Record<string, string | number | undefined> = {
+    page,
+    from: dayBoundary(from, false),
+    to: dayBoundary(to, true),
+  };
+  for (const [key, value] of Object.entries(selects) as [K, string][]) {
+    params[key] = value === ALL ? undefined : value;
+  }
+
+  return {
+    page,
+    setPage,
+    params,
+    dates: {
+      from,
+      to,
+      setFrom: (v: string) => {
+        setFrom(v);
+        setPage(1);
+      },
+      setTo: (v: string) => {
+        setTo(v);
+        setPage(1);
+      },
+    },
+    select: (key: K) => ({
+      value: selects[key],
+      onChange: (v: string) => {
+        setSelects((prev) => ({ ...prev, [key]: v }));
+        setPage(1);
+      },
+    }),
+  };
+}
+
+type FilterSelect = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Record<string, string>;
+};
+
+function FilterBar({
+  dates,
+  selects = [],
+}: {
+  dates: ReturnType<typeof useHistoryFilters>['dates'];
+  selects?: FilterSelect[];
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {selects.map((s) => {
+        const items = { [ALL]: s.label, ...s.options };
+        return (
+          <Select
+            key={s.label}
+            value={s.value}
+            onValueChange={(v) => s.onChange(v ?? ALL)}
+            items={items}
+          >
+            <SelectTrigger
+              aria-label={s.label}
+              className={cn(
+                'w-48',
+                s.value !== ALL && 'border-primary/50 bg-primary-soft font-semibold text-primary'
+              )}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(items).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      })}
+      <div className="flex items-center gap-1.5">
+        <Input
+          type="date"
+          value={dates.from}
+          max={dates.to || undefined}
+          onChange={(e) => dates.setFrom(e.target.value)}
+          aria-label="Boshlanish sanasi"
+          className="w-40"
+        />
+        <span className="text-muted-foreground">—</span>
+        <Input
+          type="date"
+          value={dates.to}
+          min={dates.from || undefined}
+          onChange={(e) => dates.setTo(e.target.value)}
+          aria-label="Tugash sanasi"
+          className="w-40"
+        />
+      </div>
+    </div>
+  );
+}
+
+// --- Umumiy qobiq: yuklanish / xato / bo'sh / sahifalash ---
 
 function HistoryPanel<T>({
   query,
-  endpoint,
   icon,
   emptyTitle,
+  emptyDescription,
   itemLabel,
   page,
   onPageChange,
-  header,
+  summary,
+  filters,
   children,
 }: {
   query: UseQueryResult<Paginated<T>>;
-  endpoint: string;
   icon: LucideIcon;
   emptyTitle: string;
+  emptyDescription?: string;
   itemLabel: string;
   page: number;
   onPageChange: (page: number) => void;
-  header?: ReactNode;
+  summary?: ReactNode;
+  filters?: ReactNode;
   children: (items: T[]) => ReactNode;
 }) {
   const { data, isLoading, isError, error, refetch } = query;
 
   if (isLoading) return <div className="h-72 animate-pulse rounded-[20px] bg-muted" />;
 
-  if (isError && isEndpointMissing(error)) {
-    return (
+  // Bu endpointlarda 404 — foydalanuvchi topilmadi
+  if (isError && error instanceof ApiError && error.status === 404) {
+    return <EmptyState icon={UserX} title="Foydalanuvchi topilmadi" />;
+  }
+
+  let body: ReactNode;
+  if (isError && error instanceof ApiError && error.status === 422) {
+    body = (
       <EmptyState
-        icon={Construction}
-        title="Bu bo'lim tez orada ishga tushadi"
-        description={`Backend'da ${endpoint} hali tayyor emas.`}
+        icon={icon}
+        title="Filtr qiymati noto'g'ri"
+        description={validationMessages(error).join(' ')}
       />
+    );
+  } else if (isError) {
+    body = <ErrorState onRetry={() => refetch()} />;
+  } else if (!data || data.items.length === 0) {
+    body = <EmptyState icon={icon} title={emptyTitle} description={emptyDescription} />;
+  } else {
+    body = (
+      <>
+        {children(data.items)}
+        <PaginationBar
+          page={page}
+          totalPages={data.totalPages}
+          total={data.total}
+          itemLabel={itemLabel}
+          onPageChange={onPageChange}
+        />
+      </>
     );
   }
 
-  if (isError) return <ErrorState onRetry={() => refetch()} />;
-
   return (
     <div className="flex flex-col gap-3.5">
-      {header}
-      {!data || data.items.length === 0 ? (
-        <EmptyState icon={icon} title={emptyTitle} />
-      ) : (
-        <>
-          {children(data.items)}
-          <PaginationBar
-            page={page}
-            totalPages={data.totalPages}
-            total={data.total}
-            itemLabel={itemLabel}
-            onPageChange={onPageChange}
-          />
-        </>
-      )}
+      {summary}
+      {filters}
+      {body}
     </div>
   );
 }
@@ -128,8 +270,26 @@ function HistoryTable({
 
 const muted = <span className="text-muted-foreground">—</span>;
 
+function Note({ children }: { children: ReactNode }) {
+  return <div className="mt-0.5 text-xs font-normal text-muted-foreground">{children}</div>;
+}
+
 function refTitle(ref: { title?: string } | null | undefined, fallback: string) {
   return ref?.title ?? <span className="text-muted-foreground">{fallback}</span>;
+}
+
+const linkClass = 'underline-offset-2 hover:text-primary hover:underline';
+
+// 691 -> "11 daq 31 s"
+function shortDuration(seconds: number | null | undefined) {
+  if (seconds == null) return null;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return m > 0 ? `${m} daq ${s} s` : `${s} s`;
+}
+
+function attemptResultHref(quizId: string, attemptId: string) {
+  return `/teacher/quizzes/${quizId}/results/${attemptId}`;
 }
 
 // --- Testlar ---
@@ -142,17 +302,30 @@ const ATTEMPT_PILL: Record<AttemptStatus, { label: string; tone: StatusPillTone 
 };
 
 export function AttemptsPanel({ userId }: { userId: string }) {
-  const [page, setPage] = useState(1);
-  const query = useUserHistory(userId, 'attempts', { page });
+  const f = useHistoryFilters({ status: ALL });
+  const query = useUserHistory(userId, 'attempts', f.params);
   return (
     <HistoryPanel
       query={query}
-      endpoint="GET /users/:id/attempts"
       icon={ClipboardList}
       emptyTitle="Test urinishlari yo'q"
       itemLabel="urinish"
-      page={page}
-      onPageChange={setPage}
+      page={f.page}
+      onPageChange={f.setPage}
+      filters={
+        <FilterBar
+          dates={f.dates}
+          selects={[
+            {
+              label: 'Barcha holatlar',
+              ...f.select('status'),
+              options: Object.fromEntries(
+                Object.entries(ATTEMPT_PILL).map(([k, v]) => [k, v.label])
+              ),
+            },
+          ]}
+        />
+      }
     >
       {(items) => (
         <HistoryTable
@@ -167,14 +340,17 @@ export function AttemptsPanel({ userId }: { userId: string }) {
           minWidth={760}
         >
           {items.map((a) => {
-            const pill = ATTEMPT_PILL[a.status] ?? {
-              label: a.status,
-              tone: 'neutral',
-            };
+            const pill = ATTEMPT_PILL[a.status] ?? { label: a.status, tone: 'neutral' };
             return (
               <tr key={a._id}>
                 <td className="font-semibold">
-                  {refTitle(a.quiz, "O'chirilgan test")}
+                  {a.quiz ? (
+                    <Link href={attemptResultHref(a.quiz._id, a._id)} className={linkClass}>
+                      {a.quiz.title ?? 'Test'}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">O&apos;chirilgan test</span>
+                  )}
                   {a.attemptNumber != null && (
                     <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                       #{a.attemptNumber}
@@ -197,14 +373,14 @@ export function AttemptsPanel({ userId }: { userId: string }) {
                 </td>
                 <td className="text-right tabular-nums">
                   {a.diamondsEarned ? (
-                    <span className="inline-flex items-center gap-1 font-semibold">
+                    <span className="inline-flex items-center gap-1 font-semibold text-success">
                       <DiamondIcon className="size-3.5" />+{formatNumber(a.diamondsEarned)}
                     </span>
                   ) : (
                     muted
                   )}
                 </td>
-                <td className="whitespace-nowrap">{formatDuration(a.durationSeconds) ?? muted}</td>
+                <td className="whitespace-nowrap">{shortDuration(a.durationSeconds) ?? muted}</td>
                 <td className="whitespace-nowrap text-muted-foreground">
                   {a.startedAt ? formatDateTime(a.startedAt) : '—'}
                 </td>
@@ -224,6 +400,7 @@ export function AttemptsPanel({ userId }: { userId: string }) {
 
 const SOURCE_LABELS: Record<DiamondSource, string> = {
   quiz: 'Test',
+  lesson: 'Dars tugatildi',
   spin: 'Kunlik spin',
   live_quiz: 'Jonli test',
   reward: "Sovg'a",
@@ -232,34 +409,51 @@ const SOURCE_LABELS: Record<DiamondSource, string> = {
   admin_adjust: "Admin o'zgartirdi",
 };
 
+const TYPE_LABELS = { earn: 'Kirim', spend: 'Chiqim' };
+
+// Manba nomi: yozuv paytidagi ref.title; havola faqat ochib bo'ladigan manbalar uchun
+function DiamondRefTitle({ item }: { item: DiamondHistoryItem }) {
+  const ref = item.ref;
+  if (!ref) return muted;
+  const title = ref.title ?? '—';
+  if (ref.kind === 'attempt' && item.source !== 'attempt_revoked') {
+    return (
+      <Link href={`/admin/attempts/${ref._id}`} className={linkClass}>
+        {title}
+      </Link>
+    );
+  }
+  if (ref.kind === 'redemption') {
+    return (
+      <Link href="?tab=rewards" scroll={false} className={linkClass}>
+        {title}
+      </Link>
+    );
+  }
+  return <>{title}</>;
+}
+
 export function DiamondsPanel({ userId, balance }: { userId: string; balance: number }) {
-  const [page, setPage] = useState(1);
-  const query = useUserHistory(userId, 'diamond-history', { page });
+  const f = useHistoryFilters({ type: ALL, source: ALL });
+  const query = useUserHistory(userId, 'diamond-history', f.params);
+  // summary butun tarix bo'yicha keladi — filtr o'zgarganda ham o'zgarmaydi
   const summary = query.data?.summary;
   const stats = [
     { label: 'Joriy balans', value: summary?.balance ?? balance },
-    {
-      label: 'Jami topilgan',
-      value: summary?.totalEarned,
-      tone: 'text-success',
-    },
-    {
-      label: 'Jami sarflangan',
-      value: summary?.totalSpent,
-      tone: 'text-destructive',
-    },
+    { label: 'Jami topilgan', value: summary?.totalEarned, tone: 'text-success' },
+    { label: 'Jami sarflangan', value: summary?.totalSpent, tone: 'text-destructive' },
   ];
 
   return (
     <HistoryPanel
       query={query}
-      endpoint="GET /users/:id/diamond-history"
       icon={Award}
       emptyTitle="Olmos harakati yo'q"
+      emptyDescription="Eski foydalanuvchilarda tarix migratsiyadan keyin to'liq ko'rinadi."
       itemLabel="yozuv"
-      page={page}
-      onPageChange={setPage}
-      header={
+      page={f.page}
+      onPageChange={f.setPage}
+      summary={
         <div className="grid gap-3 sm:grid-cols-3">
           {stats.map((s) => (
             <div key={s.label} className="rounded-[18px] border border-border bg-card px-4 py-3.5">
@@ -277,6 +471,15 @@ export function DiamondsPanel({ userId, balance }: { userId: string; balance: nu
           ))}
         </div>
       }
+      filters={
+        <FilterBar
+          dates={f.dates}
+          selects={[
+            { label: 'Kirim va chiqim', ...f.select('type'), options: TYPE_LABELS },
+            { label: 'Barcha manbalar', ...f.select('source'), options: SOURCE_LABELS },
+          ]}
+        />
+      }
     >
       {(items) => (
         <HistoryTable
@@ -287,18 +490,19 @@ export function DiamondsPanel({ userId, balance }: { userId: string; balance: nu
             { label: 'Balans', align: 'right' },
             { label: 'Sana' },
           ]}
+          minWidth={720}
         >
           {items.map((h) => {
             const earn = h.type === 'earn';
             return (
               <tr key={h._id}>
                 <td className="font-semibold whitespace-nowrap">
-                  {SOURCE_LABELS[h.source as DiamondSource] ?? h.source}
+                  {SOURCE_LABELS[h.source as DiamondSource] ?? 'Boshqa'}
                 </td>
-                <td className="text-muted-foreground">
-                  {[h.ref?.title, h.note, h.actor ? `· ${h.actor.name}` : null]
-                    .filter(Boolean)
-                    .join(' ') || '—'}
+                <td>
+                  <DiamondRefTitle item={h} />
+                  {h.note && <Note>{h.note}</Note>}
+                  {h.actor && <Note>{h.actor.name}</Note>}
                 </td>
                 <td
                   className={cn(
@@ -326,18 +530,36 @@ export function DiamondsPanel({ userId, balance }: { userId: string; balance: nu
 
 // --- Kurslar ---
 
+const ENROLLMENT_PILL: Record<EnrollmentStatus, { label: string; tone: StatusPillTone }> = {
+  active: { label: "O'qimoqda", tone: 'primary' },
+  completed: { label: 'Tugatilgan', tone: 'success' },
+  cancelled: { label: 'Bekor qilingan', tone: 'neutral' },
+};
+
 export function EnrollmentsPanel({ userId }: { userId: string }) {
-  const [page, setPage] = useState(1);
-  const query = useUserHistory(userId, 'enrollments', { page });
+  const f = useHistoryFilters({ status: ALL });
+  const query = useUserHistory(userId, 'enrollments', f.params);
   return (
     <HistoryPanel
       query={query}
-      endpoint="GET /users/:id/enrollments"
       icon={BookOpen}
       emptyTitle="Kurslarga yozilmagan"
       itemLabel="kurs"
-      page={page}
-      onPageChange={setPage}
+      page={f.page}
+      onPageChange={f.setPage}
+      filters={
+        <FilterBar
+          dates={f.dates}
+          selects={[
+            {
+              label: 'Barcha holatlar',
+              ...f.select('status'),
+              // cancelled filtri backend'da yo'q (422) — faqat shu ikkitasi
+              options: { active: "O'qimoqda", completed: 'Tugatilgan' },
+            },
+          ]}
+        />
+      }
     >
       {(items) => (
         <HistoryTable
@@ -350,7 +572,8 @@ export function EnrollmentsPanel({ userId }: { userId: string }) {
         >
           {items.map((e) => {
             const progress = Math.max(0, Math.min(100, Math.round(e.progress ?? 0)));
-            const completed = e.status === 'completed';
+            const status = (e.status ?? 'active') as EnrollmentStatus;
+            const pill = ENROLLMENT_PILL[status] ?? { label: String(e.status), tone: 'neutral' };
             return (
               <tr key={e._id}>
                 <td className="font-semibold">{refTitle(e.course, "O'chirilgan kurs")}</td>
@@ -360,7 +583,7 @@ export function EnrollmentsPanel({ userId }: { userId: string }) {
                       <div
                         className={cn(
                           'h-full rounded-full',
-                          completed ? 'bg-success' : 'bg-primary'
+                          status === 'completed' ? 'bg-success' : 'bg-primary'
                         )}
                         style={{ width: `${progress}%` }}
                       />
@@ -377,10 +600,11 @@ export function EnrollmentsPanel({ userId }: { userId: string }) {
                   {e.createdAt ? formatDate(e.createdAt) : '—'}
                 </td>
                 <td>
-                  <StatusPill tone={completed ? 'success' : 'primary'}>
-                    {completed
-                      ? `Tugatilgan${e.completedAt ? ` · ${formatDate(e.completedAt)}` : ''}`
-                      : "O'qimoqda"}
+                  <StatusPill tone={pill.tone}>
+                    {pill.label}
+                    {status === 'completed' && e.completedAt
+                      ? ` · ${formatDate(e.completedAt)}`
+                      : ''}
                   </StatusPill>
                 </td>
               </tr>
@@ -395,17 +619,17 @@ export function EnrollmentsPanel({ userId }: { userId: string }) {
 // --- Sertifikatlar ---
 
 export function CertificatesPanel({ userId }: { userId: string }) {
-  const [page, setPage] = useState(1);
-  const query = useUserHistory(userId, 'certificates', { page });
+  const f = useHistoryFilters({});
+  const query = useUserHistory(userId, 'certificates', f.params);
   return (
     <HistoryPanel
       query={query}
-      endpoint="GET /users/:id/certificates"
       icon={Award}
       emptyTitle="Sertifikatlar yo'q"
       itemLabel="sertifikat"
-      page={page}
-      onPageChange={setPage}
+      page={f.page}
+      onPageChange={f.setPage}
+      filters={<FilterBar dates={f.dates} />}
     >
       {(items) => (
         <HistoryTable
@@ -428,17 +652,17 @@ export function CertificatesPanel({ userId }: { userId: string }) {
 // --- Kunlik spin ---
 
 export function SpinPanel({ userId }: { userId: string }) {
-  const [page, setPage] = useState(1);
-  const query = useUserHistory(userId, 'spin-history', { page });
+  const f = useHistoryFilters({});
+  const query = useUserHistory(userId, 'spin-history', f.params);
   return (
     <HistoryPanel
       query={query}
-      endpoint="GET /users/:id/spin-history"
       icon={RotateCw}
       emptyTitle="Spin tarixi yo'q"
       itemLabel="spin"
-      page={page}
-      onPageChange={setPage}
+      page={f.page}
+      onPageChange={f.setPage}
+      filters={<FilterBar dates={f.dates} />}
     >
       {(items) => (
         <HistoryTable
@@ -451,10 +675,16 @@ export function SpinPanel({ userId }: { userId: string }) {
         >
           {items.map((s) => (
             <tr key={s._id}>
-              <td>{s.question?.text ?? <span className="text-muted-foreground">—</span>}</td>
               <td>
+                {s.question?.text ?? (
+                  <span className="text-muted-foreground italic">Savol saqlanmagan</span>
+                )}
+              </td>
+              <td className="whitespace-nowrap">
                 {s.status === 'expired' ? (
-                  <StatusPill tone="neutral">Vaqt tugadi</StatusPill>
+                  <StatusPill tone="warning">
+                    <TimerOff className="size-3.5" /> Vaqtida javob berilmadi
+                  </StatusPill>
                 ) : s.answeredCorrectly ? (
                   <StatusPill tone="success">To&apos;g&apos;ri</StatusPill>
                 ) : s.answeredCorrectly === false ? (
@@ -492,69 +722,73 @@ const REDEMPTION_PILL: Record<RedemptionStatus, { label: string; tone: StatusPil
   rejected: { label: 'Rad etildi', tone: 'danger' },
 };
 
-export function RedemptionsPanel({ user }: { user: User }) {
-  const [page, setPage] = useState(1);
-  const query = useUserRedemptions(user._id, user.phone, page);
+export function RedemptionsPanel({ userId }: { userId: string }) {
+  const f = useHistoryFilters({ status: ALL });
+  const query = useUserRedemptions(userId, f.params);
   return (
     <HistoryPanel
       query={query}
-      endpoint="GET /rewards/redemptions"
       icon={Gift}
       emptyTitle="Sovg'a so'rovlari yo'q"
       itemLabel="so'rov"
-      page={page}
-      onPageChange={setPage}
+      page={f.page}
+      onPageChange={f.setPage}
+      filters={
+        <FilterBar
+          dates={f.dates}
+          selects={[
+            {
+              label: 'Barcha holatlar',
+              ...f.select('status'),
+              options: Object.fromEntries(
+                Object.entries(REDEMPTION_PILL).map(([k, v]) => [k, v.label])
+              ),
+            },
+          ]}
+        />
+      }
     >
-      {(all) => {
-        // Backend userId filtrini e'tiborsiz qoldirsa, telefon qidiruvi o'xshash raqamli
-        // boshqa o'quvchilarni ham qaytarishi mumkin — ularni chiqarib tashlaymiz
-        const items = all.filter(
-          (r) => typeof r.student !== 'object' || r.student._id === user._id
-        );
-        if (items.length === 0) return <EmptyState icon={Gift} title="Sovg'a so'rovlari yo'q" />;
-        return (
-          <HistoryTable
-            columns={[
-              { label: "Sovg'a" },
-              { label: 'Olmos', align: 'right' },
-              { label: 'Sana' },
-              { label: 'Holat' },
-            ]}
-            minWidth={560}
-          >
-            {items.map((r) => {
-              const pill = REDEMPTION_PILL[r.status] ?? {
-                label: r.status,
-                tone: 'neutral',
-              };
-              return (
-                <tr key={r._id}>
-                  <td className="font-semibold">
-                    {typeof r.reward === 'object' ? r.reward.title : "Sovg'a"}
-                    {r.status === 'rejected' && r.rejectReason && (
-                      <div className="text-xs font-normal text-muted-foreground">
-                        {r.rejectReason}
-                      </div>
-                    )}
-                  </td>
-                  <td className="text-right tabular-nums">
-                    <span className="inline-flex items-center gap-1 font-semibold">
-                      <DiamondIcon className="size-3.5" />
-                      {formatNumber(r.diamondsSpent)}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap text-muted-foreground">
-                    {formatDateTime(r.createdAt)}
-                  </td>
-                  <td>
-                    <StatusPill tone={pill.tone}>{pill.label}</StatusPill>
-                  </td>
-                </tr>
-              );
-            })}
-          </HistoryTable>
-        );
-      }}
+      {(items) => (
+        <HistoryTable
+          columns={[
+            { label: "Sovg'a" },
+            { label: 'Olmos', align: 'right' },
+            { label: 'Sana' },
+            { label: 'Holat' },
+          ]}
+          minWidth={560}
+        >
+          {items.map((r) => {
+            const pill = REDEMPTION_PILL[r.status] ?? { label: r.status, tone: 'neutral' };
+            return (
+              <tr key={r._id}>
+                <td className="font-semibold">
+                  {/* Sovg'a o'chirilgan bo'lsa reward: null keladi (typeof null === 'object') */}
+                  {r.reward && typeof r.reward === 'object' ? (
+                    r.reward.title
+                  ) : (
+                    <span className="text-muted-foreground">O&apos;chirilgan sovg&apos;a</span>
+                  )}
+                  {r.status === 'rejected' && r.rejectReason && <Note>{r.rejectReason}</Note>}
+                  {r.adminNote && <Note>{r.adminNote}</Note>}
+                </td>
+                <td className="text-right tabular-nums">
+                  <span className="inline-flex items-center gap-1 font-semibold">
+                    <DiamondIcon className="size-3.5" />
+                    {formatNumber(r.diamondsSpent)}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap text-muted-foreground">
+                  {formatDateTime(r.createdAt)}
+                </td>
+                <td>
+                  <StatusPill tone={pill.tone}>{pill.label}</StatusPill>
+                </td>
+              </tr>
+            );
+          })}
+        </HistoryTable>
+      )}
     </HistoryPanel>
   );
 }
@@ -575,38 +809,93 @@ const ACTIVITY_LABELS: Record<UserActivityType, string> = {
   profile_updated: "Ma'lumotlar o'zgardi",
 };
 
+const LOGIN_METHODS: Record<string, string> = {
+  password: 'Parol bilan',
+  telegram_otp: 'Telegram kodi bilan',
+  telegram_webapp: 'Telegram ilovasi orqali',
+};
+
+const REGISTER_VIA: Record<string, string> = {
+  web: 'Sayt orqali',
+  telegram_bot: 'Telegram bot orqali',
+  admin: 'Admin yaratdi',
+};
+
+const TARIF_NAMES: Record<string, string> = { standart: 'Standart', premium: 'Premium' };
 const FIELD_LABELS: Record<string, string> = { name: 'ism', phone: 'telefon' };
 
-function activityDetail(item: UserActivityItem) {
+function str(value: unknown) {
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
+function activityDetail(item: UserActivityItem): { main: string | null; extra?: string | null } {
   const meta = item.meta ?? {};
-  const from = meta.from != null ? String(meta.from) : null;
-  const to = meta.to != null ? String(meta.to) : null;
-  if (item.type === 'role_changed' && from && to)
-    return `${ROLE_LABELS[from as Role] ?? from} → ${ROLE_LABELS[to as Role] ?? to}`;
-  if (item.type === 'tarif_changed' && to) {
-    const until =
-      typeof meta.expiresAt === 'string' ? ` (${formatDate(meta.expiresAt)} gacha)` : '';
-    return `${from ?? '—'} → ${to}${until}`;
+  const from = str(meta.from);
+  const to = str(meta.to);
+  switch (item.type) {
+    case 'login':
+      return {
+        main: LOGIN_METHODS[str(meta.method) ?? ''] ?? null,
+        extra: str(meta.ip) ? `IP ${meta.ip}` : null,
+      };
+    case 'register':
+      return { main: REGISTER_VIA[str(meta.via) ?? ''] ?? null };
+    case 'role_changed':
+      return {
+        main:
+          from && to
+            ? `${ROLE_LABELS[from as Role] ?? from} → ${ROLE_LABELS[to as Role] ?? to}`
+            : null,
+      };
+    case 'tarif_changed': {
+      const change = `${TARIF_NAMES[from ?? ''] ?? from ?? '—'} → ${TARIF_NAMES[to ?? ''] ?? to ?? '—'}`;
+      if (meta.reason === 'expired') {
+        const at = str(meta.expiredAt);
+        return { main: change, extra: `Muddati tugadi${at ? ` · ${formatDate(at)}` : ''}` };
+      }
+      const until = str(meta.expiresAt);
+      return {
+        main: `${change}${until ? ` (${formatDate(until)} gacha)` : ''}`,
+        extra: meta.paymentId ? "To'lov orqali" : null,
+      };
+    }
+    case 'grade_changed':
+      return { main: `${from ?? '—'} → ${to ?? '—'}` };
+    case 'profile_updated':
+      return {
+        main: Array.isArray(meta.fields)
+          ? meta.fields.map((f) => FIELD_LABELS[String(f)] ?? String(f)).join(', ')
+          : null,
+      };
+    default:
+      return { main: null };
   }
-  if (item.type === 'grade_changed') return `${from ?? '—'} → ${to ?? '—'}`;
-  if (item.type === 'profile_updated' && Array.isArray(meta.fields))
-    return meta.fields.map((f) => FIELD_LABELS[String(f)] ?? String(f)).join(', ');
-  if (item.type === 'login' && typeof meta.userAgent === 'string') return meta.userAgent;
-  return null;
+}
+
+// actor: null — tizim hodisasi (premium muddati tugashi) yoki foydalanuvchining o'zi
+function activityActor(item: UserActivityItem) {
+  if (item.actor) return item.actor.name;
+  return item.meta?.reason === 'expired' ? 'Tizim' : "O'zi";
 }
 
 export function ActivityPanel({ userId }: { userId: string }) {
-  const [page, setPage] = useState(1);
-  const query = useUserHistory(userId, 'activity', { page });
+  const f = useHistoryFilters({ type: ALL });
+  const query = useUserHistory(userId, 'activity', f.params);
   return (
     <HistoryPanel
       query={query}
-      endpoint="GET /users/:id/activity"
       icon={Activity}
       emptyTitle="Faollik qayd etilmagan"
+      emptyDescription="Faollik jurnali 20-noyabr 2026 dan yuritiladi."
       itemLabel="hodisa"
-      page={page}
-      onPageChange={setPage}
+      page={f.page}
+      onPageChange={f.setPage}
+      filters={
+        <FilterBar
+          dates={f.dates}
+          selects={[{ label: 'Barcha hodisalar', ...f.select('type'), options: ACTIVITY_LABELS }]}
+        />
+      }
     >
       {(items) => (
         <HistoryTable
@@ -617,25 +906,31 @@ export function ActivityPanel({ userId }: { userId: string }) {
             { label: 'Sana' },
           ]}
         >
-          {items.map((a) => (
-            <tr key={a._id}>
-              <td className="font-semibold whitespace-nowrap">
-                {ACTIVITY_LABELS[a.type as UserActivityType] ?? a.type}
-              </td>
-              <td
-                className="max-w-80 truncate text-muted-foreground"
-                title={activityDetail(a) ?? ''}
-              >
-                {activityDetail(a) ?? '—'}
-              </td>
-              <td className="whitespace-nowrap">
-                {a.actor ? a.actor.name : <span className="text-muted-foreground">O&apos;zi</span>}
-              </td>
-              <td className="whitespace-nowrap text-muted-foreground">
-                {formatDateTime(a.createdAt)}
-              </td>
-            </tr>
-          ))}
+          {items.map((a) => {
+            const detail = activityDetail(a);
+            const userAgent = a.type === 'login' ? str(a.meta?.userAgent) : null;
+            return (
+              <tr key={a._id}>
+                <td className="font-semibold whitespace-nowrap">
+                  {ACTIVITY_LABELS[a.type as UserActivityType] ?? 'Boshqa hodisa'}
+                </td>
+                <td className="max-w-96" title={userAgent ?? undefined}>
+                  {detail.main ?? (detail.extra ? null : muted)}
+                  {detail.extra && <Note>{detail.extra}</Note>}
+                </td>
+                <td className="whitespace-nowrap">
+                  {a.actor ? (
+                    a.actor.name
+                  ) : (
+                    <span className="text-muted-foreground">{activityActor(a)}</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap text-muted-foreground">
+                  {formatDateTime(a.createdAt)}
+                </td>
+              </tr>
+            );
+          })}
         </HistoryTable>
       )}
     </HistoryPanel>

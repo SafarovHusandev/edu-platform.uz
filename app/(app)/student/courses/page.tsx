@@ -32,7 +32,7 @@ export default function MyCoursesPage() {
   const completed = all.filter((e) => isEnrollmentCompleted(e));
   const items = tab === 'active' ? active : completed;
   const enrolledIds = new Set(
-    all.map((e) => (typeof e.course === 'object' ? e.course._id : e.course))
+    all.map((e) => (typeof e.course === 'object' ? e.course?._id : e.course))
   );
 
   return (

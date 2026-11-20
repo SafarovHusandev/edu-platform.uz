@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Receipt, RefreshCw } from 'lucide-react';
 import {
   Select,
@@ -84,6 +84,36 @@ function shortDateTime(value: string) {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Multicard invoysi 1 soat ichida to'lanmasa backend uni draft → expired qiladi
+const DRAFT_TTL_MS = 60 * 60 * 1000;
+
+function hhmm(date: Date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function draftDeadline(createdAt: string) {
+  return new Date(new Date(createdAt).getTime() + DRAFT_TTL_MS);
+}
+
+// Joriy vaqt, har daqiqada yangilanadi — draft muddati o'tgan paytni ochiq sahifada ham ushlash uchun
+function useNow(intervalMs = 60_000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(timer);
+  }, [intervalMs]);
+  return now;
+}
+
+// Ko'rsatiladigan holat: soat o'tib ham "draft" qolgan invoys (backend hali expired
+// qilmagan) to'lab bo'lmaydi — foydalanuvchiga "Muddati o'tgan" deb ko'rsatiladi
+function displayStatus(payment: PaymentRecord, now: number): PaymentStatus {
+  if (payment.status === 'draft' && now >= draftDeadline(payment.createdAt).getTime()) {
+    return 'expired';
+  }
+  return payment.status;
+}
+
 export function PaymentsHistory({
   scope = 'my',
   title,
@@ -119,6 +149,7 @@ export function PaymentsHistory({
   );
   const { data, isLoading, isError, refetch } = scope === 'all' ? allPayments : myPayments;
   const checkStatus = useCheckPaymentStatus();
+  const now = useNow();
   const isAdmin = scope === 'all';
   const showUser = isAdmin && !fixedUserId;
   const statusOptions = [
@@ -240,7 +271,8 @@ export function PaymentsHistory({
               </thead>
               <tbody>
                 {data.items.map((payment) => {
-                  const pill = STATUS_PILL[payment.status] ?? UNKNOWN_STATUS_PILL;
+                  const status = displayStatus(payment, now);
+                  const pill = STATUS_PILL[status] ?? UNKNOWN_STATUS_PILL;
                   const incoming = payment.purpose === 'wallet';
                   const checking =
                     checkStatus.isPending && checkStatus.variables === payment.invoiceId;
@@ -263,19 +295,27 @@ export function PaymentsHistory({
                       <td className="px-3 py-3 whitespace-nowrap text-muted-foreground">
                         {shortDateTime(payment.paymentTime ?? payment.createdAt)}
                       </td>
+                      {/* Faqat "success" da pul haqiqatan o'tgan: qolganlarida summa
+                          kulrang va ishorasiz — yechib olingandek ko'rinmasin */}
                       <td
                         className={cn(
-                          'px-3 py-3 text-right font-bold whitespace-nowrap tabular-nums',
-                          incoming && payment.status === 'success' && 'text-success'
+                          'px-3 py-3 text-right whitespace-nowrap tabular-nums',
+                          payment.status === 'success'
+                            ? cn('font-bold', incoming && 'text-success')
+                            : 'font-semibold text-muted-foreground'
                         )}
                       >
-                        {incoming ? '+' : '−'}
+                        {payment.status === 'success' && (incoming ? '+' : '−')}
                         {formatPrice(payment.amount)}
                       </td>
                       <td className="px-5 py-3">
                         <span className="flex items-center gap-1.5">
                           <StatusPill tone={pill.tone}>{pill.label}</StatusPill>
-                          {payment.status !== 'success' && payment.status !== 'error' && (
+                          {/* Yakuniy holatlarda (to'langan, bekor, qaytarilgan, muddati o'tgan) tekshirish kerak emas */}
+                          {status !== 'success' &&
+                            status !== 'error' &&
+                            status !== 'revert' &&
+                            status !== 'expired' && (
                             <Button
                               variant="ghost"
                               size="icon-sm"
@@ -292,6 +332,11 @@ export function PaymentsHistory({
                             </Button>
                           )}
                         </span>
+                        {status === 'draft' && (
+                          <div className="mt-1 text-xs whitespace-nowrap text-muted-foreground">
+                            Muddati {hhmm(draftDeadline(payment.createdAt))} da tugaydi
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

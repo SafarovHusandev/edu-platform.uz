@@ -2,10 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api-client';
-import type { AttemptStatus, Paginated, Redemption } from '@/types';
+import type { AttemptStatus, Paginated, Redemption, RedemptionStatus } from '@/types';
 
 // Admin: bitta foydalanuvchining tarixi — GET /users/:id/<kind>.
-// Shakllar "Admin: foydalanuvchi tarixi — backend spec" hujjatiga mos.
+// Hammasida page, limit (default 20), from, to (ISO, createdAt bo'yicha); eng yangisi birinchi.
 
 type Ref = { _id: string; title?: string } | null;
 type Actor = { _id: string; name: string; role?: string } | null;
@@ -19,11 +19,14 @@ export interface UserAttemptItem {
   earnedPoints?: number | null;
   totalPoints?: number | null;
   passed?: boolean;
+  // Faqat 1-urinishda bo'ladi, keyingilarida null
   diamondsEarned?: number | null;
   startedAt?: string;
   submittedAt?: string | null;
   durationSeconds?: number | null;
 }
+
+export type EnrollmentStatus = 'active' | 'completed' | 'cancelled';
 
 export interface UserEnrollmentItem {
   _id: string;
@@ -31,20 +34,33 @@ export interface UserEnrollmentItem {
   progress?: number;
   completedLessonsCount?: number;
   totalLessons?: number;
-  status?: 'active' | 'completed' | (string & {});
+  status?: EnrollmentStatus | (string & {});
   createdAt?: string;
+  // Faqat status: "completed" da
   completedAt?: string | null;
 }
 
 export type DiamondSource =
-  'quiz' | 'spin' | 'live_quiz' | 'reward' | 'reward_refund' | 'attempt_revoked' | 'admin_adjust';
+  | 'quiz'
+  | 'lesson'
+  | 'spin'
+  | 'live_quiz'
+  | 'reward'
+  | 'reward_refund'
+  | 'attempt_revoked'
+  | 'admin_adjust';
 
 export interface DiamondHistoryItem {
   _id: string;
   amount: number;
   type: 'earn' | 'spend';
   source: DiamondSource | (string & {});
-  ref?: { kind: string; _id: string; title?: string } | null;
+  // title — yozuv paytidagi nom; manba o'chirilgan bo'lsa ham keladi
+  ref?: {
+    kind: 'attempt' | 'lesson' | 'spin' | 'redemption' | 'live_session' | (string & {});
+    _id: string;
+    title?: string;
+  } | null;
   balanceAfter?: number | null;
   note?: string | null;
   actor?: Actor;
@@ -52,12 +68,14 @@ export interface DiamondHistoryItem {
 }
 
 export interface DiamondHistoryResult extends Paginated<DiamondHistoryItem> {
+  // Butun tarix bo'yicha, filtrdan qat'i nazar
   summary?: { totalEarned: number; totalSpent: number; balance: number };
 }
 
 export interface UserSpinItem {
   _id: string;
   diamondsWon: number;
+  // Eski yozuvlarda null
   question?: { _id: string; text: string } | null;
   answeredCorrectly?: boolean | null;
   status?: 'answered' | 'expired' | (string & {});
@@ -87,6 +105,7 @@ export type UserActivityType =
 export interface UserActivityItem {
   _id: string;
   type: UserActivityType | (string & {});
+  // null — foydalanuvchining o'zi yoki tizim (masalan premium muddati tugashi)
   actor?: Actor;
   meta?: Record<string, unknown> | null;
   createdAt: string;
@@ -105,15 +124,17 @@ export type UserHistoryKind = keyof UserHistoryKinds;
 
 export const HISTORY_PAGE_SIZE = 20;
 
-// 404 — endpoint hali backend'da yo'q (foydalanuvchi o'zi mavjudligi sahifada tekshirilgan)
-export function isEndpointMissing(error: unknown) {
-  return error instanceof ApiError && error.status === 404;
+// Filtr qiymati: undefined — parametr umuman yuborilmaydi ("Hammasi")
+export type HistoryParams = { page: number } & Record<string, string | number | undefined>;
+
+function noRetryOnClientError(failureCount: number, error: Error) {
+  return !(error instanceof ApiError && [403, 404, 422].includes(error.status)) && failureCount < 3;
 }
 
 export function useUserHistory<K extends UserHistoryKind>(
   userId: string,
   kind: K,
-  params: { page: number; limit?: number } & Record<string, string | number | undefined>
+  params: HistoryParams
 ) {
   return useQuery({
     queryKey: ['user-history', userId, kind, params],
@@ -123,23 +144,23 @@ export function useUserHistory<K extends UserHistoryKind>(
         ...params,
       }),
     placeholderData: (prev) => prev,
-    retry: (failureCount, error) =>
-      !(error instanceof ApiError && [403, 404, 422].includes(error.status)) && failureCount < 3,
+    retry: noRetryOnClientError,
   });
 }
 
-// Sovg'a so'rovlari: backend `userId` filtrini qo'llab-quvvatlamaguncha telefon
-// bo'yicha `search` zaxira sifatida ham yuboriladi (spec: /rewards/redemptions?userId=)
-export function useUserRedemptions(userId: string, phone: string, page: number) {
+export function useUserRedemptions(
+  userId: string,
+  params: HistoryParams & { status?: RedemptionStatus }
+) {
   return useQuery({
-    queryKey: ['all-redemptions', { userId, phone, page }],
+    queryKey: ['all-redemptions', { userId, ...params }],
     queryFn: () =>
       api.get<Paginated<Redemption>>('/rewards/redemptions', {
         userId,
-        search: phone,
-        page,
         limit: HISTORY_PAGE_SIZE,
+        ...params,
       }),
     placeholderData: (prev) => prev,
+    retry: noRetryOnClientError,
   });
 }

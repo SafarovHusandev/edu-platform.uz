@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Menu, X } from 'lucide-react';
+import { Gamepad2, LayoutDashboard, Menu, X } from 'lucide-react';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,34 @@ const LINKS = [
   { label: 'Sertifikat tekshirish', href: '/certificates/verify' },
 ];
 
+// Jonli o'yin: kompyuter xonasida PIN bilan kirish uchun (/live ochiq sahifa).
+// Oddiy havolalardan ajralib turishi uchun alohida — ramkali tugma, "jonli" nuqtasi bilan.
+function LiveGameLink({
+  compact = false,
+  className,
+  onClick,
+}: {
+  compact?: boolean;
+  className?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href="/live"
+      onClick={onClick}
+      aria-label={compact ? "Jonli o'yinga kirish" : undefined}
+      className={cn(
+        'group inline-flex items-center gap-2 rounded-xl border-[1.5px] border-primary/40 bg-primary-soft font-semibold whitespace-nowrap text-primary transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground',
+        compact ? 'size-10 justify-center' : 'h-10 px-3',
+        className
+      )}
+    >
+      <span className="relative"></span>
+      {!compact && "Jonli o'yin"}
+    </Link>
+  );
+}
+
 export function PublicNavbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -31,7 +59,7 @@ export function PublicNavbar() {
       <div className="mx-auto flex max-w-300 items-center gap-6 px-4 py-3.5 sm:px-6">
         <BrandMark className="[&>span:last-child]:text-lg" />
 
-        <nav aria-label="Asosiy" className="hidden flex-1 flex-wrap gap-1.5 text-[15px] lg:flex">
+        <nav aria-label="Asosiy" className="hidden min-w-0 flex-1 gap-1 text-[15px] lg:flex">
           {LINKS.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
@@ -53,15 +81,19 @@ export function PublicNavbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          <LiveGameLink className="hidden xl:inline-flex" />
+          <LiveGameLink compact className="xl:hidden" />
           <ThemeToggle />
           {user ? (
             <>
               <Button
                 size="lg"
                 className="hidden sm:flex"
+                aria-label="Boshqaruv paneli"
                 render={<Link href={ROLE_HOME[user.role]} />}
               >
-                <LayoutDashboard className="size-4" /> Boshqaruv paneli
+                <LayoutDashboard className="size-4" />
+                <span className="hidden xl:inline">Boshqaruv paneli</span>
               </Button>
               <UserMenu />
             </>
@@ -113,6 +145,8 @@ export function PublicNavbar() {
           >
             Homiylik
           </Link>
+          <LiveGameLink className="mt-1 justify-center" onClick={() => setOpen(false)} />
+
           <div className="mt-2 flex gap-2 border-t border-border pt-3">
             {user ? (
               <Button

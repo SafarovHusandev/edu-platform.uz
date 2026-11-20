@@ -47,7 +47,7 @@ export function CourseReviews({
   const list = reviews ?? initialReviews;
   const ownReview = list.find(
     (review) =>
-      (typeof review.student === 'object' ? review.student._id : review.student) === user?._id
+      (typeof review.student === 'object' ? review.student?._id : review.student) === user?._id
   );
   const isPending = createReview.isPending || updateReview.isPending;
 

@@ -125,9 +125,9 @@ export default function TeacherAttemptDetailPage({ params }: PageProps) {
   const isPending = attempt.status === 'submitted';
   const isExpired = attempt.status === 'expired';
 
-  const studentId = typeof attempt.student === 'object' ? attempt.student._id : attempt.student;
+  const studentId = typeof attempt.student === 'object' ? attempt.student?._id : attempt.student;
   const studentAttempts = (attempts ?? [])
-    .filter((a) => (typeof a.student === 'object' ? a.student._id : a.student) === studentId)
+    .filter((a) => (typeof a.student === 'object' ? a.student?._id : a.student) === studentId)
     .sort((a, b) => (a.attemptNumber ?? 0) - (b.attemptNumber ?? 0));
 
   return (

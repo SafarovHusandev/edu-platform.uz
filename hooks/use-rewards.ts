@@ -100,6 +100,20 @@ export function useDeleteReward() {
   });
 }
 
+// Katalog tartibi: BARCHA mukofotlar (faol va faolsiz) yangi tartibda yuboriladi —
+// backend har biriga order = indeks beradi. O'quvchi katalogi shu tartibda chiqadi.
+export function useReorderRewards() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (rewardIds: string[]) => api.patch('/rewards/reorder', { rewardIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
+      toast.success('Tartib saqlandi');
+    },
+    onError: (error) => toast.error(errorMessage(error, 'Tartibni saqlashda xatolik')),
+  });
+}
+
 export function useUploadRewardImage() {
   const queryClient = useQueryClient();
   return useMutation({

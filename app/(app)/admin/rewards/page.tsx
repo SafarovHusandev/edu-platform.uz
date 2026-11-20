@@ -4,7 +4,18 @@ import { Suspense, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Camera, Crown, Gift, Loader2, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import {
+  ArrowUpDown,
+  Camera,
+  Crown,
+  Gift,
+  Loader2,
+  Pencil,
+  Plus,
+  SearchX,
+  Trash2,
+} from 'lucide-react';
+import { RewardOrderEditor } from '@/components/admin/reward-order-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -97,6 +108,8 @@ function AdminRewardsPageContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
 
+  // Katalog tartibini belgilash rejimi (jadval o'rniga sudraladigan ro'yxat)
+  const [ordering, setOrdering] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Reward | null>(null);
 
@@ -163,219 +176,234 @@ function AdminRewardsPageContent() {
         title="Mukofotlar katalogi"
         description="Olmoslarga almashtiriladigan sovg'alar"
         actions={
-          <Button size="lg" onClick={openCreate}>
-            <Plus className="size-4" /> Mukofot qo&apos;shish
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {!ordering && (
+              <Button size="lg" variant="outline" onClick={() => setOrdering(true)}>
+                <ArrowUpDown className="size-4" /> Tartiblash
+              </Button>
+            )}
+            <Button size="lg" onClick={openCreate}>
+              <Plus className="size-4" /> Mukofot qo&apos;shish
+            </Button>
+          </div>
         }
       />
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <FilterPills
-          value={status}
-          onChange={(value) => {
-            setStatus(value);
-            setPage(1);
-          }}
-          options={[
-            { value: 'all', label: 'Barchasi' },
-            { value: 'active', label: 'Faollari' },
-            { value: 'inactive', label: "Faol bo'lmaganlari" },
-          ]}
-        />
-        <DebouncedSearch
-          initial={search}
-          onSearch={setSearch}
-          delay={400}
-          placeholder="Sovg'a nomi bo'yicha qidirish..."
-          label="Sovg'a qidirish"
-          className="w-full sm:w-80"
-          inputClassName="h-11 rounded-xl"
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="h-80 animate-pulse rounded-[20px] bg-muted" />
-      ) : isError ? (
-        <ErrorState onRetry={() => refetch()} />
-      ) : (!data || data.items.length === 0) && search ? (
-        <EmptyState
-          icon={SearchX}
-          title="Hech narsa topilmadi"
-          description={`"${search}" bo'yicha mukofot topilmadi. Boshqa so'z bilan qidirib ko'ring.`}
-          action={
-            <Button variant="outline" onClick={() => setSearch('')}>
-              Qidiruvni tozalash
-            </Button>
-          }
-        />
-      ) : !data || data.items.length === 0 ? (
-        <EmptyState icon={Gift} title={EMPTY_TITLE[status]} />
+      {ordering ? (
+        <RewardOrderEditor onDone={() => setOrdering(false)} />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-[20px] border border-border bg-card">
-            <table className="w-full min-w-180 border-collapse text-sm">
-              <thead>
-                <tr className="bg-muted/50 text-left text-[13px] text-muted-foreground">
-                  <th className="px-5 py-3.5 font-semibold">Mukofot</th>
-                  <th className="px-3 py-3.5 font-semibold">Narx</th>
-                  <th className="px-3 py-3.5 font-semibold">Qoldiq</th>
-                  <th className="px-3 py-3.5 font-semibold">Kimlarga</th>
-                  <th className="px-3 py-3.5 font-semibold">Holat</th>
-                  <th className="px-5 py-3.5" />
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((reward) => {
-                  const image = resolveAssetUrl(reward.image);
-                  const uploading = uploadImage.isPending && uploadTargetId === reward._id;
-                  // isActive maydoni bo'lmagan eski yozuvlar faol hisoblanadi
-                  const active = reward.isActive !== false;
-                  const toggling =
-                    updateReward.isPending && updateReward.variables?.id === reward._id;
-                  return (
-                    <tr
-                      key={reward._id}
-                      className={cn('border-t border-muted', !active && 'bg-muted/30')}
-                    >
-                      <td className={cn('px-5 py-3', !active && 'opacity-55')}>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            aria-label="Rasmni almashtirish"
-                            title="Rasmni almashtirish"
-                            onClick={() => {
-                              setUploadTargetId(reward._id);
-                              fileInputRef.current?.click();
-                            }}
-                            className="group relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted"
-                          >
-                            {image ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={image} alt="" className="size-full object-cover" />
-                            ) : (
-                              <Gift className="size-5 text-muted-foreground" />
-                            )}
-                            <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                              {uploading ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : (
-                                <Camera className="size-4" />
-                              )}
-                            </span>
-                          </button>
-                          <span className="min-w-0">
-                            <span className="block font-semibold">{reward.title}</span>
-                            {reward.description && (
-                              <span className="line-clamp-1 text-[13px] text-muted-foreground">
-                                {reward.description}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </td>
-                      <td className={cn('px-3 py-3', !active && 'opacity-55')}>
-                        <span className="flex items-center gap-1 font-heading font-semibold text-gold-foreground">
-                          <DiamondIcon className="size-4" /> {formatNumber(reward.cost)}
-                        </span>
-                      </td>
-                      <td className={cn('px-3 py-3', !active && 'opacity-55')}>
-                        {reward.stock === null ? (
-                          <span className="text-muted-foreground">Cheksiz</span>
-                        ) : (
-                          <span
-                            className={cn(
-                              'font-semibold',
-                              reward.stock === 0 && 'text-destructive',
-                              reward.stock > 0 && reward.stock <= 3 && 'text-gold-foreground'
-                            )}
-                          >
-                            {reward.stock === 0 ? 'Tugagan' : reward.stock}
-                          </span>
-                        )}
-                      </td>
-                      <td className={cn('px-3 py-3', !active && 'opacity-55')}>
-                        {reward.premiumOnly ? (
-                          <StatusPill tone="warning">
-                            <Crown className="size-3.5" /> Premium
-                          </StatusPill>
-                        ) : (
-                          <StatusPill tone="neutral">Barcha</StatusPill>
-                        )}
-                      </td>
-                      <td className="px-3 py-3">
-                        <label className="flex w-fit cursor-pointer items-center gap-2">
-                          <Switch
-                            checked={active}
-                            disabled={toggling}
-                            aria-label={
-                              active
-                                ? `"${reward.title}" ni faolsizlantirish`
-                                : `"${reward.title}" ni faollashtirish`
-                            }
-                            onCheckedChange={(checked) =>
-                              updateReward.mutate({ id: reward._id, isActive: checked })
-                            }
-                          />
-                          <span
-                            className={cn(
-                              'text-[13px] font-semibold',
-                              active ? 'text-success' : 'text-muted-foreground'
-                            )}
-                          >
-                            {active ? 'Faol' : 'Faolsiz'}
-                          </span>
-                        </label>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex justify-end gap-1.5">
-                          <Button variant="outline" size="sm" onClick={() => openEdit(reward)}>
-                            <Pencil className="size-3.5" /> Tahrir
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger
-                              render={
-                                <Button variant="ghost" size="icon-sm" aria-label="O'chirish" />
-                              }
-                            >
-                              <Trash2 className="size-4" />
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Mukofotni o&apos;chirasizmi?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  &quot;{reward.title}&quot; katalogdan o&apos;chiriladi. Bu amalni
-                                  bekor qilib bo&apos;lmaydi.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-                                <AlertDialogAction
-                                  variant="destructive"
-                                  onClick={() => deleteReward.mutate(reward._id)}
-                                >
-                                  O&apos;chirish
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4">
-            <PaginationBar
-              page={page}
-              totalPages={data.totalPages}
-              total={data.total}
-              itemLabel="mukofot"
-              onPageChange={setPage}
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <FilterPills
+              value={status}
+              onChange={(value) => {
+                setStatus(value);
+                setPage(1);
+              }}
+              options={[
+                { value: 'all', label: 'Barchasi' },
+                { value: 'active', label: 'Faollari' },
+                { value: 'inactive', label: "Faol bo'lmaganlari" },
+              ]}
+            />
+            <DebouncedSearch
+              initial={search}
+              onSearch={setSearch}
+              delay={400}
+              placeholder="Sovg'a nomi bo'yicha qidirish..."
+              label="Sovg'a qidirish"
+              className="w-full sm:w-80"
+              inputClassName="h-11 rounded-xl"
             />
           </div>
+
+          {isLoading ? (
+            <div className="h-80 animate-pulse rounded-[20px] bg-muted" />
+          ) : isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : (!data || data.items.length === 0) && search ? (
+            <EmptyState
+              icon={SearchX}
+              title="Hech narsa topilmadi"
+              description={`"${search}" bo'yicha mukofot topilmadi. Boshqa so'z bilan qidirib ko'ring.`}
+              action={
+                <Button variant="outline" onClick={() => setSearch('')}>
+                  Qidiruvni tozalash
+                </Button>
+              }
+            />
+          ) : !data || data.items.length === 0 ? (
+            <EmptyState icon={Gift} title={EMPTY_TITLE[status]} />
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-[20px] border border-border bg-card">
+                <table className="w-full min-w-180 border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 text-left text-[13px] text-muted-foreground">
+                      <th className="px-5 py-3.5 font-semibold">Mukofot</th>
+                      <th className="px-3 py-3.5 font-semibold">Narx</th>
+                      <th className="px-3 py-3.5 font-semibold">Qoldiq</th>
+                      <th className="px-3 py-3.5 font-semibold">Kimlarga</th>
+                      <th className="px-3 py-3.5 font-semibold">Holat</th>
+                      <th className="px-5 py-3.5" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.items.map((reward) => {
+                      const image = resolveAssetUrl(reward.image);
+                      const uploading = uploadImage.isPending && uploadTargetId === reward._id;
+                      // isActive maydoni bo'lmagan eski yozuvlar faol hisoblanadi
+                      const active = reward.isActive !== false;
+                      const toggling =
+                        updateReward.isPending && updateReward.variables?.id === reward._id;
+                      return (
+                        <tr
+                          key={reward._id}
+                          className={cn('border-t border-muted', !active && 'bg-muted/30')}
+                        >
+                          <td className={cn('px-5 py-3', !active && 'opacity-55')}>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                aria-label="Rasmni almashtirish"
+                                title="Rasmni almashtirish"
+                                onClick={() => {
+                                  setUploadTargetId(reward._id);
+                                  fileInputRef.current?.click();
+                                }}
+                                className="group relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted"
+                              >
+                                {image ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={image} alt="" className="size-full object-cover" />
+                                ) : (
+                                  <Gift className="size-5 text-muted-foreground" />
+                                )}
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                  {uploading ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <Camera className="size-4" />
+                                  )}
+                                </span>
+                              </button>
+                              <span className="min-w-0">
+                                <span className="block font-semibold">{reward.title}</span>
+                                {reward.description && (
+                                  <span className="line-clamp-1 text-[13px] text-muted-foreground">
+                                    {reward.description}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </td>
+                          <td className={cn('px-3 py-3', !active && 'opacity-55')}>
+                            <span className="flex items-center gap-1 font-heading font-semibold text-gold-foreground">
+                              <DiamondIcon className="size-4" /> {formatNumber(reward.cost)}
+                            </span>
+                          </td>
+                          <td className={cn('px-3 py-3', !active && 'opacity-55')}>
+                            {reward.stock === null ? (
+                              <span className="text-muted-foreground">Cheksiz</span>
+                            ) : (
+                              <span
+                                className={cn(
+                                  'font-semibold',
+                                  reward.stock === 0 && 'text-destructive',
+                                  reward.stock > 0 && reward.stock <= 3 && 'text-gold-foreground'
+                                )}
+                              >
+                                {reward.stock === 0 ? 'Tugagan' : reward.stock}
+                              </span>
+                            )}
+                          </td>
+                          <td className={cn('px-3 py-3', !active && 'opacity-55')}>
+                            {reward.premiumOnly ? (
+                              <StatusPill tone="warning">
+                                <Crown className="size-3.5" /> Premium
+                              </StatusPill>
+                            ) : (
+                              <StatusPill tone="neutral">Barcha</StatusPill>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <label className="flex w-fit cursor-pointer items-center gap-2">
+                              <Switch
+                                checked={active}
+                                disabled={toggling}
+                                aria-label={
+                                  active
+                                    ? `"${reward.title}" ni faolsizlantirish`
+                                    : `"${reward.title}" ni faollashtirish`
+                                }
+                                onCheckedChange={(checked) =>
+                                  updateReward.mutate({ id: reward._id, isActive: checked })
+                                }
+                              />
+                              <span
+                                className={cn(
+                                  'text-[13px] font-semibold',
+                                  active ? 'text-success' : 'text-muted-foreground'
+                                )}
+                              >
+                                {active ? 'Faol' : 'Faolsiz'}
+                              </span>
+                            </label>
+                          </td>
+                          <td className="px-5 py-3">
+                            <div className="flex justify-end gap-1.5">
+                              <Button variant="outline" size="sm" onClick={() => openEdit(reward)}>
+                                <Pencil className="size-3.5" /> Tahrir
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger
+                                  render={
+                                    <Button variant="ghost" size="icon-sm" aria-label="O'chirish" />
+                                  }
+                                >
+                                  <Trash2 className="size-4" />
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Mukofotni o&apos;chirasizmi?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      &quot;{reward.title}&quot; katalogdan o&apos;chiriladi. Bu
+                                      amalni bekor qilib bo&apos;lmaydi.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      variant="destructive"
+                                      onClick={() => deleteReward.mutate(reward._id)}
+                                    >
+                                      O&apos;chirish
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4">
+                <PaginationBar
+                  page={page}
+                  totalPages={data.totalPages}
+                  total={data.total}
+                  itemLabel="mukofot"
+                  onPageChange={setPage}
+                />
+              </div>
+            </>
+          )}
         </>
       )}
 

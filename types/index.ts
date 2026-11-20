@@ -315,6 +315,8 @@ export interface Reward {
   image?: string
   premiumOnly?: boolean
   isActive?: boolean
+  // Katalogdagi tartib (admin belgilaydi): kichigi yuqorida
+  order?: number
   createdAt?: string
 }
 

@@ -152,13 +152,16 @@ export function OptionGrid({
 // natijasida qayta chiziladi — "qayerdan qayerga" animatsiyasi uchun shu yerdan olinadi.
 const lastStanding = new Map<string, { score: number; rank: number }>();
 
-const entryKey = (entry: LiveLeaderboardEntry, i: number) => entry.id ?? `${entry.name}-${i}`;
+// Kalit savollar orasida o'zgarmasligi shart (o'rin o'zgarsa ham): id, bo'lmasa ism —
+// o'yinda ism takrorlanmaydi (NAME_TAKEN). Indeks qo'shilmaydi, aks holda o'rni
+// o'zgargan o'yinchi keshdan topilmay, animatsiyasiz chiqadi.
+const entryKey = (entry: LiveLeaderboardEntry) => entry.id || `name:${entry.name}`;
 
 // Reyting ko'rinishi bosqichlari: eski tartib → ballar sanaladi → yangi tartibga suriladi
 const COUNT_AT_MS = 900;
-const COUNT_MS = 1300;
-const REORDER_AT_MS = 2400;
-const REORDER_MS = 750;
+const COUNT_MS = 1700;
+const REORDER_AT_MS = 2900;
+const REORDER_MS = 950;
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -199,9 +202,9 @@ export function LeaderboardList({
   // Oldingi holat bir marta, birinchi chizishda olinadi (keyin kesh yangilanadi)
   const [prev] = useState(() => {
     const map = new Map<string, { score: number; rank: number }>();
-    list.forEach((e, i) => {
-      const p = lastStanding.get(entryKey(e, i));
-      if (p) map.set(entryKey(e, i), p);
+    list.forEach((e) => {
+      const p = lastStanding.get(entryKey(e));
+      if (p) map.set(entryKey(e), p);
     });
     return map;
   });
@@ -211,7 +214,7 @@ export function LeaderboardList({
 
   // Joriy natijalarni keshga yozamiz — keyingi savol shu holatdan boshlab animatsiya qiladi
   useEffect(() => {
-    entries.forEach((e, i) => lastStanding.set(entryKey(e, i), { score: e.score, rank: e.rank }));
+    entries.forEach((e) => lastStanding.set(entryKey(e), { score: e.score, rank: e.rank }));
   }, [entries]);
 
   useEffect(() => {
@@ -226,8 +229,8 @@ export function LeaderboardList({
 
   // Eski tartib: oldingi o'rin bo'yicha (yangi qo'shilganlar oxirida)
   const oldOrder = [...list].sort((a, b) => {
-    const pa = prev.get(entryKey(a, list.indexOf(a)))?.rank ?? Infinity;
-    const pb = prev.get(entryKey(b, list.indexOf(b)))?.rank ?? Infinity;
+    const pa = prev.get(entryKey(a))?.rank ?? Infinity;
+    const pb = prev.get(entryKey(b))?.rank ?? Infinity;
     return pa === pb ? a.rank - b.rank : pa - pb;
   });
   const shown = phase === 'final' ? list : oldOrder;
@@ -255,7 +258,7 @@ export function LeaderboardList({
   return (
     <ol className={cn('flex flex-col gap-2.5', className)}>
       {shown.map((entry, i) => {
-        const key = entryKey(entry, list.indexOf(entry));
+        const key = entryKey(entry);
         const before = prev.get(key);
         const final = phase === 'final';
         const climbed = final && before && before.rank > entry.rank ? before.rank - entry.rank : 0;

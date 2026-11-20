@@ -19,7 +19,9 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { FitQuestion } from '@/components/live-quiz/fit-question';
 import {
+  AvatarArt,
   DEFAULT_AVATAR,
+  LEGACY_AVATAR_KEYS,
   LIVE_AVATARS,
   PlayerAvatar,
   findAvatar,
@@ -82,6 +84,8 @@ interface PlayerQuestion {
 }
 
 const NAME_CODES = new Set(['NAME_REQUIRED', 'NAME_TOO_LONG', 'NAME_TAKEN']);
+// O'yin holati xatolari — PIN ekraniga qaytariladi
+const GAME_CODES = new Set(['GAME_NOT_FOUND', 'GAME_STARTED', 'GAME_FULL']);
 // Socket ulanib turishi kerak bo'lgan ekranlar
 const SOCKET_SCREENS = new Set<Screen>([
   'name',
@@ -365,28 +369,38 @@ function LivePlayer() {
     if (name.length > LIVE_LIMITS.nameMax) return setNameError('24 belgidan oshmasin');
     setNameError(null);
     setJoining(true);
-    const res = await call('player:join', { pin, name, avatar });
+    let chosen = avatar;
+    let res = await call('player:join', { pin, name, avatar: chosen });
+    // Yangi (2-to'plam) ikonkani backend hali tanimasa — o'yindan qolib ketmaslik uchun
+    // standart ikonka bilan bir marta qayta urinamiz. Ism/o'yin xatolarida bunday qilinmaydi.
+    if (
+      !res.ok &&
+      !LEGACY_AVATAR_KEYS.has(chosen) &&
+      !(res.code && (NAME_CODES.has(res.code) || GAME_CODES.has(res.code)))
+    ) {
+      chosen = DEFAULT_AVATAR;
+      res = await call('player:join', { pin, name, avatar: chosen });
+      if (res.ok) {
+        setAvatar(chosen);
+        toast.info("Bu ikonka hozircha mavjud emas — standart ikonka tanlandi");
+      }
+    }
     setJoining(false);
     if (res.ok) {
       const key = ackField<string>(res, 'playerKey');
       if (key) writePlayerKey(pin, key);
-      saveAvatar(avatar);
-      writePinAvatar(pin, avatar);
+      saveAvatar(chosen);
+      writePinAvatar(pin, chosen);
       const snap = ackField<LivePlayerSnapshot>(res, 'game');
-      if (snap) applySnapshot({ ...snap, name: snap.name ?? name, avatar: snap.avatar ?? avatar });
+      if (snap) applySnapshot({ ...snap, name: snap.name ?? name, avatar: snap.avatar ?? chosen });
       else {
-        setMe({ name, score: 0, avatar });
+        setMe({ name, score: 0, avatar: chosen });
         setScreen('lobby');
       }
       return;
     }
     if (res.code && NAME_CODES.has(res.code)) setNameError(liveErrorMessage(res.code));
-    else if (
-      res.code === 'GAME_NOT_FOUND' ||
-      res.code === 'GAME_STARTED' ||
-      res.code === 'GAME_FULL'
-    )
-      backToPin(liveErrorMessage(res.code));
+    else if (res.code && GAME_CODES.has(res.code)) backToPin(liveErrorMessage(res.code));
     else toast.error(liveErrorMessage(res.code, res.message));
   }
 
@@ -484,10 +498,15 @@ function LivePlayer() {
             <legend className="mb-2 text-base font-semibold text-white/80">
               Ikonkangizni tanlang
             </legend>
-            <div className="grid grid-cols-4 gap-2.5" role="radiogroup" aria-label="Ikonka">
+            <div
+              // Desktopda forma kengligidan (480px) chiqib kengayadi — 8 ustunda ikonkalar
+              // ~70px bo'ladi va 32 tasi skrollsiz 4 qatorga sig'adi
+              className="grid max-h-[50vh] grid-cols-5 gap-2 overflow-y-auto p-2 sm:grid-cols-8 md:-mx-16 md:gap-3"
+              role="radiogroup"
+              aria-label="Ikonka"
+            >
               {LIVE_AVATARS.map((item) => {
                 const active = item.key === avatar;
-                const Icon = item.icon;
                 return (
                   <button
                     key={item.key}
@@ -498,12 +517,12 @@ function LivePlayer() {
                     title={item.label}
                     onClick={() => setAvatar(item.key)}
                     className={cn(
-                      'flex h-14 items-center justify-center rounded-2xl text-white transition-transform active:scale-95',
+                      'flex aspect-square items-center justify-center rounded-2xl transition-transform active:scale-95',
                       item.bg,
-                      active ? 'scale-105 ring-4 ring-white' : 'opacity-60'
+                      active ? 'scale-105 ring-4 ring-white' : 'opacity-70 hover:opacity-100'
                     )}
                   >
-                    <Icon className="size-7" aria-hidden />
+                    <AvatarArt avatarKey={item.key} className="size-[82%]" />
                   </button>
                 );
               })}

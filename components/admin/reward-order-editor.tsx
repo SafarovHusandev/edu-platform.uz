@@ -149,7 +149,7 @@ function SortableRewardRow({
 }
 
 // Katalog tartibini belgilash: sudrab yoki ↑↓ bilan, "Saqlash" da butun tartib yuboriladi.
-// Faolsiz mukofotlar ham ro'yxatda — faollashtirilganda o'z joyida chiqishi uchun.
+// Ro'yxatda faqat faol mukofotlar — o'quvchi katalogida faqat ular ko'rinadi.
 export function RewardOrderEditor({ onDone }: { onDone: () => void }) {
   const { data, isLoading, isError, refetch } = useRewards({
     page: 1,
@@ -166,11 +166,14 @@ export function RewardOrderEditor({ onDone }: { onDone: () => void }) {
   const [orderIds, setOrderIds] = useState<string[] | null>(null);
 
   const serverItems = data?.items ?? [];
-  const byId = new Map(serverItems.map((r) => [r._id, r]));
+  // Faqat faollari tartiblanadi (o'quvchi faqat ularni ko'radi). isActive yo'q eski yozuvlar — faol.
+  const serverActive = serverItems.filter((r) => r.isActive !== false);
+  const serverInactive = serverItems.filter((r) => r.isActive === false);
+  const byId = new Map(serverActive.map((r) => [r._id, r]));
   const items = orderIds
     ? orderIds.map((id) => byId.get(id)).filter((r): r is Reward => !!r)
-    : serverItems;
-  const dirty = !!orderIds && orderIds.some((id, i) => id !== serverItems[i]?._id);
+    : serverActive;
+  const dirty = !!orderIds && orderIds.some((id, i) => id !== serverActive[i]?._id);
   const incomplete = !!data && data.total > serverItems.length;
   const busy = reorder.isPending;
 
@@ -187,16 +190,28 @@ export function RewardOrderEditor({ onDone }: { onDone: () => void }) {
     if (from !== -1 && to !== -1) move(from, to);
   }
 
+  // Backend to'liq ro'yxat kutadi: faollar yangi tartibda, faolsizlar esa ular ortidan
+  // avvalgi nisbiy tartibida (qayta faollashtirilganda ro'yxat oxirida chiqadi)
   function save() {
-    reorder.mutate(
-      items.map((r) => r._id),
-      { onSuccess: () => setOrderIds(null) }
-    );
+    reorder.mutate([...items, ...serverInactive].map((r) => r._id), {
+      onSuccess: () => setOrderIds(null),
+    });
   }
 
   if (isLoading) return <div className="h-80 animate-pulse rounded-[20px] bg-muted" />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
-  if (items.length === 0) return <EmptyState icon={Gift} title="Hali mukofot qo'shilmagan" />;
+  if (items.length === 0)
+    return (
+      <EmptyState
+        icon={Gift}
+        title="Faol mukofotlar yo'q"
+        action={
+          <Button variant="outline" onClick={onDone}>
+            Yopish
+          </Button>
+        }
+      />
+    );
 
   return (
     <div className="flex flex-col gap-3.5">

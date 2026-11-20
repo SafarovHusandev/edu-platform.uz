@@ -81,7 +81,7 @@ export function PlayerAvatar({ avatar, className }: { avatar?: string | null; cl
       )}
       title={item.label}
     >
-      <AvatarArt avatarKey={item.key} className="size-[72%]" />
+      <AvatarArt avatarKey={item.key} className="size-[80%]" />
     </span>
   );
 }

@@ -8,6 +8,7 @@ import {
   Flame,
   Hourglass,
   Loader2,
+  Lock,
   LogIn,
   PartyPopper,
   UserX,
@@ -15,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { RankMedal } from '@/components/ui/rank-medal';
+import { Confetti, type ConfettiHandle } from '@/components/board-lesson/confetti';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { FitQuestion } from '@/components/live-quiz/fit-question';
@@ -178,12 +180,12 @@ function LivePlayer() {
   );
   const [count, setCount] = useState<number | null>(null);
   const [question, setQuestion] = useState<PlayerQuestion | null>(null);
-  const [chosen, setChosen] = useState<number | null>(null);
   const [result, setResult] = useState<LiveQuestionResult | null>(null);
   const [standing, setStanding] = useState<{ rank?: number; totalPlayers?: number }>({});
   const [final, setFinal] = useState<Partial<LivePlayerGameEnd> | null>(null);
   const [zoom, setZoom] = useState<string | null>(null);
   const pinRef = useRef<string | null>(null);
+  const confettiRef = useRef<ConfettiHandle>(null);
 
   useWakeLock(screen !== 'pin');
 
@@ -258,7 +260,6 @@ function LivePlayer() {
     setResult(null);
     setFinal(null);
     setMe(null);
-    setChosen(null);
   }, []);
 
   const applySnapshot = useCallback((snap: LivePlayerSnapshot) => {
@@ -277,7 +278,6 @@ function LivePlayer() {
         setScreen('lobby');
         break;
       case 'question':
-        setChosen(null);
         setScreen(snap.alreadyAnswered ? 'answered' : 'question');
         break;
       case 'reveal':
@@ -330,7 +330,6 @@ function LivePlayer() {
       'lobby:count': (d: { count: number }) => setCount(d.count),
       'question:start': (d: LiveQuestionStart) => {
         setQuestion(toPlayerQuestion(d, d.total));
-        setChosen(null);
         setResult(null);
         setScreen('question');
       },
@@ -340,10 +339,24 @@ function LivePlayer() {
         setStanding({ rank: d.rank, totalPlayers: d.totalPlayers });
         setScreen('result');
         vibrate(d.correct ? [30, 40, 30] : 120);
+        // To'g'ri javobga konfetti: ✓ belgisi ortidan portlash; 3+ ketma-ket to'g'ri
+        // javobda — katta bayram (yon pushkalar + yomg'ir). Natija ekrani chizilgach.
+        if (d.correct) {
+          window.setTimeout(() => {
+            if (d.streak >= 3) confettiRef.current?.celebrate();
+            else confettiRef.current?.burst({ x: 0.5, y: 0.32, count: 150 });
+          }, 120);
+        }
       },
       'game:end': (d: LivePlayerGameEnd) => {
         setFinal(d);
         setScreen('finished');
+        // G'oliblar uchun bayram: 1-o'rin — ikki to'lqin, 2-3-o'rin — bitta
+        if (d.rank >= 1 && d.rank <= 3) {
+          vibrate([40, 60, 40, 60, 80]);
+          window.setTimeout(() => confettiRef.current?.celebrate(), 300);
+          if (d.rank === 1) window.setTimeout(() => confettiRef.current?.celebrate(), 2200);
+        }
       },
       'player:kicked': () => {
         if (pinRef.current) clearPlayerKey(pinRef.current);
@@ -407,14 +420,12 @@ function LivePlayer() {
   async function answer(option: number) {
     if (screen !== 'question' || !question || (remainingMs ?? 1) <= 0) return;
     vibrate(35);
-    setChosen(option);
     setScreen('answered');
     const res = await call('player:answer', { questionIndex: question.index, option });
     if (!res.ok && !(res.code && SILENT_CODES.has(res.code))) {
       toast.error(liveErrorMessage(res.code, res.message));
       // Qabul qilinmadi — qayta bosish imkoniyati
       setScreen((s) => (s === 'answered' ? 'question' : s));
-      setChosen(null);
     }
   }
 
@@ -611,18 +622,15 @@ function LivePlayer() {
           />
 
           {screen === 'answered' ? (
+            // Tanlangan variant atayin ko'rsatilmaydi: yonidagi o'quvchi ekranga qarab
+            // ko'chirib olmasin. To'g'ri/noto'g'ri natija ekranida (hamma javob bergach) ko'rinadi.
             <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-              {chosen != null && (
-                <OptionTile
-                  index={chosen}
-                  text={question.options[chosen] ?? ''}
-                  size="compact"
-                  className="w-full max-w-xl"
-                />
-              )}
               <Hourglass className="size-12 animate-pulse" />
               <p className="text-2xl font-bold">Javob qabul qilindi</p>
               <p className="text-white/70">Boshqalar javob berishini kuting</p>
+              <p className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/80">
+                <Lock className="size-4" aria-hidden /> Javobingiz hamma javob bergach ko&apos;rinadi
+              </p>
             </div>
           ) : (
             <div
@@ -787,6 +795,7 @@ function LivePlayer() {
         </div>
       )}
       <main className="flex flex-1 flex-col">{content}</main>
+      <Confetti ref={confettiRef} />
 
       <Dialog open={!!zoom} onOpenChange={(open) => !open && setZoom(null)}>
         <DialogContent className="max-w-[calc(100%-1rem)] bg-black p-2 sm:max-w-3xl">

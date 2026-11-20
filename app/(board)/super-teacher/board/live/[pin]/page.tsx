@@ -154,7 +154,7 @@ function Lobby({
               <li key={player.id} className="live-pop-in">
                 {active ? (
                   <span className="flex min-h-16 items-center gap-2 rounded-2xl bg-white p-2 pl-5 text-[clamp(1.25rem,1.8vw,1.9rem)] font-bold text-[#141B3D]">
-                    <PlayerAvatar avatar={player.avatar} className="size-11" />
+                    <PlayerAvatar avatar={player.avatar} className="size-[clamp(3.25rem,4vw,4.5rem)]" />
                     {player.name}
                     <button
                       type="button"
@@ -186,7 +186,7 @@ function Lobby({
                     )}
                     title={player.connected ? undefined : 'Ulanish uzilgan'}
                   >
-                    <PlayerAvatar avatar={player.avatar} className="size-11" />
+                    <PlayerAvatar avatar={player.avatar} className="size-[clamp(3.25rem,4vw,4.5rem)]" />
                     {player.name}
                     {!player.connected && <WifiOff className="inline size-5" />}
                   </button>

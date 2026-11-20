@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, Flame, Users, Zap } from 'lucide-react';
 import { QuestionMarkdown } from '@/components/live-quiz/question-markdown';
 import { PlayerAvatar } from '@/components/live-quiz/player-avatars';
@@ -148,6 +148,43 @@ export function OptionGrid({
 
 // ---------- Reyting ----------
 
+// Oldingi savoldagi ball va o'rin (doska sahifasi ochiq turguncha). Reyting har savol
+// natijasida qayta chiziladi — "qayerdan qayerga" animatsiyasi uchun shu yerdan olinadi.
+const lastStanding = new Map<string, { score: number; rank: number }>();
+
+const entryKey = (entry: LiveLeaderboardEntry, i: number) => entry.id ?? `${entry.name}-${i}`;
+
+// Reyting ko'rinishi bosqichlari: eski tartib → ballar sanaladi → yangi tartibga suriladi
+const COUNT_AT_MS = 900;
+const COUNT_MS = 1300;
+const REORDER_AT_MS = 2400;
+const REORDER_MS = 750;
+
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+// from → to silliq sanaladi (start bo'lganda); ease-out, oxirida sekinlashadi
+function CountUpScore({ from, to, start }: { from: number; to: number; start: boolean }) {
+  const [value, setValue] = useState(from);
+  useEffect(() => {
+    if (!start) return;
+    // Harakat kamaytirilgan yoki o'zgarmagan bo'lsa — birinchi kadrdayoq yakuniy qiymat
+    const duration = from === to || prefersReducedMotion() ? 0 : COUNT_MS;
+    let frame = 0;
+    let t0: number | null = null;
+    const step = (now: number) => {
+      t0 ??= now;
+      const p = duration ? Math.min((now - t0) / duration, 1) : 1;
+      setValue(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [from, to, start]);
+  return <>{formatNumber(Math.round(value))}</>;
+}
+
 export function LeaderboardList({
   entries,
   limit,
@@ -158,27 +195,104 @@ export function LeaderboardList({
   className?: string;
 }) {
   const list = limit ? entries.slice(0, limit) : entries;
+
+  // Oldingi holat bir marta, birinchi chizishda olinadi (keyin kesh yangilanadi)
+  const [prev] = useState(() => {
+    const map = new Map<string, { score: number; rank: number }>();
+    list.forEach((e, i) => {
+      const p = lastStanding.get(entryKey(e, i));
+      if (p) map.set(entryKey(e, i), p);
+    });
+    return map;
+  });
+  const [phase, setPhase] = useState<'old' | 'counting' | 'final'>(() =>
+    prefersReducedMotion() ? 'final' : prev.size === 0 ? 'counting' : 'old'
+  );
+
+  // Joriy natijalarni keshga yozamiz — keyingi savol shu holatdan boshlab animatsiya qiladi
+  useEffect(() => {
+    entries.forEach((e, i) => lastStanding.set(entryKey(e, i), { score: e.score, rank: e.rank }));
+  }, [entries]);
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const t1 = window.setTimeout(() => setPhase((p) => (p === 'old' ? 'counting' : p)), COUNT_AT_MS);
+    const t2 = window.setTimeout(() => setPhase('final'), REORDER_AT_MS);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, []);
+
+  // Eski tartib: oldingi o'rin bo'yicha (yangi qo'shilganlar oxirida)
+  const oldOrder = [...list].sort((a, b) => {
+    const pa = prev.get(entryKey(a, list.indexOf(a)))?.rank ?? Infinity;
+    const pb = prev.get(entryKey(b, list.indexOf(b)))?.rank ?? Infinity;
+    return pa === pb ? a.rank - b.rank : pa - pb;
+  });
+  const shown = phase === 'final' ? list : oldOrder;
+
+  // FLIP: tartib o'zgarganda qatorlar eski joyidan yangisiga silliq suriladi
+  const rowRefs = useRef(new Map<string, HTMLLIElement>());
+  const rects = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    rowRefs.current.forEach((el, key) => {
+      const top = el.getBoundingClientRect().top;
+      const before = rects.current.get(key);
+      if (before != null && before !== top && !prefersReducedMotion()) {
+        el.animate([{ transform: `translateY(${before - top}px)` }, { transform: 'translateY(0)' }], {
+          duration: REORDER_MS,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+        });
+      }
+      rects.current.set(key, top);
+    });
+  }, [phase]);
+
   if (list.length === 0)
     return <p className="text-center text-2xl opacity-70">Hali ball to&apos;plangani yo&apos;q</p>;
+
   return (
     <ol className={cn('flex flex-col gap-2.5', className)}>
-      {list.map((entry, i) => (
-        <li
-          key={entry.id ?? `${entry.name}-${i}`}
-          className="live-rise flex items-center gap-4 rounded-2xl bg-white/10 px-5 py-3 text-[clamp(1.25rem,1.8vw,2rem)] font-bold"
-          style={{ animationDelay: `${i * 80}ms` }}
-        >
-          <span className="w-10 text-center font-heading tabular-nums opacity-80">{entry.rank}</span>
-          <PlayerAvatar avatar={entry.avatar} className="size-[1.6em]" />
-          <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-          {entry.streak != null && entry.streak >= 2 && (
-            <span className="flex items-center gap-1 text-[0.75em] font-semibold opacity-90">
-              <Flame className="size-[1em] text-[#FFC62E]" aria-label="ketma-ket" /> {entry.streak}
+      {shown.map((entry, i) => {
+        const key = entryKey(entry, list.indexOf(entry));
+        const before = prev.get(key);
+        const final = phase === 'final';
+        const climbed = final && before && before.rank > entry.rank ? before.rank - entry.rank : 0;
+        return (
+          <li
+            key={key}
+            ref={(el) => {
+              if (el) rowRefs.current.set(key, el);
+              else rowRefs.current.delete(key);
+            }}
+            className={cn(
+              'live-rise flex items-center gap-4 rounded-2xl px-5 py-3 text-[clamp(1.25rem,1.8vw,2rem)] font-bold transition-colors duration-700',
+              climbed ? 'bg-[#26890C]/45' : 'bg-white/10'
+            )}
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            <span className="w-10 text-center font-heading tabular-nums opacity-80">
+              {final ? entry.rank : (before?.rank ?? entry.rank)}
             </span>
-          )}
-          <span className="font-heading tabular-nums">{formatNumber(entry.score)}</span>
-        </li>
-      ))}
+            <PlayerAvatar avatar={entry.avatar} className="size-[1.6em]" />
+            <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+            {climbed > 0 && (
+              <span className="live-pop-in rounded-full bg-[#26890C] px-2.5 py-0.5 text-[0.7em] font-bold">
+                ↑{climbed}
+              </span>
+            )}
+            {entry.streak != null && entry.streak >= 2 && (
+              <span className="flex items-center gap-1 text-[0.75em] font-semibold opacity-90">
+                <Flame className="size-[1em] text-[#FFC62E]" aria-label="ketma-ket" /> {entry.streak}
+              </span>
+            )}
+            <span className="font-heading tabular-nums">
+              <CountUpScore from={before?.score ?? 0} to={entry.score} start={phase !== 'old'} />
+            </span>
+          </li>
+        );
+      })}
     </ol>
   );
 }

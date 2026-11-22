@@ -1,12 +1,13 @@
 'use client';
 
-import { use, useCallback, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   AlertTriangle,
   BarChart3,
+  Crown,
   Flag,
   Loader2,
   Play,
@@ -33,12 +34,14 @@ import { BoardLayout, boardButton } from '@/components/super-teacher/board-layou
 import {
   BoardQuestion,
   LeaderboardList,
+  QuestionIntro,
   OptionGrid,
   useCountdown,
   type BoardQuestionData,
 } from '@/components/live-quiz/board-views';
 import { QuestionMarkdown } from '@/components/live-quiz/question-markdown';
 import { PlayerAvatar } from '@/components/live-quiz/player-avatars';
+import { Confetti, type ConfettiHandle } from '@/components/board-lesson/confetti';
 import { ackField, useLiveSocket, type LiveCall } from '@/hooks/use-live-socket';
 import { getFrontendUrl } from '@/lib/config';
 import { SILENT_CODES, liveErrorMessage } from '@/lib/live-quiz';
@@ -58,7 +61,8 @@ import type {
 const LIST_HREF = '/super-teacher/live-quiz';
 const FORBIDDEN_CODES = new Set(['UNAUTHORIZED', 'FORBIDDEN', 'NOT_HOST']);
 
-type HostQuestion = BoardQuestionData & { endsAt?: number; offset: number };
+// readMs — o'qish bosqichining to'liq davomiyligi (progress chizig'i uchun)
+type HostQuestion = BoardQuestionData & { opensAt?: number; readMs: number; endsAt?: number; offset: number };
 
 function toHostQuestion(
   q: Partial<LiveQuestionStart>,
@@ -72,6 +76,8 @@ function toHostQuestion(
     options: q.options ?? [],
     timeLimit: q.timeLimit ?? 20,
     pointsMultiplier: q.pointsMultiplier ?? 1,
+    opensAt: q.opensAt,
+    readMs: q.opensAt && q.serverNow ? Math.max(0, q.opensAt - q.serverNow) : 0,
     endsAt: q.endsAt,
     offset: q.serverNow ? q.serverNow - Date.now() : 0,
   };
@@ -260,57 +266,197 @@ function Reveal({
 // ---------- Yakun ----------
 
 const PODIUM_LAYOUT = [
-  { place: 2, height: 'h-[26vh]', color: 'bg-[#C0C7D6] text-[#141B3D]', delay: 1 },
-  { place: 1, height: 'h-[36vh]', color: 'bg-[#FFC62E] text-[#3A2800]', delay: 2 },
-  { place: 3, height: 'h-[18vh]', color: 'bg-[#D08A4E] text-[#2B1300]', delay: 0 },
+  {
+    place: 2,
+    height: 'h-[24vh]',
+    block: 'from-[#E4E9F2] to-[#9AA4B8] text-[#2A3350]',
+    ring: 'ring-[#C9D1DE]',
+    pill: 'bg-[#C9D1DE] text-[#1E2742]',
+    delay: 1,
+  },
+  {
+    place: 1,
+    height: 'h-[34vh]',
+    block: 'from-[#FFE27A] to-[#F2A900] text-[#5A3B00]',
+    ring: 'ring-[#FFC62E]',
+    pill: 'bg-[#FFC62E] text-[#3A2800]',
+    delay: 2,
+  },
+  {
+    place: 3,
+    height: 'h-[17vh]',
+    block: 'from-[#F0A56A] to-[#A9592A] text-[#3D1A05]',
+    ring: 'ring-[#D9844A]',
+    pill: 'bg-[#D9844A] text-[#2B1300]',
+    delay: 0,
+  },
 ];
 
 function Podium({ podium }: { podium: LiveLeaderboardEntry[] }) {
-  // 3-, 2-, 1-o'rin navbat bilan chiqadi
+  // 3-, 2-, 1-o'rin navbat bilan chiqadi; g'olib chiqqanda konfetti
   const [step, setStep] = useState(0);
+  const confettiRef = useRef<ConfettiHandle>(null);
   useEffect(() => {
-    const timers = [700, 1900, 3300].map((ms, i) => window.setTimeout(() => setStep(i + 1), ms));
+    const timers = [700, 1900, 3300].map((ms, i) =>
+      window.setTimeout(() => {
+        setStep(i + 1);
+        if (i === 2) confettiRef.current?.celebrate();
+      }, ms)
+    );
     return () => timers.forEach(window.clearTimeout);
   }, []);
 
   return (
-    <div className="flex items-end justify-center gap-3 sm:gap-6">
-      {PODIUM_LAYOUT.map(({ place, height, color, delay }) => {
+    <div className="relative flex items-end justify-center gap-3 sm:gap-6">
+      <Confetti ref={confettiRef} />
+      {PODIUM_LAYOUT.map(({ place, height, block, ring, pill, delay }) => {
         const entry = podium.find((p) => p.rank === place) ?? podium[place - 1];
         const visible = step > delay;
+        const winner = place === 1;
         return (
-          <div key={place} className="flex w-[clamp(8rem,20vw,18rem)] flex-col items-center gap-3">
+          <div key={place} className="relative flex w-[clamp(8rem,20vw,18rem)] flex-col items-center gap-3">
+            {/* G'olib orqasida aylanuvchi nurlar */}
+            {winner && entry && (
+              <div
+                aria-hidden
+                className={cn(
+                  'pointer-events-none absolute -top-[6vh] left-1/2 size-[clamp(16rem,30vw,30rem)] -translate-x-1/2 transition-opacity duration-1000',
+                  visible ? 'opacity-100' : 'opacity-0'
+                )}
+              >
+                <div
+                  className="lb-rays size-full rounded-full"
+                  style={{
+                    background:
+                      'repeating-conic-gradient(from 0deg, rgb(255 198 46 / 0.16) 0deg 10deg, transparent 10deg 30deg)',
+                    maskImage: 'radial-gradient(circle, black 15%, transparent 68%)',
+                    WebkitMaskImage: 'radial-gradient(circle, black 15%, transparent 68%)',
+                  }}
+                />
+              </div>
+            )}
+
             <div
               className={cn(
-                'flex min-h-24 flex-col items-center justify-end text-center transition-all duration-700',
+                'relative flex min-h-24 w-full flex-col items-center justify-end text-center transition-all duration-700',
                 visible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               )}
             >
-              {entry && (
+              {entry ? (
                 <>
-                  <PlayerAvatar avatar={entry.avatar} className="mb-2 size-[clamp(3.5rem,6vw,6rem)]" />
-                  <span className="max-w-full truncate text-[clamp(1.25rem,2.2vw,2.5rem)] font-bold">
+                  {winner && (
+                    <Crown
+                      className="lb-crown mb-1 size-[clamp(2.25rem,3.5vw,3.5rem)] fill-[#FFC62E] text-[#FFC62E] drop-shadow-[0_0_18px_rgb(255_198_46/0.7)]"
+                      aria-hidden
+                    />
+                  )}
+                  <PlayerAvatar
+                    avatar={entry.avatar}
+                    className={cn(
+                      'mb-3 ring-4 ring-offset-4 ring-offset-[#141B3D]',
+                      ring,
+                      winner
+                        ? 'size-[clamp(4.5rem,7.5vw,7.5rem)] shadow-[0_0_40px_rgb(255_198_46/0.45)]'
+                        : 'size-[clamp(3.5rem,6vw,6rem)]'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'max-w-full truncate px-2 font-bold',
+                      winner ? 'text-[clamp(1.5rem,2.6vw,3rem)]' : 'text-[clamp(1.25rem,2.1vw,2.25rem)]'
+                    )}
+                  >
                     {entry.name}
                   </span>
-                  <span className="font-heading text-[clamp(1rem,1.6vw,1.75rem)] tabular-nums text-white/80">
+                  <span
+                    className={cn(
+                      'mt-1 rounded-full px-4 py-1 font-heading text-[clamp(1rem,1.5vw,1.6rem)] font-bold tabular-nums',
+                      pill
+                    )}
+                  >
                     {formatNumber(entry.score)}
                   </span>
                 </>
+              ) : (
+                <span className="text-[clamp(1rem,1.5vw,1.5rem)] text-white/35">—</span>
               )}
             </div>
+
             <div
               className={cn(
-                'flex w-full items-start justify-center rounded-t-3xl pt-4 font-heading text-[clamp(3rem,6vw,6rem)] font-bold transition-all duration-700',
-                color,
+                'relative flex w-full items-start justify-center overflow-hidden rounded-t-3xl pt-[2vh] font-heading text-[clamp(3rem,6vw,6rem)] font-bold leading-none transition-all duration-700',
+                entry
+                  ? cn('bg-gradient-to-b shadow-[inset_0_2px_0_rgb(255_255_255/0.6),0_-10px_40px_rgb(0_0_0/0.25)]', block)
+                  : 'border-2 border-dashed border-white/15 bg-white/5 text-white/20',
                 visible ? height : 'h-6',
-                !entry && 'opacity-30'
+                winner && entry && visible && 'lb-shine'
               )}
             >
-              {visible && place}
+              {visible && <span className="drop-shadow-[0_2px_0_rgb(255_255_255/0.35)]">{place}</span>}
             </div>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// Yakuniy ekran foni: chuqur gradient, suzuvchi aurora, projektor nuri, yulduzlar.
+// Yulduz o'rinlari qat'iy (SSR/hydration mos kelishi uchun Math.random ishlatilmaydi).
+const STARS = Array.from({ length: 42 }, (_, i) => ({
+  left: (i * 37.7 + 11) % 100,
+  top: (i * 53.3 + 7) % 72,
+  size: 2 + (i % 3),
+  delay: (i * 0.41) % 2.6,
+  duration: 2.2 + (i % 5) * 0.5,
+}));
+
+function CelebrationBackground() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      {/* Asosiy gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,#2E2A78_0%,#1A1F4F_45%,#0E1230_100%)]" />
+
+      {/* Aurora dog'lari */}
+      <div className="lb-aurora absolute -left-[10%] top-[5%] size-[45vw] rounded-full bg-[#7B4DFF]/25 blur-[120px]" />
+      <div
+        className="lb-aurora absolute -right-[12%] top-[15%] size-[40vw] rounded-full bg-[#00C2FF]/20 blur-[120px]"
+        style={{ animationDelay: '-6s' }}
+      />
+      <div
+        className="lb-aurora absolute left-[30%] top-[40%] size-[35vw] rounded-full bg-[#FF4D9D]/15 blur-[130px]"
+        style={{ animationDelay: '-11s' }}
+      />
+
+      {/* Tepadan g'olibga tushuvchi projektor nuri */}
+      <div
+        className="lb-spotlight absolute left-1/2 top-0 h-[85vh] w-[60vw] -translate-x-1/2"
+        style={{
+          background: 'linear-gradient(to bottom, rgb(255 226 122 / 0.22), rgb(255 198 46 / 0.06) 60%, transparent)',
+          clipPath: 'polygon(42% 0, 58% 0, 100% 100%, 0 100%)',
+          filter: 'blur(14px)',
+        }}
+      />
+
+      {/* Yulduzlar */}
+      {STARS.map((s, i) => (
+        <span
+          key={i}
+          className="lb-twinkle absolute rounded-full bg-white"
+          style={{
+            left: `${s.left}%`,
+            top: `${s.top}%`,
+            width: s.size,
+            height: s.size,
+            animationDelay: `${s.delay}s`,
+            animationDuration: `${s.duration}s`,
+            boxShadow: '0 0 6px rgb(255 255 255 / 0.8)',
+          }}
+        />
+      ))}
+
+      {/* Podium ostidagi yorug' "pol" */}
+      <div className="absolute inset-x-0 bottom-0 h-[35vh] bg-[radial-gradient(ellipse_at_50%_100%,rgb(255_198_46/0.18),transparent_70%)]" />
     </div>
   );
 }
@@ -327,8 +473,13 @@ function Finished({
   busy: boolean;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-8">
-      <h1 className="text-center font-heading text-[clamp(2rem,4vw,4rem)] font-bold">G&apos;oliblar</h1>
+    <div className="relative z-10 flex flex-1 flex-col gap-8">
+      <CelebrationBackground />
+      <h1 className="live-pop-in flex items-center justify-center gap-4 text-center font-heading text-[clamp(2rem,4vw,4rem)] font-bold">
+        <Trophy className="size-[0.9em] text-[#FFC62E] drop-shadow-[0_0_16px_rgb(255_198_46/0.6)]" />
+        <span className="bg-gradient-to-b from-white to-[#FFE27A] bg-clip-text text-transparent">G&apos;oliblar</span>
+        <Trophy className="size-[0.9em] text-[#FFC62E] drop-shadow-[0_0_16px_rgb(255_198_46/0.6)]" />
+      </h1>
       <Podium podium={final.podium} />
       {final.leaderboard.length > 3 && (
         <div className="mx-auto w-full max-w-4xl">
@@ -461,6 +612,12 @@ export default function HostBoardPage({ params }: { params: Promise<{ pin: strin
     status === 'question' ? question?.endsAt : null,
     question?.offset ?? 0
   );
+  // O'qish bosqichi: javoblar ochilishigacha qolgan vaqt (0 — ochilgan)
+  const readingMs = useCountdown(
+    status === 'question' ? question?.opensAt : null,
+    question?.offset ?? 0
+  );
+  const reading = readingMs != null && readingMs > 0;
 
   async function hostCall(event: string, payload?: Record<string, unknown>): Promise<LiveAck | null> {
     setBusy(true);
@@ -553,6 +710,13 @@ export default function HostBoardPage({ params }: { params: Promise<{ pin: strin
           busy={busy}
           onStart={() => hostCall('host:start')}
           onKick={(player) => hostCall('host:kick', { playerId: player.id })}
+        />
+      ) : status === 'question' && question && reading ? (
+        <QuestionIntro
+          key={question.index}
+          question={question}
+          remainingMs={readingMs}
+          totalMs={question.readMs}
         />
       ) : status === 'question' && question ? (
         <BoardQuestion

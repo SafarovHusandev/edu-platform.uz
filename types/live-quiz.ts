@@ -133,6 +133,8 @@ export interface LiveQuestionStart {
   options: string[];
   timeLimit: number;
   pointsMultiplier: PointsMultiplier;
+  // O'qish bosqichi tugaydigan payt: shungacha faqat savol ko'rinadi, javob qabul qilinmaydi
+  opensAt?: number;
   endsAt: number;
   serverNow: number;
 }

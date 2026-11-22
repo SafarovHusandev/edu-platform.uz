@@ -147,6 +147,7 @@ export const LIVE_ERROR_MESSAGES: Record<string, string> = {
   FORBIDDEN: "Bu o'yinni boshqarishga ruxsat yo'q",
   NOT_HOST: "Bu o'yinni boshqarishga ruxsat yo'q",
   NO_PLAYERS: "Hali hech kim qo'shilmagan",
+  QUESTION_NOT_OPEN: 'Savol hali ochilmadi',
   TIMEOUT: 'Server javob bermadi — internetni tekshiring',
 };
 

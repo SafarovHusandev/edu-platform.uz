@@ -81,6 +81,8 @@ interface PlayerQuestion {
   options: string[];
   timeLimit: number;
   pointsMultiplier: PointsMultiplier;
+  opensAt?: number;
+  readMs: number;
   endsAt?: number;
   offset: number;
 }
@@ -108,6 +110,8 @@ function toPlayerQuestion(q: Partial<LiveQuestionStart>, total: number): PlayerQ
     options: q.options ?? [],
     timeLimit: q.timeLimit ?? 20,
     pointsMultiplier: q.pointsMultiplier ?? 1,
+    opensAt: q.opensAt,
+    readMs: q.opensAt && q.serverNow ? Math.max(0, q.opensAt - q.serverNow) : 0,
     endsAt: q.endsAt,
     offset: q.serverNow ? q.serverNow - Date.now() : 0,
   };
@@ -373,6 +377,9 @@ function LivePlayer() {
     screen === 'question' || screen === 'answered' ? question?.endsAt : null,
     question?.offset ?? 0
   );
+  // O'qish bosqichi: javoblar ochilishigacha qolgan vaqt (doskada savol o'qiladi)
+  const readingMs = useCountdown(screen === 'question' ? question?.opensAt : null, question?.offset ?? 0);
+  const reading = readingMs != null && readingMs > 0;
 
   async function submitName(e: React.FormEvent) {
     e.preventDefault();
@@ -418,11 +425,14 @@ function LivePlayer() {
   }
 
   async function answer(option: number) {
-    if (screen !== 'question' || !question || (remainingMs ?? 1) <= 0) return;
+    if (screen !== 'question' || !question || reading || (remainingMs ?? 1) <= 0) return;
     vibrate(35);
     setScreen('answered');
     const res = await call('player:answer', { questionIndex: question.index, option });
-    if (!res.ok && !(res.code && SILENT_CODES.has(res.code))) {
+    if (res.code === 'QUESTION_NOT_OPEN') {
+      // Soatlar biroz farq qilsa — savol hali ochilmagan, qayta bosish mumkin
+      setScreen((s) => (s === 'answered' ? 'question' : s));
+    } else if (!res.ok && !(res.code && SILENT_CODES.has(res.code))) {
       toast.error(liveErrorMessage(res.code, res.message));
       // Qabul qilinmadi — qayta bosish imkoniyati
       setScreen((s) => (s === 'answered' ? 'question' : s));
@@ -603,7 +613,7 @@ function LivePlayer() {
             {question.index + 1} / {question.total}
           </span>
           <PointsBadge multiplier={question.pointsMultiplier} />
-          {remainingMs != null && (
+          {remainingMs != null && !reading && (
             <CountdownRing
               remainingMs={remainingMs}
               totalMs={question.timeLimit * 1000}
@@ -621,7 +631,23 @@ function LivePlayer() {
             className="max-h-[38svh] lg:max-h-[42svh]"
           />
 
-          {screen === 'answered' ? (
+          {screen === 'question' && reading ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+              <p className="live-pop-in font-heading text-[clamp(1.75rem,1rem+3vw,3rem)] font-bold">Tayyorlaning!</p>
+              <p className="text-white/75">
+                Javoblar <span className="font-bold tabular-nums text-white">{Math.ceil(readingMs / 1000)}</span>{' '}
+                soniyadan keyin ochiladi
+              </p>
+              <div className="h-2.5 w-full max-w-md overflow-hidden rounded-full bg-white/15">
+                <div
+                  className="h-full rounded-full bg-[#FFC62E] transition-[width] duration-200 ease-linear"
+                  style={{
+                    width: `${question.readMs ? Math.min(1, readingMs / question.readMs) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ) : screen === 'answered' ? (
             // Tanlangan variant atayin ko'rsatilmaydi: yonidagi o'quvchi ekranga qarab
             // ko'chirib olmasin. To'g'ri/noto'g'ri natija ekranida (hamma javob bergach) ko'rinadi.
             <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">

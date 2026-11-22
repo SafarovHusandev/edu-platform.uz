@@ -341,6 +341,56 @@ export function PointsBadge({ multiplier }: { multiplier: PointsMultiplier }) {
   );
 }
 
+// Savol "o'qish" bosqichi: variantlarsiz, faqat savol matni katta ko'rinadi; pastdagi
+// chiziq javoblar ochilishigacha qolgan vaqtni ko'rsatadi
+export function QuestionIntro({
+  question,
+  remainingMs,
+  totalMs,
+}: {
+  question: BoardQuestionData;
+  remainingMs: number;
+  totalMs: number;
+}) {
+  const image = toServerUrl(question.image);
+  const fraction = totalMs > 0 ? Math.min(1, Math.max(0, remainingMs / totalMs)) : 0;
+  return (
+    <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-8">
+      <div className="flex items-center gap-3 text-[clamp(1.1rem,1.6vw,1.6rem)]">
+        <span className="live-pop-in rounded-full bg-white/15 px-5 py-2 font-heading font-bold tabular-nums">
+          {question.index + 1} / {question.total}
+        </span>
+        <PointsBadge multiplier={question.pointsMultiplier} />
+      </div>
+
+      <div className="live-pop-in w-full max-w-6xl rounded-3xl bg-white px-[clamp(1.5rem,4vw,4rem)] py-[clamp(1.25rem,3vh,3rem)] text-[#141B3D] shadow-[0_12px_0_rgb(0_0_0/0.25)]">
+        <QuestionMarkdown
+          text={question.text}
+          variant="board"
+          className="w-full !text-[clamp(1.75rem,3.6vw,4rem)] font-bold"
+        />
+      </div>
+
+      {image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" className="live-rise max-h-[36vh] max-w-full rounded-2xl object-contain" />
+      )}
+
+      <div className="mt-auto w-full max-w-6xl">
+        <p className="mb-3 text-center text-[clamp(1rem,1.4vw,1.4rem)] font-semibold text-white/70">
+          Savolni o&apos;qing — javoblar {Math.ceil(remainingMs / 1000)} soniyadan keyin ochiladi
+        </p>
+        <div className="h-3 w-full overflow-hidden rounded-full bg-white/15">
+          <div
+            className="h-full rounded-full bg-[#FFC62E] transition-[width] duration-200 ease-linear"
+            style={{ width: `${fraction * 100}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BoardQuestion({
   question,
   remainingMs,

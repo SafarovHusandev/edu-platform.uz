@@ -112,7 +112,7 @@ export function useStartLiveSession() {
   });
 }
 
-// Ishtirokchi uchun, token yuborilmaydi
+// Ishtirokchi uchun (public). Token bo'lsa limitdan ozod qilish uchun yuboriladi
 export async function fetchLiveJoinInfo(pin: string) {
   return (
     await api.get<{ session: LiveJoinInfo }>(`/live-quizzes/join/${pin}`, undefined, {

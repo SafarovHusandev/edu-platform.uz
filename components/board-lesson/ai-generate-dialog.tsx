@@ -32,7 +32,7 @@ const NOTES_MAX = 300;
 const TOPIC_MIN = 3;
 const GRADE_STORAGE_KEY = 'st-ai-grade';
 
-// Kutish paytida almashib turadigan yozuvlar (AI 10–40 soniya ishlaydi)
+// Kutish paytida almashib turadigan yozuvlar (AI 2 daqiqagacha ishlashi mumkin)
 const STEPS = [
   'Mavzu tahlil qilinmoqda...',
   'Slaydlar yozilmoqda...',
@@ -105,7 +105,7 @@ export function AiGenerateDialog({
 
   useEffect(() => {
     if (!pending) return;
-    const id = window.setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 6000);
+    const id = window.setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 15000);
     return () => window.clearInterval(id);
   }, [pending]);
 
@@ -188,7 +188,9 @@ export function AiGenerateDialog({
             <p key={step} className="live-pop-in font-heading text-lg font-semibold">
               {STEPS[step]}
             </p>
-            <p className="text-sm text-muted-foreground">Odatda 10–40 soniya davom etadi</p>
+            <p className="text-sm text-muted-foreground">
+              AI dars tayyorlamoqda... Bu 2 daqiqagacha vaqt olishi mumkin
+            </p>
             <Button variant="outline" onClick={cancel} className="mt-2">
               Bekor qilish
             </Button>

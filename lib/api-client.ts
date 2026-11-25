@@ -59,9 +59,14 @@ interface RequestOptions {
   body?: unknown;
   params?: QueryParams;
   token?: string;
+  // Public endpoint: 401 kelsa sessiya tozalanmaydi. Token (agar bo'lsa) baribir
+  // yuboriladi — backend login qilgan foydalanuvchini so'rov limitidan ozod qiladi,
+  // public route'lar esa yaroqsiz tokenni rad etmaydi.
   skipAuth?: boolean;
   // So'rovni bekor qilish (AbortController)
   signal?: AbortSignal;
+  // Faqat shu so'rov uchun kutish chegarasi (ms). Berilmasa — chegarasiz.
+  timeout?: number;
 }
 
 function retryAfterSeconds(headers: Headers) {
@@ -130,7 +135,7 @@ function unwrap(json: unknown) {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, params, token, skipAuth, signal } = options;
+  const { method = 'GET', body, params, token, skipAuth, signal, timeout } = options;
   const url = `${API_URL}${path}${buildQuery(params)}`;
 
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
@@ -140,18 +145,44 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers['Content-Type'] = 'application/json';
   }
 
-  const authToken = token ?? (skipAuth ? undefined : getTokenCookie());
+  const authToken = token ?? getTokenCookie();
 
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
-    signal,
-  });
+  // timeout berilgan bo'lsa: tashqi signal + taymer bitta controller'ga ulanadi
+  let timedOut = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let fetchSignal = signal;
+  if (timeout) {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    if (signal?.aborted) abort();
+    else signal?.addEventListener('abort', abort, { once: true });
+    timer = setTimeout(() => {
+      timedOut = true;
+      abort();
+    }, timeout);
+    fetchSignal = controller.signal;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
+      signal: fetchSignal,
+    });
+  } catch (error) {
+    if (timedOut) {
+      throw new ApiError("Server belgilangan vaqtda javob bermadi. Qayta urinib ko'ring", 0, undefined, 'TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 
   const contentType = res.headers.get('content-type') ?? '';
   const isJson = contentType.includes('application/json');

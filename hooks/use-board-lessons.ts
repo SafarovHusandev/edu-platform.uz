@@ -95,14 +95,17 @@ export function useDuplicateBoardLesson() {
 }
 
 // AI (Gemini) dars qoralamasini tuzadi — natija muharrirga tushadi, BAZAGA SAQLANMAYDI,
-// shuning uchun query cache'ga ham yozilmaydi. Javob 10–40 soniya olishi mumkin
-// (server 60 soniyada 504 qaytaradi; api-client'da timeout yo'q).
+// shuning uchun query cache'ga ham yozilmaydi. Gemini band bo'lsa server o'zi qayta
+// urinadi, shuning uchun javob 2 daqiqagacha kelishi mumkin.
+export const GENERATE_TIMEOUT_MS = 130_000;
+
 export async function generateBoardLessonDraft(
   body: BoardLessonGenerateRequest,
   options: { signal?: AbortSignal } = {}
 ) {
   const res = await api.post<{ draft: BoardLessonDraft }>('/board-lessons/generate', body, {
     signal: options.signal,
+    timeout: GENERATE_TIMEOUT_MS,
   });
   return res.draft;
 }
@@ -143,27 +146,35 @@ function aiFieldErrors(raw: unknown) {
   return fields;
 }
 
+// Server `message` yubormagan holatlar uchun zaxira matnlar
+const AI_FALLBACK_MESSAGES: Record<number, string> = {
+  0: 'AI javob bermadi. Qayta urinib ko\'ring',
+  403: "Bu amalga ruxsat yo'q",
+  422: "Ma'lumotlarni tekshiring",
+  429: 'AI kvotasi vaqtincha tugadi',
+  502: "AI javobini o'qib bo'lmadi",
+  503: 'AI xizmati vaqtincha ishlamayapti',
+  504: 'AI javob bermadi',
+};
+
+// Xato matni serverdan (`{ success, statusCode, message }`) olinadi
 export function aiErrorInfo(error: unknown): AiErrorInfo {
   if (error instanceof ApiError) {
+    const message =
+      error.message.trim() || AI_FALLBACK_MESSAGES[error.status] || 'AI darsni tuza olmadi';
     if (error.status === 429) {
+      // Endi faqat AI provayder (Gemini) kvotasi tugaganda keladi
       const minutes = error.retryAfter ? Math.max(1, Math.ceil(error.retryAfter / 60)) : null;
-      const base = error.message || 'AI limiti vaqtincha tugadi';
       return {
-        message: minutes ? `${base}. ${minutes} daqiqadan so'ng urinib ko'ring` : base,
+        message: minutes ? `${message}. ${minutes} daqiqadan so'ng urinib ko'ring` : message,
         retryable: false,
         fields: {},
       };
     }
-    if (error.status === 403) return { message: "Bu amalga ruxsat yo'q", retryable: false, fields: {} };
+    if (error.status === 403) return { message, retryable: false, fields: {} };
     if (error.status === 422)
-      return {
-        message: error.message || "Ma'lumotlarni tekshiring",
-        retryable: false,
-        fields: aiFieldErrors(error.errors),
-      };
-    if (error.status === 502 || error.status === 503 || error.status === 504 || error.status === 0)
-      return { message: error.message || "AI hozir javob bermadi", retryable: true, fields: {} };
-    return { message: error.message || 'AI darsni tuza olmadi', retryable: true, fields: {} };
+      return { message, retryable: false, fields: aiFieldErrors(error.errors) };
+    return { message, retryable: true, fields: {} };
   }
   return { message: "AI darsni tuza olmadi. Internetni tekshiring", retryable: true, fields: {} };
 }

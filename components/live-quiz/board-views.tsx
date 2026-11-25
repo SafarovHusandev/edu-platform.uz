@@ -159,9 +159,10 @@ const entryKey = (entry: LiveLeaderboardEntry) => entry.id || `name:${entry.name
 
 // Reyting animatsiyasi: qisqa pauza → ballar sanaladi; sanash davomida kim kimdan
 // oshib ketsa, o'sha zahoti joy almashadi (oxirigacha kutilmaydi)
-const COUNT_AT_MS = 500;
-const COUNT_MS = 1600;
-const REORDER_MS = 450;
+// Sekinroq: o'quvchilar kim ko'tarilib, kim tushganini ko'rib ulgurishi kerak
+const COUNT_AT_MS = 800;
+const COUNT_MS = 3200;
+const REORDER_MS = 1200;
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -279,8 +280,9 @@ export function LeaderboardList({
               else rowRefs.current.delete(key);
             }}
             className={cn(
-              'live-rise flex items-center gap-4 rounded-2xl px-5 py-3 text-[clamp(1.25rem,1.8vw,2rem)] font-bold transition-colors duration-700',
-              climbed ? 'bg-[#26890C]/45' : 'bg-white/10'
+              'live-rise relative flex items-center gap-4 rounded-2xl px-5 py-3 text-[clamp(1.25rem,1.8vw,2rem)] font-bold transition-colors duration-700',
+              // Ko'tarilgan qator almashish paytida boshqasining ustidan o'tadi
+              climbed ? 'z-10 bg-[#26890C]/45 shadow-[0_8px_24px_rgb(0_0_0/0.35)]' : 'bg-white/10'
             )}
             style={{ animationDelay: `${list.indexOf(entry) * 80}ms` }}
           >

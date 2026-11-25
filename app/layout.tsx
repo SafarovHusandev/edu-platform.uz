@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/sonner';
 import NextTopLoader from 'nextjs-toploader';
 import Script from 'next/script';
 import { TelegramWebAppGate } from '@/components/auth/telegram-webapp-gate';
+import { TgWebBackButton } from '@/components/tg/tg-web-back-button';
 
 const onest = Onest({
   variable: '--font-onest',
@@ -63,6 +64,7 @@ export default function RootLayout({
                 <NextTopLoader showSpinner={false} />
                 {children}
                 <TelegramWebAppGate />
+                <TgWebBackButton />
                 <Toaster position="top-center" richColors closeButton />
               </TooltipProvider>
             </AuthProvider>

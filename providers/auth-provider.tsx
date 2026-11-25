@@ -24,6 +24,9 @@ const PUBLIC_PATHS = [
   "/maxfiylik-siyosati",
   // Jonli viktorina ishtirokchisi — akkaunt shart emas
   "/live",
+  // Telegram Mini App: sessiya yo'qolsa /login'ga emas, TgShell'ning o'z
+  // "qayta kirish" ekraniga tushadi (initData orqali)
+  "/tg",
 ]
 
 function isPublicPath(pathname: string) {

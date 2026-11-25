@@ -97,6 +97,14 @@ const EXPORT_COLUMNS: ExportColumn[] = [
 type SortKey = 'name' | 'grade' | 'score' | 'status' | 'startedAt' | 'submittedAt' | 'duration';
 type StatusFilter = 'all' | 'passed' | 'failed' | 'pending' | 'expired';
 
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  all: 'Barcha holatlar',
+  passed: "O'tdi",
+  failed: "O'tmadi",
+  pending: 'Tekshirilmoqda',
+  expired: 'Vaqt tugadi',
+};
+
 function attemptStudent(attempt: Attempt): User | null {
   return typeof attempt.student === 'object' ? attempt.student : null;
 }
@@ -507,7 +515,8 @@ function ResultsContent({ quizId }: { quizId: string }) {
     }
   }
 
-  const exportRows: ExportRow[] = studentGroups.map((group) => ({
+  // Eksport ekrandagi ro'yxat bilan bir xil: joriy qidiruv, filtrlar va tartiblash bo'yicha
+  const exportRows: ExportRow[] = sortedGroups.map((group) => ({
     name: group.student?.name ?? '—',
     grade: group.student?.grade?.number
       ? `${group.student.grade.number}-${group.student.grade.letter ?? ''}`
@@ -521,6 +530,17 @@ function ResultsContent({ quizId }: { quizId: string }) {
   }));
 
   const activeExportColumns = EXPORT_COLUMNS.filter((column) => selectedColumns[column.key]);
+
+  // Faylda qaysi filtr qo'llanganini ko'rsatish uchun: O'tdi, 6-sinf, "Ali"
+  const exportFileFilter = [
+    statusFilter !== 'all' ? STATUS_FILTER_LABELS[statusFilter] : null,
+    gradeFilter !== 'all' ? `${gradeFilter}-sinf` : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const exportFilterLabel = [exportFileFilter, search.trim() ? `"${search.trim()}"` : '']
+    .filter(Boolean)
+    .join(', ');
 
   // Yuqoridagi ko'rsatkichlar: har bir o'quvchining oxirgi baholangan urinishi bo'yicha
   const summary = (() => {
@@ -540,14 +560,17 @@ function ResultsContent({ quizId }: { quizId: string }) {
   })();
 
   async function handleExport() {
-    if (activeExportColumns.length === 0) return;
+    if (activeExportColumns.length === 0 || exportRows.length === 0) return;
     setIsExporting(true);
     try {
-      const filename = `${quiz?.title ?? 'test'} - natijalar`;
+      // Fayl nomiga faqat holat va sinf (qidiruv matni fayl nomini buzmasin)
+      const filename = `${quiz?.title ?? 'test'} - natijalar${exportFileFilter ? ` (${exportFileFilter})` : ''}`;
       if (exportFormat === 'excel') {
         await exportRowsToExcel(exportRows, activeExportColumns, filename);
       } else {
-        await exportRowsToPdf(exportRows, activeExportColumns, filename, quiz?.title);
+        await exportRowsToPdf(exportRows, activeExportColumns, filename, quiz?.title, {
+          subtitle: exportFilterLabel ? `Filtr: ${exportFilterLabel}` : undefined,
+        });
       }
       toast.success('Fayl yuklab olindi');
       setExportOpen(false);
@@ -649,13 +672,7 @@ function ResultsContent({ quizId }: { quizId: string }) {
               <Select
                 value={statusFilter}
                 onValueChange={(v) => setStatusFilter((v as StatusFilter) ?? 'all')}
-                items={{
-                  all: 'Barcha holatlar',
-                  passed: "O'tdi",
-                  failed: "O'tmadi",
-                  pending: 'Tekshirilmoqda',
-                  expired: 'Vaqt tugadi',
-                }}
+                items={STATUS_FILTER_LABELS}
               >
                 <SelectTrigger className="h-10 w-full rounded-md sm:w-40">
                   <SelectValue placeholder="Holati" />
@@ -925,6 +942,15 @@ function ResultsContent({ quizId }: { quizId: string }) {
             </DialogDescription>
           </DialogHeader>
 
+          <div className="rounded-md bg-muted/60 px-3.5 py-2.5 text-sm">
+            <span className="font-medium text-foreground">
+              {exportRows.length} ta o&apos;quvchi yuklanadi
+            </span>
+            <span className="text-muted-foreground">
+              {exportFilterLabel ? ` · Filtr: ${exportFilterLabel}` : ' · Filtrsiz (barchasi)'}
+            </span>
+          </div>
+
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">Ustunlar</p>
@@ -983,7 +1009,7 @@ function ResultsContent({ quizId }: { quizId: string }) {
           <Button
             className="w-full p-2 h-auto"
             onClick={handleExport}
-            disabled={activeExportColumns.length === 0 || isExporting}
+            disabled={activeExportColumns.length === 0 || exportRows.length === 0 || isExporting}
           >
             {isExporting ? (
               <Loader2 className="size-4 animate-spin" />

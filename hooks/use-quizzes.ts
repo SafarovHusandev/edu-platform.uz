@@ -55,7 +55,8 @@ export function useQuizzes(filters: { page?: number; limit?: number } = {}) {
 
 export function useQuizzesMy(filters: { page?: number; limit?: number } = {}) {
   return useQuery({
-    queryKey: ['quizzes', filters],
+    // useQuizzes bilan bir xil filtrda keshi aralashmasin ('quizzes' prefiksi invalidatsiya uchun)
+    queryKey: ['quizzes', 'my', filters],
     queryFn: async () => {
       const result = await api.get<Paginated<Quiz> | { quizzes: Quiz[] }>(
         '/quizzes/my',

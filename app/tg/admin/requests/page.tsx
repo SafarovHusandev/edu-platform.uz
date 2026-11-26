@@ -6,6 +6,7 @@ import {
   TgEmpty,
   TgError,
   TgHeader,
+  TgLoadMore,
   TgPage,
   TgPill,
   TgSegment,
@@ -59,6 +60,8 @@ function RequestCard({
   const image = resolveAssetUrl(reward?.image);
   const mode = active?.id === redemption._id ? active.kind : null;
   const busy = approve.isPending || reject.isPending || deliver.isPending;
+
+  const failed = () => haptic('error');
 
   function done() {
     haptic('success');
@@ -139,12 +142,15 @@ function RequestCard({
                 disabled={busy}
                 onClick={() =>
                   mode === 'reject'
-                    ? reject.mutate({ id: redemption._id, reason: note.trim() || undefined }, { onSuccess: done })
-                    : deliver.mutate({ id: redemption._id, note: note.trim() || undefined }, { onSuccess: done })
+                    ? reject.mutate({ id: redemption._id, reason: note.trim() || undefined }, { onSuccess: done, onError: failed })
+                    : deliver.mutate(
+                        { id: redemption._id, note: note.trim() || undefined },
+                        { onSuccess: done, onError: failed }
+                      )
                 }
                 className={
                   mode === 'reject'
-                    ? 'inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-destructive text-sm font-bold text-white disabled:opacity-50'
+                    ? 'inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-destructive text-sm font-bold text-background disabled:opacity-50'
                     : 'inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-success text-sm font-bold text-success-foreground disabled:opacity-50'
                 }
               >
@@ -161,7 +167,7 @@ function RequestCard({
             <button
               type="button"
               onClick={() => setActive({ id: redemption._id, kind: 'reject' })}
-              className="h-11 rounded-xl border border-border text-sm font-semibold"
+              className="h-11 rounded-xl border border-destructive/35 text-sm font-semibold text-destructive"
             >
               Rad etish
             </button>
@@ -169,7 +175,7 @@ function RequestCard({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => approve.mutate(redemption._id, { onSuccess: done })}
+                onClick={() => approve.mutate(redemption._id, { onSuccess: done, onError: failed })}
                 className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-50"
               >
                 {approve.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -190,31 +196,54 @@ function RequestCard({
   );
 }
 
+type StatusParam = 'pending' | 'approved' | 'delivered,rejected';
+
+function RequestsPage({
+  page,
+  status,
+  active,
+  setActive,
+}: {
+  page: number;
+  status: StatusParam;
+  active: Pending;
+  setActive: (p: Pending) => void;
+}) {
+  const query = useAllRedemptions({ status, page, limit: PAGE_SIZE });
+  if (query.isLoading) return <TgSkeletonList count={2} height={130} />;
+  if (query.isError) return <TgError onRetry={() => query.refetch()} />;
+  return query.data?.items.map((r) => (
+    <RequestCard key={r._id} redemption={r} active={active} setActive={setActive} />
+  ));
+}
+
 export default function TgAdminRequestsPage() {
   const [stage, setStage] = useState<Stage>('pending');
-  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [pages, setPages] = useState(1);
   const [active, setActive] = useState<Pending>(null);
-  const status = stage === 'archive' ? ('delivered,rejected' as const) : stage;
-  const list = useAllRedemptions({ status, page: 1, limit });
+  const status: StatusParam = stage === 'archive' ? 'delivered,rejected' : stage;
+  const first = useAllRedemptions({ status, page: 1, limit: PAGE_SIZE });
+  const last = useAllRedemptions({ status, page: pages, limit: PAGE_SIZE });
   const pendingCount = useAllRedemptions({ status: 'pending', page: 1, limit: 1 });
   const approvedCount = useAllRedemptions({ status: 'approved', page: 1, limit: 1 });
-  const items = list.data?.items ?? [];
+  const total = first.data?.total ?? 0;
+  const totalPages = last.data?.totalPages ?? first.data?.totalPages ?? 1;
 
   const count = (n?: number) => (n ? ` · ${n}` : '');
 
   return (
-    <TgPage>
+    <TgPage className="gap-3">
       <TgHeader title="Mukofot so'rovlari" />
       <TgSegment
         value={stage}
         onChange={(v) => {
           setStage(v);
-          setLimit(PAGE_SIZE);
+          setPages(1);
           setActive(null);
         }}
         options={[
           { value: 'pending', label: `Kutilmoqda${count(pendingCount.data?.total)}` },
-          { value: 'approved', label: `Tasdiqlangan${count(approvedCount.data?.total)}` },
+          { value: 'approved', label: `Tasdiqlandi${count(approvedCount.data?.total)}` },
           { value: 'archive', label: 'Arxiv' },
         ]}
       />
@@ -223,29 +252,46 @@ export default function TgAdminRequestsPage() {
           ? "1-bosqich: so'rovni tasdiqlang yoki rad eting."
           : stage === 'approved'
             ? "2-bosqich: sovg'a qo'lga berilgach «Topshirildi» deb belgilang."
-            : 'Topshirilgan va rad etilgan so\'rovlar tarixi.'}
+            : "Topshirilgan va rad etilgan so'rovlar tarixi."}
       </p>
 
-      {list.isLoading ? (
+      {first.isLoading ? (
         <TgSkeletonList count={3} height={130} />
-      ) : list.isError ? (
-        <TgError onRetry={() => list.refetch()} />
-      ) : items.length === 0 ? (
-        <TgEmpty icon={Gift} title="So'rovlar yo'q" />
+      ) : first.isError ? (
+        <TgError onRetry={() => first.refetch()} />
+      ) : total === 0 ? (
+        <TgEmpty
+          icon={Gift}
+          title={
+            stage === 'pending'
+              ? "Yangi so'rovlar yo'q"
+              : stage === 'approved'
+                ? "Topshirishni kutayotgan sovg'a yo'q"
+                : "Arxiv bo'sh"
+          }
+          description={
+            stage === 'pending' ? "O'quvchi olmosga sovg'a so'raganda shu yerda paydo bo'ladi" : undefined
+          }
+        />
       ) : (
-        items.map((r) => (
-          <RequestCard key={r._id} redemption={r} active={active} setActive={setActive} />
-        ))
-      )}
-
-      {(list.data?.total ?? 0) > items.length && (
-        <button
-          type="button"
-          onClick={() => setLimit((l) => l + PAGE_SIZE)}
-          className="h-11 rounded-xl border border-border bg-card text-sm font-semibold"
-        >
-          Yana yuklash
-        </button>
+        <>
+          {Array.from({ length: pages }, (_, i) => (
+            <RequestsPage
+              key={i + 1}
+              page={i + 1}
+              status={status}
+              active={active}
+              setActive={setActive}
+            />
+          ))}
+          {pages < totalPages && last.isSuccess && !last.isPlaceholderData && (
+            <TgLoadMore
+              onClick={() => setPages((p) => p + 1)}
+              shown={Math.min(pages * PAGE_SIZE, total)}
+              total={total}
+            />
+          )}
+        </>
       )}
     </TgPage>
   );

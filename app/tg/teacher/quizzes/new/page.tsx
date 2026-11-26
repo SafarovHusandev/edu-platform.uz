@@ -2,34 +2,41 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
-import { TgMainButton } from '@/components/tg/tg-main-button';
-import { TgHeader, TgPage, TgWebHint } from '@/components/tg/tg-ui';
+import { TgGradePicker } from '@/components/tg/tg-grade-picker';
+import { TgMainButton, TgSecondaryButton } from '@/components/tg/tg-main-button';
+import { useTgBackOverride } from '@/components/tg/tg-shell';
+import { QUIZ_BUILDER_STEPS, TgHeader, TgPage, TgSteps, TgWebHint } from '@/components/tg/tg-ui';
 import { useCreateQuiz, type TargetGradeInput } from '@/hooks/use-quizzes';
-import { GRADE_LETTERS } from '@/lib/class-roster';
+import { getMinQuestionsForGrades } from '@/lib/quiz-rules';
 import { haptic } from '@/lib/telegram-webapp';
-import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 
 const fieldClass =
-  'h-12 w-full rounded-xl border border-input bg-card px-3.5 text-[15px] outline-none focus:border-primary';
+  'h-12 w-full min-w-0 rounded-xl border border-input bg-card px-3.5 text-[15px] outline-none focus:border-primary';
 
-function Field({ label, htmlFor, children, hint }: { label: string; htmlFor: string; children: React.ReactNode; hint?: string }) {
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-semibold">
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="truncate text-[13px] font-semibold">
         {label}
       </label>
       {children}
-      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
     </div>
   );
 }
 
-function gradeKey(g: TargetGradeInput) {
-  return `${g.number}-${g.letter ?? '*'}`;
-}
+const digits = (value: string) => value.replace(/\D/g, '').slice(0, 4);
 
+// Test yaratish: 1-bosqich — asosiy ma'lumot, 2-bosqich — sinflar. Test qoralama
+// sifatida yaratiladi va 3-bosqichga (savollar, /tg/teacher/quizzes/[id]) o'tiladi.
 export default function TgNewQuizPage() {
   const router = useRouter();
   const tarif = useAuthStore((s) => s.user?.tarif);
@@ -37,32 +44,27 @@ export default function TgNewQuizPage() {
 
   const [title, setTitle] = useState('');
   const [grades, setGrades] = useState<TargetGradeInput[]>([]);
-  const [gradeNumber, setGradeNumber] = useState<number | null>(null);
   const [timeLimit, setTimeLimit] = useState('30');
   const [maxAttempts, setMaxAttempts] = useState('1');
   const [passingScore, setPassingScore] = useState('60');
   const [step, setStep] = useState<1 | 2>(1);
 
-  function addGrade(letter: string | null) {
-    if (!gradeNumber) return;
-    const entry: TargetGradeInput = letter ? { number: gradeNumber, letter } : { number: gradeNumber };
-    setGrades((prev) => {
-      // "Barcha parallellar" tanlansa shu raqamdagi alohida harflar keraksiz
-      const rest = letter
-        ? prev.filter((g) => !(g.number === gradeNumber && !g.letter))
-        : prev.filter((g) => g.number !== gradeNumber);
-      return rest.some((g) => gradeKey(g) === gradeKey(entry)) ? rest : [...rest, entry];
-    });
-    haptic('selection');
-  }
+  // 2-bosqichda Telegram «Orqaga» tugmasi sahifadan chiqmay, 1-bosqichga qaytaradi
+  useTgBackOverride(step === 2 ? () => setStep(1) : null);
 
   const titleOk = title.trim().length >= 3;
   const numbersOk =
-    Number(timeLimit) >= 1 && Number(maxAttempts) >= 1 && Number(passingScore) >= 0 && Number(passingScore) <= 100;
+    Number(timeLimit) >= 1 &&
+    Number(maxAttempts) >= 1 &&
+    passingScore !== '' &&
+    Number(passingScore) <= 100;
+  const minQuestions = getMinQuestionsForGrades(grades);
 
   function submit() {
     if (step === 1) {
+      haptic('light');
       setStep(2);
+      window.scrollTo({ top: 0 });
       return;
     }
     createQuiz.mutate(
@@ -80,24 +82,15 @@ export default function TgNewQuizPage() {
           haptic('success');
           router.replace(`/tg/teacher/quizzes/${quiz._id}`);
         },
+        onError: () => haptic('error'),
       }
     );
   }
 
   return (
-    <TgPage>
+    <TgPage className="gap-3">
       <TgHeader eyebrow="Test yaratish" title={title.trim() || 'Yangi test'} />
-
-      <ol aria-label="Bosqichlar" className="grid grid-cols-3 gap-1.5">
-        {['1. Asosiy', '2. Sinflar', '3. Savollar'].map((label, i) => (
-          <li key={label} className="flex flex-col gap-1.5">
-            <span className={cn('h-1 rounded-full', i < step ? 'bg-primary' : 'bg-border')} />
-            <span className={cn('text-xs font-semibold', i + 1 === step ? 'text-foreground' : 'text-muted-foreground')}>
-              {label}
-            </span>
-          </li>
-        ))}
-      </ol>
+      <TgSteps steps={QUIZ_BUILDER_STEPS} current={step} />
 
       {step === 1 ? (
         <>
@@ -109,21 +102,48 @@ export default function TgNewQuizPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
+              enterKeyHint="next"
             />
           </Field>
-          <div className="grid grid-cols-3 gap-2.5">
+          {title.length > 0 && !titleOk && (
+            <span className="-mt-1.5 text-xs text-destructive">Kamida 3 ta belgi kiriting</span>
+          )}
+          <div className="grid grid-cols-3 gap-2">
             <Field label="Vaqt (daq)" htmlFor="q-time">
-              <input id="q-time" inputMode="numeric" className={fieldClass} value={timeLimit} onChange={(e) => setTimeLimit(e.target.value.replace(/\D/g, ''))} />
+              <input
+                id="q-time"
+                inputMode="numeric"
+                className={fieldClass}
+                value={timeLimit}
+                onChange={(e) => setTimeLimit(digits(e.target.value))}
+              />
             </Field>
             <Field label="Urinish" htmlFor="q-attempts">
-              <input id="q-attempts" inputMode="numeric" className={fieldClass} value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value.replace(/\D/g, ''))} />
+              <input
+                id="q-attempts"
+                inputMode="numeric"
+                className={fieldClass}
+                value={maxAttempts}
+                onChange={(e) => setMaxAttempts(digits(e.target.value))}
+              />
             </Field>
             <Field label="O'tish %" htmlFor="q-pass">
-              <input id="q-pass" inputMode="numeric" className={fieldClass} value={passingScore} onChange={(e) => setPassingScore(e.target.value.replace(/\D/g, ''))} />
+              <input
+                id="q-pass"
+                inputMode="numeric"
+                className={fieldClass}
+                value={passingScore}
+                onChange={(e) => setPassingScore(digits(e.target.value))}
+              />
             </Field>
           </div>
+          {!numbersOk && (
+            <span className="-mt-1.5 text-xs text-destructive">
+              Vaqt va urinish kamida 1, o&apos;tish bali 0–100 oralig&apos;ida bo&apos;lsin
+            </span>
+          )}
           {tarif !== 'premium' && Number(maxAttempts) > 1 && (
-            <p className="rounded-xl bg-gold-soft px-3.5 py-2.5 text-[13px] text-gold-foreground">
+            <p className="rounded-xl bg-gold-soft px-3 py-2.5 text-[13px] text-gold-foreground">
               Standart tarifda o&apos;quvchilarga baribir 1 ta urinish beriladi. Ko&apos;proq urinish —
               Premium tarifda.
             </p>
@@ -131,77 +151,13 @@ export default function TgNewQuizPage() {
         </>
       ) : (
         <>
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-semibold">Sinf</span>
-            <div className="grid grid-cols-6 gap-1.5">
-              {Array.from({ length: 11 }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  aria-pressed={gradeNumber === n}
-                  onClick={() => setGradeNumber(n)}
-                  className={cn(
-                    'h-11 rounded-xl font-heading text-sm font-bold',
-                    gradeNumber === n ? 'bg-primary text-primary-foreground' : 'border border-border bg-card'
-                  )}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-          {gradeNumber && (
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-semibold">{gradeNumber}-sinf parallelini qo&apos;shing</span>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => addGrade(null)}
-                  className="h-10 rounded-xl border border-primary/40 bg-primary-soft px-3 text-sm font-semibold text-primary"
-                >
-                  Barchasi
-                </button>
-                {GRADE_LETTERS.map((letter) => (
-                  <button
-                    key={letter}
-                    type="button"
-                    onClick={() => addGrade(letter)}
-                    className="h-10 min-w-10 rounded-xl border border-border bg-card px-3 text-sm font-semibold"
-                  >
-                    {gradeNumber}-{letter}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <TgGradePicker value={grades} onChange={setGrades} disabled={createQuiz.isPending} />
+          {grades.length > 0 && (
+            <p className="rounded-xl bg-primary-soft px-3 py-2.5 text-[13px] text-primary">
+              Faollashtirish uchun kamida <strong>{minQuestions} ta savol</strong> kerak. Test
+              qoralama sifatida yaratiladi — savollarni keyingi bosqichda qo&apos;shasiz.
+            </p>
           )}
-          <div className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5">
-            <span className="text-sm font-semibold">Tanlangan sinflar</span>
-            {grades.length === 0 ? (
-              <span className="text-sm text-muted-foreground">Hali sinf tanlanmagan</span>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {grades.map((g) => (
-                  <span
-                    key={gradeKey(g)}
-                    className="inline-flex items-center gap-1 rounded-full bg-primary-soft py-1 pr-1 pl-3 text-sm font-semibold text-primary"
-                  >
-                    {g.letter ? `${g.number}-${g.letter}` : `${g.number}-sinf (barchasi)`}
-                    <button
-                      type="button"
-                      aria-label="Olib tashlash"
-                      onClick={() => setGrades((prev) => prev.filter((x) => gradeKey(x) !== gradeKey(g)))}
-                      className="flex size-6 items-center justify-center rounded-full hover:bg-primary/15"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-          <button type="button" onClick={() => setStep(1)} className="self-start text-sm font-semibold text-primary">
-            ← Asosiy ma&apos;lumotlarga qaytish
-          </button>
         </>
       )}
 
@@ -214,6 +170,13 @@ export default function TgNewQuizPage() {
         onClick={submit}
         loading={createQuiz.isPending}
         disabled={step === 1 ? !titleOk || !numbersOk : grades.length === 0}
+        secondary={
+          step === 2 ? (
+            <TgSecondaryButton onClick={() => setStep(1)} disabled={createQuiz.isPending}>
+              Orqaga
+            </TgSecondaryButton>
+          ) : undefined
+        }
       />
     </TgPage>
   );

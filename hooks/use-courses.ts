@@ -20,6 +20,8 @@ export interface CourseFilters {
   category?: string
   sort?: CourseSort
   isFree?: boolean
+  // Muallif bo'yicha (GET /courses?teacher=<id>) — o'qituvchining o'z kurslari, qoralamalari bilan
+  teacher?: string
   // Faqat login qilgan student uchun: yozilgan kurslar serverda chiqarib tashlanadi
   excludeEnrolled?: boolean
 }

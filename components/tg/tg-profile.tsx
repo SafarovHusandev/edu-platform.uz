@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Loader2 } from 'lucide-react';
-import { TgAvatar, TgHeader, TgLinkRow, TgPage } from '@/components/tg/tg-ui';
+import { TgAvatar, TgLinkRow, TgPage } from '@/components/tg/tg-ui';
 import { useUnreadNotificationsCount } from '@/hooks/use-notifications';
 import { useUpdateProfile } from '@/hooks/use-users';
 import { formatDate } from '@/lib/format';
 import { ROLE_LABELS } from '@/lib/roles';
 import { haptic } from '@/lib/telegram-webapp';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 
 export function formatPhone(phone?: string | null) {
@@ -35,10 +36,15 @@ export function TgProfile({ links, showTarif }: { links: TgProfileLink[]; showTa
   const nameChanged = name.trim().length >= 3 && name.trim() !== user.name;
 
   return (
-    <TgPage>
-      <TgHeader title="Profil" />
+    <TgPage className="gap-3">
+      <h1 className="sr-only">Profil</h1>
       <div className="flex items-center gap-3.5">
-        <TgAvatar name={user.name} src={user.avatar} size={56} />
+        <TgAvatar
+          name={user.name}
+          src={user.avatar}
+          size={64}
+          className="bg-success font-heading text-success-foreground"
+        />
         <div className="min-w-0">
           <div className="truncate text-lg font-bold">{user.name}</div>
           <div className="truncate text-[13px] text-muted-foreground">
@@ -49,21 +55,22 @@ export function TgProfile({ links, showTarif }: { links: TgProfileLink[]; showTa
 
       {showTarif && (
         <section
-          className={
-            premium
-              ? 'flex flex-col gap-1 rounded-[18px] bg-gold-soft px-4 py-3.5'
-              : 'flex flex-col gap-1 rounded-[18px] border border-border bg-card px-4 py-3.5'
-          }
+          className={cn(
+            'flex flex-col gap-1.5 rounded-[18px] px-4 py-3.5',
+            premium ? 'bg-primary text-primary-foreground' : 'border border-border bg-card'
+          )}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="font-bold">Tarif: {premium ? 'Premium' : 'Standart'}</span>
             {premium && user.premiumExpiresAt && (
-              <span className="text-[13px] text-gold-foreground">
+              <span className="text-[13px] text-primary-foreground/80">
                 {formatDate(user.premiumExpiresAt)} gacha
               </span>
             )}
           </div>
-          <span className="text-[13px] text-muted-foreground">
+          <span
+            className={cn('text-[13px]', premium ? 'text-primary-foreground/80' : 'text-muted-foreground')}
+          >
             {premium
               ? "Testlaringizda o'quvchilarga kengaytirilgan urinish limiti."
               : "Standart tarifda testlaringizda o'quvchilarga 1 ta urinish beriladi."}
@@ -104,9 +111,8 @@ export function TgProfile({ links, showTarif }: { links: TgProfileLink[]; showTa
         </div>
       </div>
 
-      <section className="rounded-2xl bg-success-soft px-4 py-3 text-[13px] text-secondary-foreground">
-        <strong className="text-success">Telegram orqali kirgansiz.</strong> Bildirishnomalar shu botga
-        keladi.
+      <section className="rounded-2xl bg-success-soft px-3.5 py-3 text-[13px] text-success">
+        <strong>Telegram orqali kirgansiz.</strong> Bildirishnomalar shu botga keladi.
       </section>
 
       <nav aria-label="Bo'limlar" className="overflow-hidden rounded-2xl border border-border bg-card">

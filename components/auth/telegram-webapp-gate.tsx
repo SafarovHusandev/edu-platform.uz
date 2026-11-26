@@ -9,11 +9,68 @@ import { useTelegramWebAppLogin } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
 import { getTokenCookie } from '@/lib/cookies';
 import { TELEGRAM_BOT_USERNAME } from '@/lib/config';
-import { getTelegramInitData, getTelegramWebApp, openTelegramLink } from '@/lib/telegram-webapp';
+import {
+  getTelegramInitData,
+  getTelegramWebApp,
+  openTelegramLink,
+  supportsNativeButtons,
+} from '@/lib/telegram-webapp';
+import { TgMainButton } from '@/components/tg/tg-main-button';
 
 const AUTH_PATHS = ['/', '/login', '/register'];
 
 const subscribeNoop = () => () => {};
+
+const openBot = () => openTelegramLink(`https://t.me/${TELEGRAM_BOT_USERNAME}`);
+
+const REGISTER_STEPS: React.ReactNode[] = [
+  <>
+    Botni oching va <strong>/start</strong> bosing
+  </>,
+  'Kontaktingizni ulashing',
+  "Mini ilovani qayta oching",
+];
+
+function NotRegistered({ onRetry, retrying }: { onRetry: () => void; retrying: boolean }) {
+  const native = useSyncExternalStore(subscribeNoop, supportsNativeButtons, () => false);
+  return (
+    <div className="mx-auto flex min-h-full max-w-md flex-col gap-4.5 px-6 pt-12 pb-[max(env(safe-area-inset-bottom),24px)] text-left">
+      <span className="flex size-16 items-center justify-center rounded-[20px] bg-gold-soft text-gold-foreground">
+        <Send className="size-7" />
+      </span>
+      <h1 className="font-heading text-2xl leading-tight font-semibold">
+        Avval botdan ro&apos;yxatdan o&apos;ting
+      </h1>
+      <p className="leading-relaxed text-secondary-foreground">
+        Mini ilova orqali yangi hisob ochib bo&apos;lmaydi — telefon raqamingizni faqat bot so&apos;ray
+        oladi.
+      </p>
+      <ol className="flex flex-col gap-2.5">
+        {REGISTER_STEPS.map((step, i) => (
+          <li key={i} className="flex items-center gap-3 rounded-[14px] bg-background px-3.5 py-3">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-primary-foreground">
+              {i + 1}
+            </span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-auto flex flex-col gap-2.5 pt-4">
+        <Button size="lg" variant="outline" className="h-12 w-full" disabled={retrying} onClick={onRetry}>
+          {retrying && <Loader2 className="size-4 animate-spin" />}
+          Qayta urinish
+        </Button>
+        {native ? (
+          <TgMainButton text="Botga o'tish" onClick={openBot} />
+        ) : (
+          <Button size="lg" className="h-12 w-full" onClick={openBot}>
+            <Send className="size-4" /> Botga o&apos;tish
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // Sayt Telegram Mini App sifatida ochilganda login/parol formasini ko'rsatmay,
 // initData orqali avtomatik kiritadi. Oddiy brauzerda hech narsa render qilmaydi.
@@ -62,31 +119,22 @@ export function TelegramWebAppGate() {
 
   const status = login.error instanceof ApiError ? login.error.status : null;
 
+  // 404 — telefon raqami faqat bot orqali olinadi: dizayn (MiniApp.html) bo'yicha
+  // to'liq ekran yo'riqnoma, "Botga o'tish" — Telegram MainButton'ida
+  if (status === 404) {
+    return (
+      <div className="fixed inset-0 z-100 overflow-y-auto bg-card">
+        <NotRegistered onRetry={authenticate} retrying={login.isPending} />
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-background p-6">
       <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
         <Logo />
 
-        {status === 404 ? (
-          <>
-            <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Send className="size-7" />
-            </span>
-            <h1 className="font-heading text-xl font-semibold">Avval botga o&apos;ting</h1>
-            <p className="text-sm text-muted-foreground">
-              Hisobingiz hali Telegram bilan bog&apos;lanmagan. Botni oching va{' '}
-              <span className="font-semibold text-foreground">/start</span> tugmasini bosing,
-              so&apos;ng ilovani qayta oching.
-            </p>
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={() => openTelegramLink(`https://t.me/${TELEGRAM_BOT_USERNAME}`)}
-            >
-              <Send className="size-4" /> Botga o&apos;tish
-            </Button>
-          </>
-        ) : status === 401 ? (
+        {status === 401 ? (
           <>
             <span className="flex size-14 items-center justify-center rounded-2xl bg-gold/15 text-gold-foreground">
               <Clock className="size-7" />

@@ -10,6 +10,7 @@ import {
   TgEmpty,
   TgError,
   TgHeader,
+  TgLoadMore,
   TgPage,
   TgPill,
   TgSkeletonList,
@@ -19,6 +20,9 @@ import {
 import { attemptStatus, attemptStudent } from '@/components/tg/tg-quiz-utils';
 import { useQuizResults, useQuizWithAnswers } from '@/hooks/use-quizzes';
 import { formatDuration } from '@/lib/format';
+import { cn } from '@/lib/utils';
+
+const PAGE_SIZE = 30;
 
 export default function TgQuizResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -26,6 +30,8 @@ export default function TgQuizResultsPage({ params }: { params: Promise<{ id: st
   const quiz = useQuizWithAnswers(id);
   const results = useQuizResults(id);
   const [filter, setFilter] = useState('all');
+  // Backend barcha urinishlarni bitta javobda beradi — ekranga bo'lib chiqaramiz
+  const [shown, setShown] = useState(PAGE_SIZE);
 
   const attempts = useMemo(() => results.data ?? [], [results.data]);
   const finished = attempts.filter((a) => a.status !== 'in_progress');
@@ -55,25 +61,35 @@ export default function TgQuizResultsPage({ params }: { params: Promise<{ id: st
     <TgPage>
       <TgHeader eyebrow="Natijalar" title={quiz.data?.title ?? (quiz.isLoading ? '…' : 'Test')} />
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1.5">
         {[
-          { value: attempts.length, label: 'urinish' },
-          { value: avg ?? '—', label: "o'rtacha" },
-          { value: pendingCount, label: 'tekshirish', warn: pendingCount > 0 },
-          { value: expiredCount, label: 'vaqt tugagan' },
+          { value: attempts.length, label: 'urinish', tone: 'plain' },
+          { value: avg ?? '—', label: "o'rtacha", tone: 'plain' },
+          { value: pendingCount, label: 'tekshirish', tone: pendingCount > 0 ? 'warn' : 'plain' },
+          { value: expiredCount, label: 'vaqt tugagan', tone: expiredCount > 0 ? 'danger' : 'plain' },
         ].map((item) => (
           <div
             key={item.label}
-            className={
-              item.warn
-                ? 'rounded-2xl bg-gold-soft px-2 py-2.5 text-center'
-                : 'rounded-2xl border border-border bg-card px-2 py-2.5 text-center'
-            }
+            className={cn(
+              'min-w-0 rounded-xl px-1.5 py-2.5 text-center',
+              item.tone === 'warn' && 'bg-gold-soft text-gold-foreground',
+              item.tone === 'danger' && 'bg-destructive-soft text-destructive',
+              item.tone === 'plain' && 'border border-border bg-card'
+            )}
           >
-            <div className="font-heading text-lg font-bold tabular-nums">
-              {results.isLoading ? '·' : item.value}
+            {results.isLoading ? (
+              <div className="mx-auto my-0.5 h-5 w-7 animate-pulse rounded bg-muted" />
+            ) : (
+              <div className="font-heading font-bold tabular-nums">{item.value}</div>
+            )}
+            <div
+              className={cn(
+                'truncate text-[11px]',
+                item.tone === 'plain' ? 'text-muted-foreground' : 'opacity-85'
+              )}
+            >
+              {item.label}
             </div>
-            <div className="truncate text-[11px] text-muted-foreground">{item.label}</div>
           </div>
         ))}
       </div>
@@ -81,7 +97,10 @@ export default function TgQuizResultsPage({ params }: { params: Promise<{ id: st
       {attempts.length > 0 && (
         <TgChips
           value={filter}
-          onChange={setFilter}
+          onChange={(v) => {
+            setFilter(v);
+            setShown(PAGE_SIZE);
+          }}
           options={[
             { value: 'all', label: 'Barchasi' },
             ...grades.map((g) => ({ value: g, label: g })),
@@ -94,11 +113,17 @@ export default function TgQuizResultsPage({ params }: { params: Promise<{ id: st
         <TgSkeletonList count={6} height={60} />
       ) : results.isError ? (
         <TgError onRetry={() => results.refetch()} />
+      ) : attempts.length === 0 ? (
+        <TgEmpty
+          icon={Users}
+          title="Hali urinishlar yo'q"
+          description="O'quvchilar testni yechganda shu yerda ko'rinadi"
+        />
       ) : visible.length === 0 ? (
-        <TgEmpty icon={Users} title="Hali urinishlar yo'q" description="O'quvchilar testni yechganda shu yerda ko'rinadi" />
+        <TgEmpty icon={Users} title="Bu filtr bo'yicha urinish yo'q" />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          {visible.map((attempt) => {
+          {visible.slice(0, shown).map((attempt) => {
             const student = attemptStudent(attempt);
             const status = attemptStatus(attempt);
             const pending = attempt.status === 'submitted';
@@ -111,7 +136,9 @@ export default function TgQuizResultsPage({ params }: { params: Promise<{ id: st
             const row = (
               <>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{student?.name ?? "O'quvchi"}</span>
+                  <span className="block truncate text-sm font-semibold">
+                    {student?.name ?? "O'quvchi"}
+                  </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {[
                       gradeLabel(student?.grade),
@@ -122,17 +149,17 @@ export default function TgQuizResultsPage({ params }: { params: Promise<{ id: st
                       .join(' · ')}
                   </span>
                 </span>
-                <span className="font-heading text-base font-bold tabular-nums">
+                <span className="w-9 shrink-0 text-right font-heading text-sm font-semibold tabular-nums">
                   {score}
                   {pending && '*'}
                 </span>
-                <TgPill tone={status.tone} className="min-w-[74px] justify-center">
+                <TgPill tone={status.tone} className="min-w-18 justify-center px-2">
                   {status.label}
                 </TgPill>
               </>
             );
             const className =
-              'flex items-center gap-3 border-t border-border px-3.5 py-3 first:border-t-0';
+              'flex items-center gap-2.5 border-t border-border px-3.5 py-2.75 first:border-t-0';
             return pending ? (
               <Link
                 key={attempt._id}
@@ -148,6 +175,14 @@ export default function TgQuizResultsPage({ params }: { params: Promise<{ id: st
             );
           })}
         </div>
+      )}
+
+      {visible.length > shown && (
+        <TgLoadMore
+          onClick={() => setShown((n) => n + PAGE_SIZE)}
+          shown={shown}
+          total={visible.length}
+        />
       )}
 
       {pendingCount > 0 && (

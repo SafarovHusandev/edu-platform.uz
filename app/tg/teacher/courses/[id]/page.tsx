@@ -74,10 +74,10 @@ export default function TgCourseLessonsPage({ params }: { params: Promise<{ id: 
         eyebrow={`${c.title} · ${lessons.length} dars`}
         title="Darslar"
         action={
-          <label className="flex shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold">
+          <label className="flex shrink-0 items-center gap-1.5 text-[13px] font-semibold">
             <input
               type="checkbox"
-              className="size-5 accent-primary"
+              className="size-4.5 accent-primary"
               checked={!!c.isPublished}
               disabled={updateCourse.isPending}
               onChange={(e) => {
@@ -106,13 +106,17 @@ export default function TgCourseLessonsPage({ params }: { params: Promise<{ id: 
       </TgStatGrid>
 
       {lessons.length === 0 ? (
-        <TgEmpty icon={FileText} title="Hali dars qo'shilmagan" />
+        <TgEmpty
+          icon={FileText}
+          title="Hali dars qo'shilmagan"
+          description="«+ Yangi dars» tugmasi web versiyada dars qo'shish sahifasini ochadi"
+        />
       ) : (
-        <ol className="overflow-hidden rounded-2xl border border-border bg-card">
+        <ol className="overflow-hidden rounded-[18px] border border-border bg-card">
           {lessons.map((lesson, index) => (
             <li
               key={lesson._id}
-              className="flex items-center gap-2.5 border-t border-border px-3 py-2.5 first:border-t-0"
+              className="flex items-center gap-2.5 border-t border-border px-3 py-2.75 first:border-t-0"
             >
               <span className="flex flex-col">
                 <button
@@ -134,17 +138,17 @@ export default function TgCourseLessonsPage({ params }: { params: Promise<{ id: 
                   <ArrowDown className="size-3.5" />
                 </button>
               </span>
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-xs font-bold text-primary">
+              <span className="w-4.5 shrink-0 text-center font-heading text-xs font-semibold text-muted-foreground">
                 {index + 1}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">{lesson.title}</span>
+                <span className="block truncate text-sm font-semibold">{lesson.title}</span>
                 <span className="block truncate text-xs text-muted-foreground">{lessonMeta(lesson)}</span>
               </span>
               <Link
                 href={`/teacher/lessons/${lesson._id}`}
                 aria-label="Darsni tahrirlash"
-                className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground"
+                className="flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-border text-muted-foreground active:bg-muted"
               >
                 <Pencil className="size-4" />
               </Link>

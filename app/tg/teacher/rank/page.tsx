@@ -2,107 +2,139 @@
 
 import { useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { TgAvatar, TgEmpty, TgError, TgHeader, TgPage, TgSkeletonList } from '@/components/tg/tg-ui';
+import {
+  TgEmpty,
+  TgError,
+  TgHeader,
+  TgLoadMore,
+  TgPage,
+  TgSkeletonList,
+} from '@/components/tg/tg-ui';
 import { useTopTeachers } from '@/hooks/use-stats';
 import { useAuthStore } from '@/store/auth-store';
 import { cn } from '@/lib/utils';
+import type { TeacherRanking } from '@/types';
 
 const PAGE_SIZE = 20;
 
-const MEDAL = ['bg-gold text-foreground', 'bg-slate-300 text-slate-800', 'bg-amber-700 text-white'];
+// Dizayn (TgTmRank): 1-o'rin — oltin, 2-3 — ko'k, qolganlar — kulrang
+function medalClass(rank: number) {
+  if (rank === 1) return 'bg-gold text-foreground dark:text-background';
+  if (rank <= 3) return 'bg-primary text-primary-foreground';
+  return 'bg-muted text-secondary-foreground';
+}
+
+function teacherMeta(t: TeacherRanking) {
+  return [
+    t.coursesCount ? `${t.coursesCount} kurs` : null,
+    `${t.quizzesCount} test`,
+    t.booksCount ? `${t.booksCount} kitob` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function RankPage({ page, myId }: { page: number; myId?: string }) {
+  const query = useTopTeachers(page, PAGE_SIZE);
+  if (query.isLoading) {
+    return (
+      <div className="flex flex-col gap-2 p-3">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+    );
+  }
+  if (query.isError) {
+    return (
+      <div className="p-3">
+        <TgError onRetry={() => query.refetch()} />
+      </div>
+    );
+  }
+  return query.data?.items.map((teacher) => (
+    <div
+      key={teacher._id}
+      aria-current={teacher._id === myId ? 'true' : undefined}
+      className={cn(
+        'flex items-center gap-3 border-t border-border px-3.5 py-2.75 first:border-t-0',
+        teacher._id === myId && 'bg-primary-soft'
+      )}
+    >
+      <span
+        className={cn(
+          'flex size-7.5 shrink-0 items-center justify-center rounded-[9px] font-heading text-[13px] font-bold tabular-nums',
+          medalClass(teacher.rank)
+        )}
+      >
+        {teacher.rank}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-bold">{teacher.name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{teacherMeta(teacher)}</span>
+      </span>
+      <span className="shrink-0 text-sm font-bold tabular-nums">
+        {teacher.avgRating ? `★ ${teacher.avgRating.toFixed(1)}` : '—'}
+      </span>
+    </div>
+  ));
+}
 
 export default function TgTeacherRankPage() {
   const user = useAuthStore((s) => s.user);
-  const [page, setPage] = useState(1);
-  const top = useTopTeachers(page, PAGE_SIZE);
-  const items = top.data?.items ?? [];
-  const me = top.data?.me;
-  const meRow = items.find((t) => t._id === user?._id);
+  const [pages, setPages] = useState(1);
+  const first = useTopTeachers(1, PAGE_SIZE);
+  const last = useTopTeachers(pages, PAGE_SIZE);
+  const total = first.data?.total ?? 0;
+  const totalPages = last.data?.totalPages ?? first.data?.totalPages ?? 1;
+  const me = first.data?.me;
+  const meRow = first.data?.items.find((t) => t._id === user?._id);
 
   return (
-    <TgPage>
-      <TgHeader title="Eng faol o'qituvchilar" />
+    <TgPage className="gap-3">
+      <TgHeader variant="inner" title="Eng faol o'qituvchilar" />
 
       {me && (
-        <div className="flex items-center gap-3 rounded-[18px] bg-primary px-4 py-3.5 text-primary-foreground">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15 font-heading text-lg font-bold">
-            {me.rank}
-          </span>
+        <div className="flex items-center gap-3.5 rounded-[18px] bg-primary p-4 text-primary-foreground">
+          <span className="font-heading text-[34px] leading-none font-bold tabular-nums">{me.rank}</span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-bold">Siz · {user?.name}</span>
-            <span className="block truncate text-[13px] text-white/80">
+            <span className="block truncate text-[13px] text-primary-foreground/80">
               {meRow
-                ? `${meRow.coursesCount} kurs · ${meRow.quizzesCount} test${meRow.avgRating ? ` · ★ ${meRow.avgRating.toFixed(1)}` : ''}`
-                : `${me.activityScore} faollik ball`}
+                ? [teacherMeta(meRow), meRow.avgRating ? `★ ${meRow.avgRating.toFixed(1)}` : null]
+                    .filter(Boolean)
+                    .join(' · ')
+                : `${me.activityScore} faollik bali`}
             </span>
           </span>
         </div>
       )}
 
-      {top.isLoading ? (
-        <TgSkeletonList count={7} height={56} />
-      ) : top.isError ? (
-        <TgError onRetry={() => top.refetch()} />
-      ) : items.length === 0 ? (
-        <TgEmpty icon={Trophy} title="Reyting hali shakllanmagan" />
+      {first.isLoading ? (
+        <TgSkeletonList count={7} height={52} />
+      ) : first.isError ? (
+        <TgError onRetry={() => first.refetch()} />
+      ) : total === 0 ? (
+        <TgEmpty
+          icon={Trophy}
+          title="Reyting hali shakllanmagan"
+          description="Kurs, test va kitob qo'shgan o'qituvchilar shu yerda ko'rinadi"
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          {items.map((teacher) => {
-            const isMe = teacher._id === user?._id;
-            return (
-              <div
-                key={teacher._id}
-                className={cn(
-                  'flex items-center gap-3 border-t border-border px-3.5 py-2.5 first:border-t-0',
-                  isMe && 'bg-primary-soft'
-                )}
-              >
-                <span
-                  className={cn(
-                    'flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold',
-                    MEDAL[teacher.rank - 1] ?? 'bg-muted text-muted-foreground'
-                  )}
-                >
-                  {teacher.rank}
-                </span>
-                <TgAvatar name={teacher.name} src={teacher.avatar} size={36} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{teacher.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {teacher.coursesCount} kurs · {teacher.quizzesCount} test · {teacher.booksCount} kitob
-                  </span>
-                </span>
-                <span className="shrink-0 text-sm font-bold tabular-nums">
-                  {teacher.avgRating ? `★ ${teacher.avgRating.toFixed(1)}` : '—'}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {(top.data?.totalPages ?? 1) > 1 && (
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="h-10 rounded-xl border border-border bg-card px-4 text-sm font-semibold disabled:opacity-40"
-          >
-            Oldingi
-          </button>
-          <span className="text-sm text-muted-foreground">
-            {page} / {top.data?.totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={page >= (top.data?.totalPages ?? 1)}
-            onClick={() => setPage((p) => p + 1)}
-            className="h-10 rounded-xl border border-border bg-card px-4 text-sm font-semibold disabled:opacity-40"
-          >
-            Keyingi
-          </button>
-        </div>
+        <>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            {Array.from({ length: pages }, (_, i) => (
+              <RankPage key={i + 1} page={i + 1} myId={user?._id} />
+            ))}
+          </div>
+          {pages < totalPages && last.isSuccess && !last.isPlaceholderData && (
+            <TgLoadMore
+              onClick={() => setPages((p) => p + 1)}
+              shown={Math.min(pages * PAGE_SIZE, total)}
+              total={total}
+            />
+          )}
+        </>
       )}
     </TgPage>
   );

@@ -4,7 +4,7 @@
 // Dizayn: edu-platform-dizayn/TgTm*.html — 390px ekran, 20px chekka, 16-18px radius.
 
 import Link from 'next/link';
-import { ChevronRight, Inbox, RotateCw } from 'lucide-react';
+import { ChevronRight, Inbox, Loader2, RotateCw } from 'lucide-react';
 import { resolveAssetUrl } from '@/lib/config';
 import { initials } from '@/lib/format';
 import { haptic } from '@/lib/telegram-webapp';
@@ -14,25 +14,42 @@ export function TgPage({ children, className }: { children: React.ReactNode; cla
   return <div className={cn('flex flex-col gap-3.5 px-5 pt-5 pb-6', className)}>{children}</div>;
 }
 
+// Dizaynda ikki xil sarlavha: tab ildizlarida — Unbounded 22px ("Testlarim"),
+// ichki sahifalarda — Onest 17-18px qalin, ustida kichik izoh ("Natijalar").
 export function TgHeader({
   title,
   eyebrow,
   action,
+  variant = eyebrow ? 'inner' : 'root',
 }: {
   title: React.ReactNode;
   eyebrow?: React.ReactNode;
   action?: React.ReactNode;
+  variant?: 'root' | 'inner';
 }) {
   return (
-    <div className="flex items-end justify-between gap-3">
-      <div className="min-w-0">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0 flex-1">
         {eyebrow && <div className="truncate text-[13px] text-muted-foreground">{eyebrow}</div>}
-        <h1 className="font-heading text-xl leading-tight font-semibold wrap-break-word">{title}</h1>
+        <h1
+          className={cn(
+            'leading-tight wrap-break-word',
+            variant === 'root'
+              ? 'font-heading text-[22px] font-semibold'
+              : cn('font-bold', eyebrow ? 'text-[17px]' : 'text-lg')
+          )}
+        >
+          {title}
+        </h1>
       </div>
       {action}
     </div>
   );
 }
+
+// Sarlavha yonidagi "+ Test", "+ Kurs" tugmasi
+export const tgHeaderActionClass =
+  'inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-bold text-primary-foreground active:opacity-90';
 
 export function TgSectionTitle({
   children,
@@ -154,11 +171,18 @@ export function TgStat({
 }) {
   const body = (
     <>
-      <div className={cn('truncate text-[11px]', accent ? 'text-white/80' : 'text-muted-foreground')}>
+      <div
+        className={cn('truncate text-[11px]', accent ? 'text-primary-foreground/80' : 'text-muted-foreground')}
+      >
         {label}
       </div>
       {loading ? (
-        <div className={cn('mt-1.5 h-6 w-10 animate-pulse rounded-md', accent ? 'bg-white/25' : 'bg-muted')} />
+        <div
+          className={cn(
+            'mt-1.5 h-6 w-10 animate-pulse rounded-md',
+            accent ? 'bg-primary-foreground/25' : 'bg-muted'
+          )}
+        />
       ) : (
         <div className="mt-1 truncate font-heading text-xl font-bold tabular-nums">{value}</div>
       )}
@@ -167,7 +191,7 @@ export function TgStat({
           className={cn(
             'truncate text-[11px]',
             accent
-              ? 'text-white/80'
+              ? 'text-primary-foreground/80'
               : hintTone === 'success'
                 ? 'text-success'
                 : hintTone === 'danger'
@@ -181,7 +205,8 @@ export function TgStat({
     </>
   );
   const className = cn(
-    'block min-w-0 rounded-2xl p-3',
+    'block min-w-0 rounded-2xl p-3 transition-opacity',
+    href && 'active:opacity-80',
     accent ? 'bg-primary text-primary-foreground' : 'border border-border bg-card'
   );
   return href ? (
@@ -211,14 +236,17 @@ export function TgCallout({
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 rounded-[18px] px-4 py-3.5',
-        tone === 'warning' ? 'bg-gold-soft' : 'border border-primary/25 bg-card'
+        'flex items-center gap-3 rounded-[18px] px-4 py-3.5 text-foreground active:opacity-90',
+        tone === 'warning' ? 'bg-gold-soft' : 'border border-primary/30 bg-card'
       )}
     >
       <span
         className={cn(
           'flex size-11 shrink-0 items-center justify-center rounded-xl font-heading font-bold',
-          tone === 'warning' ? 'bg-gold text-foreground' : 'bg-primary-soft text-primary'
+          // Oltin fonda doim to'q matn: light'da foreground, dark'da background to'q
+          tone === 'warning'
+            ? 'bg-gold text-foreground dark:text-background'
+            : 'bg-primary-soft text-primary'
         )}
       >
         {badge}
@@ -226,7 +254,14 @@ export function TgCallout({
       <span className="min-w-0 flex-1">
         <span className="block font-bold">{title}</span>
         {description && (
-          <span className="block truncate text-[13px] text-muted-foreground">{description}</span>
+          <span
+            className={cn(
+              'block truncate text-[13px]',
+              tone === 'warning' ? 'text-gold-foreground' : 'text-muted-foreground'
+            )}
+          >
+            {description}
+          </span>
         )}
       </span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
@@ -311,10 +346,10 @@ export function TgChips<T extends string>({
               onChange(option.value);
             }}
             className={cn(
-              'shrink-0 rounded-full px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors',
+              'shrink-0 rounded-full px-3 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors',
               active
-                ? 'bg-foreground text-background'
-                : 'border border-border bg-card text-secondary-foreground'
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-input bg-card text-foreground active:bg-muted'
             )}
           >
             {option.label}
@@ -336,7 +371,7 @@ export function TgSegment<T extends string>({
   options: { value: T; label: React.ReactNode }[];
 }) {
   return (
-    <div role="tablist" className="grid auto-cols-fr grid-flow-col gap-1 rounded-[14px] bg-muted p-1">
+    <div role="tablist" className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-muted p-1">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -350,8 +385,9 @@ export function TgSegment<T extends string>({
               onChange(option.value);
             }}
             className={cn(
-              'truncate rounded-[10px] px-2 py-2 text-[13px] font-semibold transition-colors',
-              active ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
+              'truncate rounded-[9px] px-1 py-2.5 font-semibold transition-colors',
+              options.length > 2 ? 'text-[13px]' : 'text-sm',
+              active ? 'bg-card text-foreground shadow-sm' : 'text-secondary-foreground'
             )}
           >
             {option.label}
@@ -395,20 +431,106 @@ export function TgEmpty({
   );
 }
 
-export function TgError({ onRetry }: { onRetry: () => void }) {
+export function TgError({
+  onRetry,
+  title = "Ma'lumotni yuklab bo'lmadi",
+}: {
+  onRetry: () => void;
+  title?: string;
+}) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive-soft px-6 py-8 text-center">
-      <div className="font-bold text-destructive">Ma&apos;lumotni yuklab bo&apos;lmadi</div>
+    <div
+      role="alert"
+      className="flex flex-col items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive-soft px-6 py-8 text-center"
+    >
+      <div className="font-bold text-destructive">{title}</div>
+      <p className="-mt-1 text-[13px] text-secondary-foreground">
+        Internet aloqasini tekshirib, qayta urinib ko&apos;ring.
+      </p>
       <button
         type="button"
-        onClick={onRetry}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold"
+        onClick={() => {
+          haptic('light');
+          onRetry();
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold active:bg-muted"
       >
         <RotateCw className="size-4" /> Qayta urinish
       </button>
     </div>
   );
 }
+
+// Sahifalab yuklash tugmasi — ro'yxat oxirida
+export function TgLoadMore({
+  onClick,
+  loading,
+  shown,
+  total,
+}: {
+  onClick: () => void;
+  loading?: boolean;
+  shown?: number;
+  total?: number;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={() => {
+        haptic('light');
+        onClick();
+      }}
+      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold active:bg-muted disabled:opacity-60"
+    >
+      {loading && <Loader2 className="size-4 animate-spin" />}
+      Yana yuklash
+      {shown != null && total != null && (
+        <span className="font-medium text-muted-foreground tabular-nums">
+          {shown} / {total}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// Test yaratish bosqichlari (TgTmBuilder): o'tilgan — yashil, joriy — ko'k
+export function TgSteps({ steps, current }: { steps: string[]; current: number }) {
+  return (
+    <ol aria-label="Bosqichlar" className="grid grid-cols-3 gap-1.5">
+      {steps.map((label, i) => {
+        const n = i + 1;
+        const state = n < current ? 'done' : n === current ? 'current' : 'todo';
+        return (
+          <li
+            key={label}
+            aria-current={state === 'current' ? 'step' : undefined}
+            className="flex min-w-0 flex-col gap-1.5"
+          >
+            <span
+              className={cn(
+                'h-1.25 rounded-full',
+                state === 'done' ? 'bg-success' : state === 'current' ? 'bg-primary' : 'bg-border'
+              )}
+            />
+            <span
+              className={cn(
+                'truncate text-xs',
+                state === 'done' && 'font-semibold text-success',
+                state === 'current' && 'font-bold text-primary',
+                state === 'todo' && 'font-semibold text-muted-foreground'
+              )}
+            >
+              {n}. {label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+export const QUIZ_BUILDER_STEPS = ['Asosiy', 'Sinflar', 'Savollar'];
 
 // Dizayndagi "Muqova va narxni kengroq tahrirlash uchun web versiyadan..." izohi
 export function TgWebHint({ children, href }: { children: React.ReactNode; href?: string }) {

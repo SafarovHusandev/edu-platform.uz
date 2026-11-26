@@ -122,7 +122,7 @@ export default function TgAdminUserPage({ params }: { params: Promise<{ id: stri
                   className={
                     u.isBlocked
                       ? 'inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-success text-sm font-bold text-success-foreground'
-                      : 'inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-destructive text-sm font-bold text-white'
+                      : 'inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-destructive text-sm font-bold text-background'
                   }
                 >
                   {toggleBlock.isPending && <Loader2 className="size-4 animate-spin" />}

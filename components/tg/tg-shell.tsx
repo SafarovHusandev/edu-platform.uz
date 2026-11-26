@@ -25,6 +25,7 @@ import { useAdminStats } from '@/hooks/use-stats';
 import { TELEGRAM_BOT_USERNAME } from '@/lib/config';
 import { getTokenCookie } from '@/lib/cookies';
 import {
+  cssVarHex,
   getTelegramInitData,
   getTelegramWebApp,
   haptic,
@@ -76,24 +77,46 @@ export function tgHome(role: Role | undefined) {
   return area ? `/tg/${area}` : '/tg';
 }
 
-// Telegram sarlavhasi/foni bilan ilova fonini moslash (globals.css --background)
-const CHROME_COLORS = { light: '#F5F6FA', dark: '#10131B' } as const;
+// Zaxira: oklch'ni bilmaydigan eski WebView uchun globals.css --background qiymati
+const CHROME_FALLBACK = { light: '#F5F6FA', dark: '#10131B' } as const;
 
+// Telegram mavzusi (light/dark) ilovaga o'tadi, sarlavha/fon rangi esa ilova
+// fonining tokenidan olinadi — mavzu almashganda ikkalasi ham yangilanadi.
 function useTelegramTheme() {
-  const { setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
 
   useEffect(() => {
     const webApp = getTelegramWebApp();
     if (!webApp?.initData) return;
-    const apply = () => {
-      const scheme = webApp.colorScheme === 'dark' ? 'dark' : 'light';
-      setTheme(scheme);
-      setTelegramChromeColor(CHROME_COLORS[scheme]);
-    };
+    const apply = () => setTheme(webApp.colorScheme === 'dark' ? 'dark' : 'light');
     apply();
     webApp.onEvent?.('themeChanged', apply);
     return () => webApp.offEvent?.('themeChanged', apply);
   }, [setTheme]);
+
+  useEffect(() => {
+    if (!getTelegramWebApp()?.initData) return;
+    // next-themes .dark klassini o'z effektida qo'yadi — keyingi kadrda o'qiymiz
+    const frame = requestAnimationFrame(() => {
+      const fallback = CHROME_FALLBACK[resolvedTheme === 'dark' ? 'dark' : 'light'];
+      setTelegramChromeColor(cssVarHex('--background', fallback));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [resolvedTheme]);
+}
+
+// Sahifa BackButton bosilishini o'zi hal qilishi uchun (masalan, ko'p bosqichli
+// formada oldingi bosqichga qaytish). Bir vaqtda bitta sahifa egallaydi.
+const backOverride: { current: (() => void) | null } = { current: null };
+
+export function useTgBackOverride(handler: (() => void) | null) {
+  useEffect(() => {
+    if (!handler) return;
+    backOverride.current = handler;
+    return () => {
+      if (backOverride.current === handler) backOverride.current = null;
+    };
+  }, [handler]);
 }
 
 // Tab ildizlarida "Yopish" (Telegram'ning o'zi ko'rsatadi), ichki sahifalarda — BackButton
@@ -111,6 +134,10 @@ function useTelegramBackButton(isRoot: boolean, fallbackHref: string) {
     }
     const handler = () => {
       haptic('light');
+      if (backOverride.current) {
+        backOverride.current();
+        return;
+      }
       if (window.history.length > 1) router.back();
       else router.replace(fallbackHref);
     };
@@ -137,7 +164,7 @@ function BottomNav({ area }: { area: TgArea }) {
 
   return (
     <>
-      <div aria-hidden className="h-[76px]" />
+      <div aria-hidden className="h-(--tg-nav-h)" />
       <nav
         aria-label="Pastki menyu"
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-card px-2 pt-2 pb-[max(env(safe-area-inset-bottom),12px)]"
@@ -158,9 +185,9 @@ function BottomNav({ area }: { area: TgArea }) {
               )}
             >
               <span className="relative block">
-                <Icon className="size-[22px]" />
+                <Icon className="size-5.5" />
                 {count > 0 && (
-                  <span className="absolute -top-1 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -top-1 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-background">
                     {count > 99 ? '99+' : count}
                   </span>
                 )}
@@ -317,7 +344,12 @@ export function TgShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-background"
-      style={isRoot ? ({ '--tg-nav-h': '72px' } as React.CSSProperties) : undefined}
+      // Pastki menyu balandligi (safe-area bilan) — brauzerdagi MainButton shu ustida turadi
+      style={
+        isRoot
+          ? ({ '--tg-nav-h': 'calc(60px + max(env(safe-area-inset-bottom), 12px))' } as React.CSSProperties)
+          : undefined
+      }
     >
       <main className="flex-1">{children}</main>
       {isRoot && <BottomNav area={area} />}

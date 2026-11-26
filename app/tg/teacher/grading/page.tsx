@@ -2,7 +2,8 @@
 
 import { use, useState } from 'react';
 import { CheckCheck } from 'lucide-react';
-import { TgMainButton } from '@/components/tg/tg-main-button';
+import Link from 'next/link';
+import { TgMainButton, TgSecondaryButton } from '@/components/tg/tg-main-button';
 import {
   TgAvatar,
   TgEmpty,
@@ -46,7 +47,7 @@ function GradingCard({
   onSkip: () => void;
 }) {
   const quiz = quizOf(attempt);
-  const { data: quizData, isLoading } = useQuizWithAnswers(quiz._id);
+  const { data: quizData, isLoading, isError, refetch } = useQuizWithAnswers(quiz._id);
   const review = useReviewOpenEnded(quiz._id);
   const student = attemptStudent(attempt);
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -91,7 +92,7 @@ function GradingCard({
       <TgHeader
         title="Baholash"
         action={
-          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground tabular-nums">
+          <span className="rounded-full bg-gold-soft px-2.5 py-1 text-[13px] font-bold text-gold-foreground tabular-nums">
             {position} / {total}
           </span>
         }
@@ -124,6 +125,8 @@ function GradingCard({
 
       {isLoading ? (
         <TgSkeletonList count={2} height={180} />
+      ) : isError ? (
+        <TgError title="Test savollarini yuklab bo'lmadi" onRetry={() => refetch()} />
       ) : openQuestions.length === 0 ? (
         <p className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
           Bu testda ochiq savollar topilmadi.
@@ -161,33 +164,39 @@ function GradingCard({
                   </p>
                 </details>
               )}
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Ball">
-                {quickScores(question.points).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={selected === value}
-                    onClick={() => {
-                      haptic('selection');
-                      setScores((prev) => ({ ...prev, [question._id]: value }));
-                    }}
-                    className={cn(
-                      'h-10 min-w-10 rounded-xl px-2 font-heading text-sm font-bold tabular-nums transition-colors',
-                      selected === value
-                        ? 'bg-primary text-primary-foreground'
-                        : 'border border-border bg-background'
-                    )}
-                  >
-                    {value}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-1.5 border-t border-border pt-2.5">
+                <span className="text-[13px] font-semibold">
+                  Ball{selected !== undefined && `: ${selected} / ${question.points}`}
+                </span>
+                <div className="grid grid-cols-6 gap-1" role="group" aria-label={`${order}-savol bali`}>
+                  {quickScores(question.points).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={selected === value}
+                      disabled={review.isPending}
+                      onClick={() => {
+                        haptic('selection');
+                        setScores((prev) => ({ ...prev, [question._id]: value }));
+                      }}
+                      className={cn(
+                        'h-9 rounded-lg font-bold tabular-nums transition-colors disabled:opacity-60',
+                        selected === value
+                          ? 'bg-primary text-primary-foreground'
+                          : 'border border-input bg-card active:bg-muted'
+                      )}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
               </div>
               <input
-                aria-label="Izoh"
+                aria-label={`${order}-savol uchun izoh`}
                 placeholder="Izoh (ixtiyoriy)"
                 value={feedback[question._id] ?? ''}
                 onChange={(e) => setFeedback((prev) => ({ ...prev, [question._id]: e.target.value }))}
-                className="h-11 rounded-xl border border-input bg-background px-3 text-[15px] outline-none focus:border-primary"
+                className="h-11 rounded-[10px] border border-input bg-card px-3 text-sm outline-none focus:border-primary"
               />
             </article>
           );
@@ -201,13 +210,9 @@ function GradingCard({
         disabled={isLoading || openQuestions.length === 0 || !allScored}
         secondary={
           total > 1 ? (
-            <button
-              type="button"
-              onClick={onSkip}
-              className="h-12 rounded-[14px] border border-border bg-card px-4 text-[15px] font-semibold"
-            >
+            <TgSecondaryButton onClick={onSkip} disabled={review.isPending}>
               O&apos;tkazish
-            </button>
+            </TgSecondaryButton>
           ) : undefined
         }
       />
@@ -222,15 +227,26 @@ export default function TgGradingPage({
 }) {
   const { quiz: quizFilter, attempt: initialAttempt } = use(searchParams);
   const pending = usePendingReviews({ quizId: quizFilter, page: 1, limit: QUEUE_LIMIT });
-  const queue = pending.data?.items ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(initialAttempt ?? null);
+  // Saqlangan urinishlar navbat qayta yuklanguncha ham qayta ko'rinmasin
+  const [doneIds, setDoneIds] = useState<string[]>([]);
 
+  const items = pending.data?.items ?? [];
+  const queue = items.filter((a) => !doneIds.includes(a._id));
+  const staleDone = items.length - queue.length;
+  const total = Math.max(queue.length, (pending.data?.total ?? items.length) - staleDone);
   const index = Math.max(0, queue.findIndex((a) => a._id === selectedId));
   const current = queue[index];
 
-  function goNext() {
-    const next = queue[index + 1] ?? queue[0];
-    setSelectedId(next && next._id !== current?._id ? next._id : null);
+  function goNext(savedId?: string) {
+    const rest = savedId ? queue.filter((a) => a._id !== savedId) : queue;
+    // Navbatdagi keyingisi; oxiriga yetsa — boshidan (o'tkazib yuborilganlar)
+    const next =
+      queue.slice(index + 1).find((a) => a._id !== savedId) ??
+      rest.find((a) => a._id !== current?._id) ??
+      null;
+    if (savedId) setDoneIds((prev) => [...prev, savedId]);
+    setSelectedId(next?._id ?? null);
     window.scrollTo({ top: 0 });
   }
 
@@ -258,22 +274,34 @@ export default function TgGradingPage({
         <TgHeader title="Baholash" />
         <TgEmpty
           icon={CheckCheck}
-          title="Hammasi tekshirilgan"
-          description="O'quvchilar ochiq savollarga javob berganda shu yerda paydo bo'ladi"
+          title={doneIds.length > 0 ? 'Navbat tugadi — barakalla!' : 'Hammasi tekshirilgan'}
+          description={
+            doneIds.length > 0
+              ? `${doneIds.length} ta urinish baholandi. O'quvchilarga natija yuborildi.`
+              : "O'quvchilar ochiq savollarga javob berganda shu yerda paydo bo'ladi"
+          }
+          action={
+            <Link
+              href={quizFilter ? `/tg/teacher/quizzes/${quizFilter}/results` : '/tg/teacher/quizzes'}
+              className="inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"
+            >
+              {quizFilter ? "Natijalarni ko'rish" : 'Testlarimga o\'tish'}
+            </Link>
+          }
         />
       </TgPage>
     );
   }
 
   return (
-    <TgPage>
+    <TgPage className="gap-3">
       <GradingCard
         key={current._id}
         attempt={current}
         position={index + 1}
-        total={pending.data?.total ?? queue.length}
-        onDone={goNext}
-        onSkip={goNext}
+        total={total}
+        onDone={() => goNext(current._id)}
+        onSkip={() => goNext()}
       />
     </TgPage>
   );

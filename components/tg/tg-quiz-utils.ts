@@ -30,8 +30,9 @@ export function attemptStudent(attempt: Attempt): User | null {
 }
 
 export function attemptStatus(attempt: Attempt): { label: string; tone: TgTone } {
-  if (attempt.status === 'expired') return { label: 'Vaqt tugadi', tone: 'neutral' };
+  // Dizayn (TgTmResults): vaqt tugagani — qizil, o'tmagani — kulrang
+  if (attempt.status === 'expired') return { label: 'Vaqt tugadi', tone: 'danger' };
   if (attempt.status === 'in_progress') return { label: 'Yechmoqda', tone: 'primary' };
   if (attempt.status === 'submitted') return { label: 'Tekshir', tone: 'warning' };
-  return attempt.passed ? { label: "O'tdi", tone: 'success' } : { label: "O'tmadi", tone: 'danger' };
+  return attempt.passed ? { label: "O'tdi", tone: 'success' } : { label: "O'tmadi", tone: 'neutral' };
 }

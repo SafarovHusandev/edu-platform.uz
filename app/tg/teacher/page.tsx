@@ -7,6 +7,7 @@ import {
   TgCallout,
   TgCard,
   TgEmpty,
+  TgError,
   TgPage,
   TgPill,
   TgSectionTitle,
@@ -34,7 +35,8 @@ export default function TgTeacherHomePage() {
   const top = useTopTeachers(1, 1);
   const pending = usePendingReviewsCount();
   const shares = useQuizShares('incoming', 'pending');
-  const quizzes = useQuizzesMy({ page: 1, limit: 3 });
+  // «Testlarim» sahifasining 1-sahifasi bilan bir xil kalit — o'tganda qayta so'ralmaydi
+  const quizzes = useQuizzesMy({ page: 1, limit: 20 });
 
   const s = stats.data;
   const pendingCount = pending.data ?? 0;
@@ -50,13 +52,17 @@ export default function TgTeacherHomePage() {
   return (
     <TgPage>
       <div className="flex items-center gap-3">
-        <TgAvatar name={user?.name} src={user?.avatar} className="bg-success text-white" />
+        <TgAvatar
+          name={user?.name}
+          src={user?.avatar}
+          className="bg-success text-success-foreground"
+        />
         <div className="min-w-0 flex-1">
           <div className="text-[13px] text-muted-foreground">{greeting()}</div>
           <div className="truncate text-[17px] font-bold">{user?.name}</div>
         </div>
         {user?.tarif === 'premium' && (
-          <span className="rounded-full bg-gold px-2.5 py-1 text-[11px] font-bold text-foreground">
+          <span className="rounded-full bg-gold px-2.5 py-1 text-[11px] font-bold text-foreground dark:text-background">
             PREMIUM
           </span>
         )}
@@ -110,9 +116,15 @@ export default function TgTeacherHomePage() {
         />
       )}
 
+      {stats.isError && (
+        <TgError title="Statistikani yuklab bo'lmadi" onRetry={() => stats.refetch()} />
+      )}
+
       <TgSectionTitle href="/tg/teacher/quizzes">Testlarim</TgSectionTitle>
       {quizzes.isLoading ? (
         <TgSkeletonList count={2} height={64} />
+      ) : quizzes.isError ? (
+        <TgError onRetry={() => quizzes.refetch()} />
       ) : (quizzes.data?.items.length ?? 0) === 0 ? (
         <TgEmpty
           icon={ClipboardList}
@@ -127,7 +139,7 @@ export default function TgTeacherHomePage() {
           }
         />
       ) : (
-        quizzes.data?.items.map((quiz) => {
+        quizzes.data?.items.slice(0, 3).map((quiz) => {
           const status = quizStatus(quiz);
           const st = quiz.stats;
           return (

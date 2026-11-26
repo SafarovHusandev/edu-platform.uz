@@ -33,6 +33,7 @@ interface TelegramHaptic {
 
 interface TelegramWebApp {
   initData: string;
+  initDataUnsafe?: { start_param?: string };
   version?: string;
   platform?: string;
   colorScheme?: 'light' | 'dark';
@@ -86,6 +87,51 @@ export function getTelegramInitData() {
     return stored?.tgWebAppData ?? '';
   } catch {
     return '';
+  }
+}
+
+// Chuqur havola parametri (t.me/<bot>/<app>?startapp=grading yoki menyu tugmasi
+// URL'idagi ?startapp=...). Telegram uni initData ichida, initDataUnsafe'da va
+// URL'dagi tgWebAppStartParam sifatida beradi — qaysi biri bo'lsa o'shani olamiz.
+export function getTelegramStartParam() {
+  if (typeof window === 'undefined') return '';
+  const fromUnsafe = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+  if (fromUnsafe) return fromUnsafe;
+  const fromInitData = new URLSearchParams(getTelegramInitData()).get('start_param');
+  if (fromInitData) return fromInitData;
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  return (
+    search.get('tgWebAppStartParam') ??
+    hash.get('tgWebAppStartParam') ??
+    search.get('startapp') ??
+    ''
+  );
+}
+
+// Telegram API (MainButton, sarlavha rangi) faqat #rrggbb qabul qiladi, dizayn
+// tokenlari esa oklch'da. CSS o'zgaruvchisini joriy mavzu bo'yicha hex'ga
+// o'giradi; brauzer oklch'ni bilmasa — zaxira qiymat.
+export function cssVarHex(name: `--${string}`, fallback: string) {
+  if (typeof document === 'undefined') return fallback;
+  try {
+    // Eski WebView oklch'ni tushunmasa o'zgaruvchi "yaroqsiz" bo'lib, meros rang qaytadi
+    if (!CSS.supports('color', 'oklch(0.5 0.1 270)')) return fallback;
+    const probe = document.createElement('span');
+    probe.style.color = `var(${name})`;
+    probe.style.display = 'none';
+    document.body.appendChild(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    if (!ctx || !computed) return fallback;
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = computed;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+  } catch {
+    return fallback;
   }
 }
 

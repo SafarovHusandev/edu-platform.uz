@@ -6,6 +6,7 @@ import {
   TgAvatar,
   TgCallout,
   TgCard,
+  TgError,
   TgPage,
   TgPill,
   TgSectionTitle,
@@ -34,7 +35,7 @@ export default function TgAdminHomePage() {
   return (
     <TgPage>
       <div className="flex items-center gap-3">
-        <TgAvatar name={user?.name} src={user?.avatar} className="bg-foreground text-background" />
+        <TgAvatar name={user?.name} src={user?.avatar} className="bg-primary text-primary-foreground" />
         <div className="min-w-0 flex-1">
           <div className="text-[13px] text-muted-foreground">
             {user?.role ? ROLE_LABELS[user.role] : 'Admin'}
@@ -44,6 +45,10 @@ export default function TgAdminHomePage() {
       </div>
 
       <h1 className="font-heading text-lg font-semibold">Platforma ko&apos;rsatkichlari</h1>
+
+      {stats.isError && (
+        <TgError title="Ko'rsatkichlarni yuklab bo'lmadi" onRetry={() => stats.refetch()} />
+      )}
 
       <TgStatGrid>
         <TgStat accent label="O'quvchilar" value={formatNumber(s?.students ?? 0)} loading={stats.isLoading} />
@@ -79,6 +84,8 @@ export default function TgAdminHomePage() {
       <TgSectionTitle href="/tg/admin/users?tab=pending">Tasdiqlash navbati</TgSectionTitle>
       {pendingUsers.isLoading ? (
         <TgSkeletonList count={2} height={60} />
+      ) : pendingUsers.isError ? (
+        <TgError onRetry={() => pendingUsers.refetch()} />
       ) : (pendingUsers.data?.items.length ?? 0) === 0 ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-5 text-center text-sm text-muted-foreground">
           Navbat bo&apos;sh 🎉
@@ -102,7 +109,10 @@ export default function TgAdminHomePage() {
                 type="button"
                 disabled={verify.isPending}
                 onClick={() =>
-                  verify.mutate(u._id, { onSuccess: () => haptic('success') })
+                  verify.mutate(u._id, {
+                    onSuccess: () => haptic('success'),
+                    onError: () => haptic('error'),
+                  })
                 }
                 className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-primary px-3 text-[13px] font-bold text-primary-foreground disabled:opacity-50"
               >
@@ -117,13 +127,19 @@ export default function TgAdminHomePage() {
       <TgSectionTitle href="/tg/admin/payments">So&apos;nggi to&apos;lovlar</TgSectionTitle>
       {payments.isLoading ? (
         <TgSkeletonList count={3} height={56} />
+      ) : payments.isError ? (
+        <TgError onRetry={() => payments.refetch()} />
+      ) : (payments.data?.items.length ?? 0) === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border px-4 py-5 text-center text-sm text-muted-foreground">
+          Hali to&apos;lovlar yo&apos;q
+        </p>
       ) : (
         payments.data?.items.map((p) => {
           const pill = PAYMENT_PILL[p.status];
           return (
             <TgCard key={p.invoiceId} className="flex-row items-center gap-3">
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">
+                <span className="block truncate text-sm font-semibold">
                   {p.user?.name ?? '—'} · {paymentLabel(p)}
                 </span>
                 <span className="block text-xs text-muted-foreground">

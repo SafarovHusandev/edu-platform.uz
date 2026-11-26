@@ -2,15 +2,18 @@
 
 import { use, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, X } from 'lucide-react';
-import { TgMainButton } from '@/components/tg/tg-main-button';
+import { Loader2, Plus, Trash2, X } from 'lucide-react';
+import { TgGradePicker } from '@/components/tg/tg-grade-picker';
+import { TgMainButton, TgSecondaryButton } from '@/components/tg/tg-main-button';
 import {
+  QUIZ_BUILDER_STEPS,
+  TgChips,
   TgError,
   TgHeader,
   TgPage,
   TgPill,
-  TgSegment,
   TgSkeletonList,
+  TgSteps,
   TgWebHint,
 } from '@/components/tg/tg-ui';
 import { quizGradesLabel, quizStatus } from '@/components/tg/tg-quiz-utils';
@@ -20,11 +23,12 @@ import {
   useQuizWithAnswers,
   useUpdateQuiz,
   type QuestionPayload,
+  type TargetGradeInput,
 } from '@/hooks/use-quizzes';
-import { getMinQuestionsForGrades } from '@/lib/quiz-rules';
+import { getMinQuestions, getMinQuestionsForGrades } from '@/lib/quiz-rules';
 import { haptic } from '@/lib/telegram-webapp';
 import { cn } from '@/lib/utils';
-import type { QuestionType } from '@/types';
+import type { QuestionType, TargetGrade } from '@/types';
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -35,8 +39,51 @@ const TYPE_SHORT: Record<QuestionType, string> = {
 };
 
 const fieldClass =
-  'w-full rounded-xl border border-input bg-background px-3.5 text-[15px] outline-none focus:border-primary';
+  'w-full rounded-xl border border-input bg-card px-3 text-[15px] outline-none focus:border-primary';
 
+function toGradeInput(g: TargetGrade): TargetGradeInput {
+  return {
+    number: g.number,
+    ...(g.letter ? { letter: g.letter } : {}),
+    ...(g.availableFrom !== undefined ? { availableFrom: g.availableFrom } : {}),
+    ...(g.availableUntil !== undefined ? { availableUntil: g.availableUntil } : {}),
+    ...(g.maxAttempts != null ? { maxAttempts: g.maxAttempts } : {}),
+    ...(g.timeLimit != null ? { timeLimit: g.timeLimit } : {}),
+  };
+}
+
+// Eng qattiq talab qo'yayotgan sinf ("8-sinf uchun ...")
+function strictestGrade(grades: { number: number }[]) {
+  if (grades.length === 0) return null;
+  return grades.reduce((a, b) => (getMinQuestions(b.number) > getMinQuestions(a.number) ? b : a)).number;
+}
+
+function GradesEditor({ quizId, grades }: { quizId: string; grades: TargetGrade[] }) {
+  const updateQuiz = useUpdateQuiz();
+  const [draft, setDraft] = useState<TargetGradeInput[]>(() => grades.map(toGradeInput));
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3.5">
+      <TgGradePicker value={draft} onChange={setDraft} disabled={updateQuiz.isPending} />
+      <button
+        type="button"
+        disabled={draft.length === 0 || updateQuiz.isPending}
+        onClick={() =>
+          updateQuiz.mutate(
+            { id: quizId, targetGrades: draft },
+            { onSuccess: () => haptic('success'), onError: () => haptic('error') }
+          )
+        }
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-50"
+      >
+        {updateQuiz.isPending && <Loader2 className="size-4 animate-spin" />}
+        Sinflarni saqlash
+      </button>
+    </div>
+  );
+}
+
+// Test tuzish 3-bosqichi: savollar qo'shish va testni faollashtirish
 export default function TgQuizEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const quiz = useQuizWithAnswers(id);
@@ -52,11 +99,14 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
   const [sample, setSample] = useState('');
   const [points, setPoints] = useState('1');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [editGrades, setEditGrades] = useState(false);
 
   const data = quiz.data;
   const questions = data?.questions ?? [];
-  const minQuestions = getMinQuestionsForGrades(data?.targetGrades ?? []);
+  const grades = data?.targetGrades ?? [];
+  const minQuestions = getMinQuestionsForGrades(grades);
   const missing = Math.max(0, minQuestions - questions.length);
+  const strictest = strictestGrade(grades);
 
   const filledOptions = options.map((o) => o.trim()).filter(Boolean);
   const valid =
@@ -64,7 +114,7 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
     Number(points) >= 1 &&
     (type === 'open_ended' ||
       (type === 'true_false' && trueFalse !== null) ||
-      (type === 'multiple_choice' && filledOptions.length >= 2 && options[correct]?.trim()));
+      (type === 'multiple_choice' && filledOptions.length >= 2 && !!options[correct]?.trim()));
 
   function resetForm() {
     setText('');
@@ -72,6 +122,14 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
     setCorrect(0);
     setTrueFalse(null);
     setSample('');
+  }
+
+  function setActive(isActive: boolean) {
+    haptic('light');
+    updateQuiz.mutate(
+      { id, isActive },
+      { onSuccess: () => haptic('success'), onError: () => haptic('error') }
+    );
   }
 
   function saveQuestion() {
@@ -124,73 +182,113 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
   if (quiz.isError || !data) {
     return (
       <TgPage>
+        <TgHeader eyebrow="Test tahriri" title="Test" />
         <TgError onRetry={() => quiz.refetch()} />
       </TgPage>
     );
   }
 
   const status = quizStatus(data);
+  const ready = missing === 0 && grades.length > 0;
 
   return (
-    <TgPage>
+    <TgPage className="gap-3">
       <TgHeader
-        eyebrow="Test tahriri"
+        eyebrow={data.isActive ? 'Test tahriri' : 'Test yaratish'}
         title={data.title}
         action={<TgPill tone={status.tone}>{status.label}</TgPill>}
       />
-      <div className="text-[13px] text-muted-foreground">
-        {[quizGradesLabel(data), data.timeLimit ? `${data.timeLimit} daq` : null, `o'tish ${data.passingScore}%`]
-          .filter(Boolean)
-          .join(' · ')}
-        {' · '}
+      {!data.isActive && <TgSteps steps={QUIZ_BUILDER_STEPS} current={3} />}
+
+      <div className="flex flex-wrap items-center gap-x-1 text-[13px] text-muted-foreground">
+        <span>
+          {[data.timeLimit ? `${data.timeLimit} daq` : null, `o'tish ${data.passingScore}%`]
+            .filter(Boolean)
+            .join(' · ')}
+        </span>
+        <span aria-hidden>·</span>
         <Link href={`/tg/teacher/quizzes/${id}/results`} className="font-semibold text-primary">
           Natijalar
         </Link>
       </div>
 
-      {missing > 0 ? (
-        <div role="alert" className="rounded-2xl bg-gold-soft px-3.5 py-3 text-sm text-gold-foreground">
+      {/* Sinflar: ulashilgan testni qabul qilgandan keyin o'z sinfini shu yerda tanlaydi */}
+      <button
+        type="button"
+        aria-expanded={editGrades || grades.length === 0}
+        onClick={() => setEditGrades((v) => !v)}
+        className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-3.5 py-3 text-left active:bg-muted"
+      >
+        <span className="min-w-0">
+          <span className="block text-xs text-muted-foreground">Sinflar</span>
+          <span className="block truncate font-semibold">{quizGradesLabel(data)}</span>
+        </span>
+        <span className="shrink-0 text-sm font-semibold text-primary">
+          {editGrades ? 'Yopish' : "O'zgartirish"}
+        </span>
+      </button>
+      {(editGrades || grades.length === 0) && (
+        <GradesEditor
+          key={grades.map((g) => `${g.number}${g.letter ?? ''}`).join()}
+          quizId={id}
+          grades={grades}
+        />
+      )}
+
+      {missing > 0 && (
+        <div role="alert" className="rounded-xl bg-gold-soft px-3 py-2.5 text-[13px] text-gold-foreground">
           <strong>
             {questions.length} / {minQuestions} savol.
           </strong>{' '}
-          Faollashtirish uchun yana {missing} ta kerak.
+          {strictest ? `${strictest}-sinf uchun faollashtirishga` : 'Faollashtirishga'} yana {missing} ta
+          kerak.
+          {data.isActive && ' Test hozir faol — o\'quvchilar uni yecha oladi.'}
         </div>
-      ) : (
+      )}
+
+      {ready && !data.isActive && (
+        <div role="status" className="rounded-xl bg-success-soft px-3 py-2.5 text-[13px] text-success">
+          <strong>
+            {questions.length} / {minQuestions} savol.
+          </strong>{' '}
+          Test tayyor — «Faollashtirish» tugmasi bilan o&apos;quvchilarga oching.
+        </div>
+      )}
+
+      {data.isActive && (
         <label className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-3.5 py-3">
           <span>
             <span className="block font-bold">O&apos;quvchilarga ochiq</span>
             <span className="block text-xs text-muted-foreground">
-              {data.isActive ? 'Test faol — o\'quvchilar yecha oladi' : 'Qoralama — faqat siz ko\'rasiz'}
+              Test faol — o&apos;chirsangiz qoralamaga qaytadi
             </span>
           </span>
           <input
             type="checkbox"
             role="switch"
             className="size-6 accent-primary"
-            checked={!!data.isActive}
+            checked
             disabled={updateQuiz.isPending}
-            onChange={(e) => {
-              haptic('light');
-              updateQuiz.mutate({ id, isActive: e.target.checked });
-            }}
+            onChange={() => setActive(false)}
           />
         </label>
       )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold">Savollar · {questions.length}</h2>
-      </div>
+      <h2 className="mt-1 text-base font-bold">Savollar · {questions.length}</h2>
 
       {questions.length > 0 && (
         <ol className="flex flex-col gap-2">
           {questions.map((q, index) => (
-            <li key={q._id} className="flex items-start gap-3 rounded-2xl border border-border bg-card px-3.5 py-3">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold">
+            <li
+              key={q._id}
+              className="flex items-start gap-3 rounded-2xl border border-border bg-card px-3.5 py-3"
+            >
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted font-heading text-xs font-semibold text-muted-foreground">
                 {index + 1}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold wrap-break-word">{q.text}</span>
-                <span className="block text-xs text-muted-foreground">
+                <span className="block text-sm font-semibold wrap-break-word">{q.text}</span>
+                <span className="block text-xs wrap-break-word text-muted-foreground">
                   {TYPE_SHORT[q.type]} · {q.points} ball
                   {q.type === 'multiple_choice' &&
                     typeof q.correctAnswer === 'number' &&
@@ -211,12 +309,16 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      deleteQuestion.mutate(q._id);
-                      setConfirmDelete(null);
-                    }}
-                    className="h-8 rounded-lg bg-destructive px-2.5 text-xs font-bold text-white"
+                    disabled={deleteQuestion.isPending}
+                    onClick={() =>
+                      deleteQuestion.mutate(q._id, {
+                        onSuccess: () => haptic('success'),
+                        onSettled: () => setConfirmDelete(null),
+                      })
+                    }
+                    className="inline-flex h-8 items-center gap-1 rounded-lg bg-destructive px-2.5 text-xs font-bold text-background disabled:opacity-60"
                   >
+                    {deleteQuestion.isPending && <Loader2 className="size-3 animate-spin" />}
                     O&apos;chirish
                   </button>
                 </span>
@@ -235,25 +337,25 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
         </ol>
       )}
 
-      <section className="flex flex-col gap-3 rounded-[18px] border border-primary/25 bg-card p-3.5">
-        <div className="flex items-center gap-2 text-sm font-bold text-primary">
-          <Plus className="size-4" /> {questions.length + 1}-savol
-        </div>
-        <TgSegment
+      <section className="flex flex-col gap-3 rounded-[18px] border-2 border-primary bg-card p-3.5">
+        <TgChips
           value={type}
-          onChange={(v) => setType(v)}
+          onChange={setType}
           options={(Object.keys(TYPE_SHORT) as QuestionType[]).map((t) => ({
             value: t,
             label: TYPE_SHORT[t],
           }))}
         />
+        <label htmlFor="q-text" className="flex items-center gap-1.5 text-[13px] font-semibold">
+          <Plus className="size-3.5" /> {questions.length + 1}-savol
+        </label>
         <textarea
-          aria-label="Savol matni"
+          id="q-text"
           placeholder="Savol matni"
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className={cn(fieldClass, 'py-3 leading-snug')}
+          className={cn(fieldClass, 'resize-none py-3 leading-snug')}
         />
 
         {type === 'multiple_choice' && (
@@ -262,17 +364,22 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
               <div
                 key={idx}
                 className={cn(
-                  'flex items-center gap-2 rounded-xl border px-2.5',
-                  correct === idx ? 'border-success bg-success-soft' : 'border-input bg-background'
+                  'flex items-center gap-2.5 rounded-xl px-3',
+                  correct === idx
+                    ? 'border-[1.5px] border-success bg-success-soft'
+                    : 'border border-input bg-card'
                 )}
               >
                 <input
                   type="radio"
                   name="correct"
-                  aria-label={`${LABELS[idx]} to'g'ri javob`}
+                  aria-label={`${LABELS[idx]} — to'g'ri javob`}
                   checked={correct === idx}
-                  onChange={() => setCorrect(idx)}
-                  className="size-5 accent-success"
+                  onChange={() => {
+                    haptic('selection');
+                    setCorrect(idx);
+                  }}
+                  className="size-4.5 shrink-0 accent-success"
                 />
                 <input
                   aria-label={`${LABELS[idx]} variant`}
@@ -283,16 +390,18 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
                   }
                   className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none"
                 />
-                {correct === idx && <span className="text-xs font-bold text-success">To&apos;g&apos;ri</span>}
+                {correct === idx && (
+                  <span className="shrink-0 text-xs font-bold text-success">To&apos;g&apos;ri</span>
+                )}
                 {options.length > 2 && correct !== idx && (
                   <button
                     type="button"
-                    aria-label="Variantni olib tashlash"
+                    aria-label={`${LABELS[idx]} variantni olib tashlash`}
                     onClick={() => {
                       setOptions((prev) => prev.filter((_, i) => i !== idx));
                       if (correct > idx) setCorrect((c) => c - 1);
                     }}
-                    className="text-muted-foreground"
+                    className="flex size-8 shrink-0 items-center justify-center text-muted-foreground"
                   >
                     <X className="size-4" />
                   </button>
@@ -303,7 +412,7 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
               <button
                 type="button"
                 onClick={() => setOptions((prev) => [...prev, ''])}
-                className="self-start text-sm font-semibold text-primary"
+                className="self-start py-1 text-sm font-semibold text-primary"
               >
                 + Variant qo&apos;shish
               </button>
@@ -318,12 +427,15 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
                 key={String(value)}
                 type="button"
                 aria-pressed={trueFalse === value}
-                onClick={() => setTrueFalse(value)}
+                onClick={() => {
+                  haptic('selection');
+                  setTrueFalse(value);
+                }}
                 className={cn(
-                  'h-12 rounded-xl font-semibold',
+                  'h-12 rounded-xl font-semibold transition-colors',
                   trueFalse === value
-                    ? 'bg-success text-success-foreground'
-                    : 'border border-input bg-background'
+                    ? 'border-[1.5px] border-success bg-success-soft text-success'
+                    : 'border border-input bg-card'
                 )}
               >
                 {value ? "To'g'ri" : "Noto'g'ri"}
@@ -339,20 +451,20 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
             rows={2}
             value={sample}
             onChange={(e) => setSample(e.target.value)}
-            className={cn(fieldClass, 'py-3 leading-snug')}
+            className={cn(fieldClass, 'resize-none py-3 leading-snug')}
           />
         )}
 
         <div className="flex items-center gap-2.5">
-          <label htmlFor="q-points" className="text-sm font-semibold">
+          <label htmlFor="q-points" className="text-[13px] font-semibold">
             Ball
           </label>
           <input
             id="q-points"
             inputMode="numeric"
             value={points}
-            onChange={(e) => setPoints(e.target.value.replace(/\D/g, ''))}
-            className={cn(fieldClass, 'h-11 w-20 text-center font-heading')}
+            onChange={(e) => setPoints(e.target.value.replace(/\D/g, '').slice(0, 3))}
+            className={cn(fieldClass, 'h-10 w-16 text-center')}
           />
         </div>
       </section>
@@ -366,6 +478,13 @@ export default function TgQuizEditPage({ params }: { params: Promise<{ id: strin
         onClick={saveQuestion}
         loading={addQuestion.isPending}
         disabled={!valid}
+        secondary={
+          ready && !data.isActive ? (
+            <TgSecondaryButton onClick={() => setActive(true)} disabled={updateQuiz.isPending}>
+              {updateQuiz.isPending ? 'Saqlanmoqda…' : 'Faollashtirish'}
+            </TgSecondaryButton>
+          ) : undefined
+        }
       />
     </TgPage>
   );

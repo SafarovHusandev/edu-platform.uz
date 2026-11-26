@@ -48,7 +48,7 @@ export default function TgQuizSharesPage() {
 
   return (
     <TgPage>
-      <TgHeader title="Ulashilgan testlar" />
+      <TgHeader variant="inner" title="Ulashilgan testlar" />
       <TgSegment
         value={tab}
         onChange={setTab}
@@ -78,23 +78,29 @@ export default function TgQuizSharesPage() {
             pending.map((share) => (
               <article
                 key={share._id}
-                className="flex flex-col gap-2 rounded-[18px] border border-primary/25 bg-card p-3.5"
+                className="flex flex-col gap-2.5 rounded-2xl border-[1.5px] border-primary/45 bg-card p-3.5"
               >
                 <div className="font-bold wrap-break-word">{titleOf(share)}</div>
-                <div className="text-[13px] text-muted-foreground">
+                <div className="text-[13px] text-secondary-foreground">
                   Kimdan: {nameOf(share.fromTeacher)}
                   {share.createdAt && ` · ${formatTashkentDateTime(share.createdAt)}`}
                 </div>
-                <div className="mt-1 grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={busyId === share._id}
                     onClick={() => {
                       setBusyId(share._id);
-                      reject.mutate(share._id, { onSettled: () => setBusyId(null) });
+                      reject.mutate(share._id, {
+                        onSuccess: () => haptic('success'),
+                        onSettled: () => setBusyId(null),
+                      });
                     }}
-                    className="h-11 rounded-xl border border-border bg-background text-sm font-semibold disabled:opacity-50"
+                    className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[10px] border border-destructive/35 bg-card text-sm font-semibold text-destructive disabled:opacity-50"
                   >
+                    {busyId === share._id && reject.isPending && (
+                      <Loader2 className="size-4 animate-spin" />
+                    )}
                     Rad etish
                   </button>
                   <button
@@ -105,13 +111,14 @@ export default function TgQuizSharesPage() {
                       accept.mutate(share._id, {
                         onSuccess: (cloned) => {
                           haptic('success');
-                          // Nusxa faol emas — darhol tahrirga o'tib sinfni tekshiradi
+                          // Nusxa faol emas — darhol tahrirga o'tib sinfni tanlaydi
                           if (cloned?._id) router.push(`/tg/teacher/quizzes/${cloned._id}`);
                         },
+                        onError: () => haptic('error'),
                         onSettled: () => setBusyId(null),
                       });
                     }}
-                    className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-50"
+                    className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[10px] bg-success text-sm font-bold text-success-foreground disabled:opacity-50"
                   >
                     {busyId === share._id && accept.isPending && (
                       <Loader2 className="size-4 animate-spin" />
@@ -123,11 +130,15 @@ export default function TgQuizSharesPage() {
             ))}
 
           {tab === 'incoming' && pending.length > 0 && (
-            <div role="status" className="flex flex-col gap-1 rounded-2xl bg-primary-soft px-3.5 py-3 text-[13px]">
-              <span className="font-bold text-primary">Qabul qilingandan keyin</span>
-              <span className="text-secondary-foreground">
-                Nusxa faol emas va asl sinflarga biriktirilgan bo&apos;ladi. Testni ochib, o&apos;z
-                sinfingizni web versiyada tanlang va faollashtiring.
+            <div
+              role="status"
+              className="flex flex-col gap-1 rounded-[14px] border border-success/30 bg-success-soft px-3.5 py-3 text-[13px]"
+            >
+              <span className="font-bold text-success">Qabul qilingandan keyin</span>
+              <span className="leading-normal text-secondary-foreground">
+                Nusxa faol emas va hali asl sinflarga biriktirilgan. Qabul qilgach test tahririga
+                o&apos;tasiz — u yerda «Sinflar» bo&apos;limidan o&apos;z sinfingizni tanlab,
+                faollashtirasiz.
               </span>
             </div>
           )}

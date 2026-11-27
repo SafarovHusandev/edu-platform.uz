@@ -22,18 +22,26 @@ import { haptic } from '@/lib/telegram-webapp';
 import { cn } from '@/lib/utils';
 import type { Notification } from '@/types';
 
-// Bildirishnoma havolasini mini ilova ichidagi ekranga moslash (bo'lsa)
+// Bildirishnoma havolasini (meta.url) mini ilova ichidagi ekranga moslash.
+// "Yangi natija" → .../results (natijalar), "Tekshirish kerak" → .../results/:attemptId
+// (baholash). quizId+attemptId bo'yicha taxmin faqat url'siz eski yozuvlar uchun.
 function miniAppHref(n: Notification): string | null {
   const url = n.meta?.url;
-  if (n.meta?.quizId && n.meta?.attemptId && n.type === 'quiz') {
-    return `/tg/teacher/grading?quiz=${n.meta.quizId}&attempt=${n.meta.attemptId}`;
+  if (!url) {
+    if (n.type === 'quiz' && n.meta?.quizId && n.meta?.attemptId) {
+      return `/tg/teacher/grading?quiz=${n.meta.quizId}&attempt=${n.meta.attemptId}`;
+    }
+    return null;
   }
-  if (!url) return null;
   try {
     const path = new URL(url, window.location.origin).pathname;
     if (path.startsWith('/admin/users')) return '/tg/admin/users?tab=pending';
     if (path.startsWith('/admin/redemptions')) return '/tg/admin/requests';
-    if (path.startsWith('/teacher/quiz-shares')) return '/tg/teacher/shares';
+    if (path.startsWith('/teacher/quiz-shares') || path.startsWith('/teacher/quizzes/shares')) {
+      return '/tg/teacher/shares';
+    }
+    const review = path.match(/^\/teacher\/quizzes\/([^/]+)\/results\/([^/]+)$/);
+    if (review) return `/tg/teacher/grading?quiz=${review[1]}&attempt=${review[2]}`;
     const results = path.match(/^\/teacher\/quizzes\/([^/]+)\/results$/);
     if (results) return `/tg/teacher/quizzes/${results[1]}/results`;
     return path;

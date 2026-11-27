@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { BookMarked, Plus, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,30 +18,34 @@ import {
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 import { ErrorState } from '@/components/ui/error-state';
 import { useBooks, useDeleteBook, useRegisterBookDownload } from '@/hooks/use-books';
-import { useAuthStore } from '@/store/auth-store';
 import { resolveAssetUrl, bookDownloadUrl } from '@/lib/config';
 import { formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { StatusPill, coverTone } from '@/components/dashboard/dashboard-ui';
 
+const PAGE_SIZE = 24;
+
 export default function TeacherBooksPage() {
-  const user = useAuthStore((s) => s.user);
-  const { data, isLoading, isError, refetch } = useBooks({ page: 1, limit: 100 });
+  const [page, setPage] = useState(1);
+  // uploadedBy=me — backend o'zi filtrlaydi (qoralamalar ham keladi)
+  const { data, isLoading, isError, refetch } = useBooks({ uploadedBy: 'me', page, limit: PAGE_SIZE });
   const deleteBook = useDeleteBook();
   const registerDownload = useRegisterBookDownload();
 
-  const myBooks = data?.items.filter((book) => {
-    const uploaderId = typeof book.uploadedBy === 'object' ? book.uploadedBy?._id : book.uploadedBy;
-    return uploaderId === user?._id;
-  });
+  const myBooks = data?.items;
+  const total = data?.total ?? 0;
+
+  // Oxirgi sahifadagi yagona kitob o'chirilsa — bo'sh sahifada qolmay, orqaga qaytamiz
+  if (data && page > 1 && page > data.totalPages) setPage(Math.max(1, data.totalPages));
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Kitoblarim"
-        description={myBooks && myBooks.length > 0 ? `${myBooks.length} ta kitob` : undefined}
+        description={total > 0 ? `${formatNumber(total)} ta kitob` : undefined}
         actions={
           <Button size="lg" render={<Link href="/teacher/books/new" />}>
             <Plus className="size-4" /> Kitob qo&apos;shish
@@ -56,7 +61,7 @@ export default function TeacherBooksPage() {
         </div>
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
-      ) : !myBooks || myBooks.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
           icon={BookMarked}
           title="Hali kitob yuklamagansiz"
@@ -68,7 +73,7 @@ export default function TeacherBooksPage() {
         />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] sm:gap-4">
-          {myBooks.map((book, index) => {
+          {(myBooks ?? []).map((book, index) => {
             const cover = resolveAssetUrl(book.coverImage);
             return (
               <article
@@ -185,6 +190,16 @@ export default function TeacherBooksPage() {
             );
           })}
         </div>
+      )}
+
+      {data && data.totalPages > 1 && (
+        <PaginationBar
+          page={page}
+          totalPages={data.totalPages}
+          total={total}
+          itemLabel="kitob"
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

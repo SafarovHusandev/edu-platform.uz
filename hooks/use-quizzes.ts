@@ -53,7 +53,17 @@ export function useQuizzes(filters: { page?: number; limit?: number } = {}) {
   });
 }
 
-export function useQuizzesMy(filters: { page?: number; limit?: number } = {}) {
+// Backend /quizzes/my filtrlari — ro'yxatni klientda filtrlamang, shularni yuboring
+export interface MyQuizFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean;
+  targetType?: 'course' | 'lesson' | 'standalone';
+  targetId?: string;
+}
+
+export function useQuizzesMy(filters: MyQuizFilters = {}) {
   return useQuery({
     // useQuizzes bilan bir xil filtrda keshi aralashmasin ('quizzes' prefiksi invalidatsiya uchun)
     queryKey: ['quizzes', 'my', filters],

@@ -17,6 +17,9 @@ export interface BookFilters {
   search?: string
   category?: string
   grade?: number
+  // "me" — joriy foydalanuvchining kitoblari (qoralamalar bilan, token shart);
+  // <userId> — shu muallifning faqat nashr qilingan kitoblari
+  uploadedBy?: "me" | (string & {})
 }
 
 // Backend /books va /books/:id "authenticate.optional" bilan himoyalangan — kurslardagi

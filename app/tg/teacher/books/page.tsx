@@ -18,16 +18,10 @@ import {
 import { useBooks } from '@/hooks/use-books';
 import { resolveAssetUrl } from '@/lib/config';
 import { formatNumber } from '@/lib/format';
-import { useAuthStore } from '@/store/auth-store';
 import type { Book } from '@/types';
 
-// GET /books'da muallif bo'yicha filtr yo'q — katta bo'laklarda olib, o'zinikini ajratamiz
-const CHUNK = 100;
-
-function isMine(book: Book, userId?: string) {
-  const uploader = typeof book.uploadedBy === 'object' ? book.uploadedBy?._id : book.uploadedBy;
-  return !!userId && uploader === userId;
-}
+// uploadedBy=me — backend o'zi filtrlaydi (qoralamalar ham keladi)
+const PAGE_SIZE = 20;
 
 function BookCard({ book }: { book: Book }) {
   const cover = resolveAssetUrl(book.coverImage);
@@ -61,15 +55,15 @@ function BookCard({ book }: { book: Book }) {
   );
 }
 
-function BooksChunk({ page, userId }: { page: number; userId?: string }) {
-  const query = useBooks({ page, limit: CHUNK });
+function BooksChunk({ page }: { page: number }) {
+  const query = useBooks({ uploadedBy: 'me', page, limit: PAGE_SIZE });
   if (query.isLoading) return <TgSkeletonList count={2} height={220} />;
   if (query.isError) return <TgError onRetry={() => query.refetch()} />;
-  const mine = query.data?.items.filter((b) => isMine(b, userId)) ?? [];
-  if (mine.length === 0) return null;
+  const items = query.data?.items ?? [];
+  if (items.length === 0) return null;
   return (
     <div className="grid grid-cols-2 gap-3">
-      {mine.map((book) => (
+      {items.map((book) => (
         <BookCard key={book._id} book={book} />
       ))}
     </div>
@@ -78,23 +72,25 @@ function BooksChunk({ page, userId }: { page: number; userId?: string }) {
 
 export default function TgTeacherBooksPage() {
   const router = useRouter();
-  const userId = useAuthStore((s) => s.user?._id);
   const [pages, setPages] = useState(1);
-  const first = useBooks({ page: 1, limit: CHUNK });
-  const last = useBooks({ page: pages, limit: CHUNK });
+  const first = useBooks({ uploadedBy: 'me', page: 1, limit: PAGE_SIZE });
+  const last = useBooks({ uploadedBy: 'me', page: pages, limit: PAGE_SIZE });
+  const total = first.data?.total ?? 0;
   const totalPages = last.data?.totalPages ?? first.data?.totalPages ?? 1;
-  const hasMore = pages < totalPages;
-  const firstMine = first.data?.items.filter((b) => isMine(b, userId)).length ?? 0;
 
   return (
     <TgPage className="gap-3">
-      <TgHeader variant="inner" title="Kitoblarim" />
+      <TgHeader
+        variant="inner"
+        title="Kitoblarim"
+        eyebrow={total > 0 ? `${formatNumber(total)} ta kitob` : undefined}
+      />
 
       {first.isLoading ? (
         <TgSkeletonList count={2} height={220} />
       ) : first.isError ? (
         <TgError onRetry={() => first.refetch()} />
-      ) : pages === 1 && firstMine === 0 && !hasMore ? (
+      ) : total === 0 ? (
         <TgEmpty
           icon={BookMarked}
           title="Hali kitob yuklamagansiz"
@@ -103,10 +99,14 @@ export default function TgTeacherBooksPage() {
       ) : (
         <>
           {Array.from({ length: pages }, (_, i) => (
-            <BooksChunk key={i + 1} page={i + 1} userId={userId} />
+            <BooksChunk key={i + 1} page={i + 1} />
           ))}
-          {hasMore && last.isSuccess && !last.isPlaceholderData && (
-            <TgLoadMore onClick={() => setPages((p) => p + 1)} />
+          {pages < totalPages && last.isSuccess && !last.isPlaceholderData && (
+            <TgLoadMore
+              onClick={() => setPages((p) => p + 1)}
+              shown={Math.min(pages * PAGE_SIZE, total)}
+              total={total}
+            />
           )}
         </>
       )}
